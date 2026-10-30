@@ -51,6 +51,13 @@ fn spawn_point [cx cz radius fallback_y] do
     return [cx (fallback_y + 1) cz]
 end
 
+# A symbol's name, without the colon that to_str and interpolation keep
+fn sym_name [s] do
+    let text {to_str s}
+    if ({str_substr text 0 1} == ":") { return {str_substr text 1 ({str_length text} - 1)} }
+    return text
+end
+
 fn dist2 [ax az bx bz] do
     let dx (ax - bx)
     let dz (az - bz)

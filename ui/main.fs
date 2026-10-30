@@ -37,6 +37,104 @@ ui_show {ui.window "##ribbon"
     ]
 } =immediate true
 
+# What's under the cursor, or the crosshair when on foot. Details come from the game.
+set inspect_title {ui.text "" =id "i_title"}
+set inspect_detail {ui.text "" =id "i_detail"}
+set inspect_panel nil
+set inspect_block ""
+set inspect_wait 0
+
+fn hide_inspect [] do
+    if (inspect_panel != nil) do
+        ui_hide inspect_panel
+        set inspect_panel nil
+    end
+end
+
+fn show_inspect_panel [] do
+    if (inspect_panel != nil) { return nil }
+    let size {window_size}
+    set inspect_panel {ui_show {ui.window "##inspect"
+        =window_pos_x (size[0] - 290) =window_pos_y 8
+        =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing :no_inputs]
+        =children [inspect_title inspect_detail]
+    } =immediate true}
+end
+
+# timber_stack_3 is timber_stack: every fill stage shares a name
+fn block_family [name] do
+    let length {str_length name}
+    if ((length > 2) and ({str_substr name (length - 2) 1} == "_")) {
+        return {str_substr name 0 (length - 2)}
+    }
+    return name
+end
+
+fn inspect_lines [info] do
+    let lines ""
+    fn add [line] do
+        if (lines == "") { set lines line } { set lines "{lines}\n{line}" }
+    end
+
+    if info.stale { return {loc "inspect.remembered"} }
+    let building {info.get :building}
+    if (building != nil) do
+        let name {loc "building.{building}"}
+        let built {info.get :built}
+        if (built != nil) { add {loc "inspect.site" =name name =percent {floor built}} } { add name }
+    end
+    let stack {info.get :stack}
+    if (stack != nil) {
+        add {loc "inspect.stack" =count stack =cap info.stack_cap =kind {loc "kind.{info.stack_kind}"}}
+    }
+    let gives {info.get :gives}
+    if (gives != nil) { add {loc "inspect.gives" =count gives =kind {loc "kind.{info.gives_kind}"}} }
+    let owner {info.get :owner}
+    if (owner != nil) {
+        if (owner == 1) { add {loc "inspect.yours"} } { add {loc "inspect.rival"} }
+    }
+    return lines
+end
+
+fn show_inspect [info] do
+    if ({info.get :hidden} == true) do
+        hide_inspect
+        return nil
+    end
+    set inspect_title.text {loc "block.{block_family inspect_block}"}
+    set inspect_detail.text {inspect_lines info}
+    show_inspect_panel
+end
+
+fn inspect_target [] do
+    if (view_mode == :embodied) { return {pick_view} }
+    if ((placing != nil) or {gui_has_mouse}) { return nil }
+    let m {mouse_pos}
+    return {pick_block m[0] m[1]}
+end
+
+fn update_inspect [] do
+    set inspect_wait (inspect_wait - 1)
+    if (inspect_wait > 0) { return nil }
+    set inspect_wait 6
+
+    let hit {inspect_target}
+    if (hit == nil) do
+        hide_inspect
+        return nil
+    end
+    set inspect_block hit.block
+    send_command {=name :inspect =x hit.x =y hit.y =z hit.z}
+end
+
+fn draw_crosshair [] do
+    let size {window_size}
+    let cx (size[0] / 2)
+    let cy (size[1] / 2)
+    ui_rect (cx - 9) cy (cx + 9) cy 1.0 0.9 0.7 0.8
+    ui_rect cx (cy - 9) cx (cy + 9) 1.0 0.9 0.7 0.8
+end
+
 fn start_placing [name] do
     set placing {to_sym name}
 end
@@ -162,6 +260,11 @@ fn show_end_screen [won] do
 end
 
 on :state do
+    let inspected {msg.get :inspect}
+    if (inspected != nil) do
+        show_inspect inspected
+        return nil
+    end
     if (state == nil) {cam_focus msg.home[0] msg.home[1]}
     if ((msg.match == :over) and (end_screen == nil)) {
         show_end_screen (msg.winner == 1)
@@ -218,6 +321,8 @@ on :frame do
         set hud_hint.text {loc "ui.hint.select"}
     end
     set hud_fps.text {loc "ui.fps" =fps {fps}}
+    update_inspect
+    if (view_mode == :embodied) { draw_crosshair }
 
     for id in selection do
         let p {entity_pos id}

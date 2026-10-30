@@ -11,6 +11,7 @@ source "scripts/faction.fsc"
 source "scripts/combat.fsc"
 source "scripts/commander.fsc"
 source "scripts/match.fsc"
+source "scripts/inspect.fsc"
 
 fn tick_hands [f tick] do
     let i 0
@@ -164,6 +165,7 @@ on :command do
         :muster { queue_unit f cmd.unit }
         :continue { continue_open_ended cmd.pacify }
         :steward_harvest { steward_harvest f cmd.x cmd.y cmd.z }
+        :inspect { ui_publish {=inspect {inspect_at f.id cmd.x cmd.y cmd.z}} }
         _ { log "unknown command" cmd.name }
     end
 end

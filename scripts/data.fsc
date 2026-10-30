@@ -3,8 +3,8 @@
 set KIND_NAMES [:timber :stone :provisions]
 
 # Blocks a Hand carries at once, and units a resource block holds
-set CARRY_CAP 4
-set STACK_UNITS 4
+set CARRY_CAP 3
+set STACK_UNITS 8
 
 # What a block costs to place. Blocks not listed are free.
 set BLOCK_MATERIAL {

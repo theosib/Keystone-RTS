@@ -21,9 +21,9 @@ on :tick do
 
     if (tick == 30) do
         # Fill the yard nearly to the brim, in every section
-        grant_stock f :stone 240
-        grant_stock f :timber 240
-        grant_stock f :provisions 200
+        grant_stock f :stone (60 * STACK_UNITS)
+        grant_stock f :timber (60 * STACK_UNITS)
+        grant_stock f :provisions (50 * STACK_UNITS)
         log "after grant:" {zone_summary f}
     end
 

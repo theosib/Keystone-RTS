@@ -1,0 +1,53 @@
+# Scenario: looking at a block tells you what it holds, and nothing the fog is hiding.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+on :tick do
+    if ({game_tick} != 60) { return nil }
+    let f factions[1]
+
+    # Every fill stage exists, and is the block the slot says it is
+    for stage in (1..(STACK_UNITS + 1)) do
+        let name {stack_block :timber stage}
+        world_set_block (f.x + 40) 90 f.z name
+        expect "stage block" {block_at (f.x + 40) 90 f.z} name
+    end
+    world_set_block (f.x + 40) 90 f.z :air
+
+    # A partial stack
+    let slot nil
+    for candidate in f.zone.slots do
+        if ((candidate.kind == :timber) and (slot == nil)) { set slot candidate }
+    end
+    set slot.amount 5
+    slot_paint slot
+    let seen {inspect_at f.id slot.x slot.y slot.z}
+    expect "stack" seen.stack 5
+    expect "stack cap" seen.stack_cap STACK_UNITS
+    expect "stack kind" seen.stack_kind "timber"
+    expect "stack owner" seen.owner 1
+
+    # A building going up
+    let near {ent_pos f.hands[0].id}
+    let b {place_building f :shelter ({floor near[0]} + 3) {floor near[2]} 0}
+    let inside {inspect_at f.id b.x (b.y + 1) b.z}
+    expect "building" inside.building b.name
+    expect "owner" inside.owner 1
+    if ({inside.get :built} == nil) { fail "no build progress" }
+
+    # Under the fog
+    let rival factions[2]
+    let hidden {inspect_at f.id rival.x rival.y rival.z}
+    expect "the rival's base through the fog" {hidden.get :hidden} true
+    expect "no detail leaks" {hidden.get :stack} nil
+
+    log "PASS"
+    game_exit 0
+end

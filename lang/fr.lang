@@ -3,3 +3,38 @@ ui.selected.one: 1 Main sélectionnée
 ui.selected.other: {count} Mains sélectionnées
 ui.palette: Bâtir
 ui.train_hand: Former une Main
+
+block.banner_blue: Bannière bleue
+block.banner_red: Bannière rouge
+block.berry_bush: Buisson de baies
+block.berry_bush_bare: Buisson cueilli
+block.boulder: Rocher
+block.canopy: Feuillage
+block.dressed_stone: Pierre de taille
+block.flagstone: Dalle
+block.gravel: Gravier
+block.gravel_path: Chemin de gravier
+block.keystone: La Clef de voûte
+block.loam: Terreau
+block.palisade: Palissade
+block.planks: Planches
+block.sand: Sable
+block.scaffold: Échafaudage
+block.stone: Pierre
+block.thatch: Chaume
+block.timber_log: Tronc
+block.turf: Gazon
+block.timber_stack: Pile de bois
+block.stone_pallet: Palette de pierre
+block.grain_sack: Vivres
+
+kind.timber: bois
+kind.stone: pierre
+kind.provisions: vivres
+
+inspect.stack: {count} sur {cap} ({kind})
+inspect.gives: Donne {count} ({kind})
+inspect.site: {name}, construit à {percent} %
+inspect.yours: À vous
+inspect.rival: Rival
+inspect.remembered: Tel que vu la dernière fois

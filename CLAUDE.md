@@ -39,7 +39,7 @@ finescript traps that cost real time here:
 - `(...)` is infix math only. Calls need `{...}`: `(loc "x")` is a parse error.
 - `else` needs `do`: `else do ... end`.
 - A statement ends at the newline. Named args can't wrap to the next line.
-- `match` is a keyword, so it can't be a variable name.
+- `match` and `source` are keywords, so they can't be variable names.
 - `random_range` is inclusive at both ends.
 - `{}` is an empty block, not an empty map.
 - Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.

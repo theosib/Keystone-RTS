@@ -30,3 +30,38 @@ match.exit: View Chronicle and Exit
 match.continue: Continue in Open-Ended World
 match.pacify: Make Rivals Passive
 ui.keystone_danger: The Keystone is under attack!
+
+block.banner_blue: Blue Banner
+block.banner_red: Red Banner
+block.berry_bush: Berry Bush
+block.berry_bush_bare: Picked Berry Bush
+block.boulder: Boulder
+block.canopy: Leaves
+block.dressed_stone: Dressed Stone
+block.flagstone: Flagstone
+block.gravel: Gravel
+block.gravel_path: Gravel Path
+block.keystone: The Keystone
+block.loam: Loam
+block.palisade: Palisade
+block.planks: Planks
+block.sand: Sand
+block.scaffold: Scaffold
+block.stone: Stone
+block.thatch: Thatch
+block.timber_log: Timber Log
+block.turf: Turf
+block.timber_stack: Timber Stack
+block.stone_pallet: Stone Pallet
+block.grain_sack: Provisions
+
+kind.timber: timber
+kind.stone: stone
+kind.provisions: provisions
+
+inspect.stack: {count} of {cap} {kind}
+inspect.gives: Gives {count} {kind}
+inspect.site: {name}, {percent}% built
+inspect.yours: Yours
+inspect.rival: Rival
+inspect.remembered: As last seen

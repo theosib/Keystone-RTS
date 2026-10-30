@@ -1,0 +1,66 @@
+# What the player learns by looking at a block. Only what's in view gets an answer: remembered
+# ground could have changed, and nobody can inspect their way through the fog.
+
+fn slot_at [f x y z] do
+    for slot in f.zone.slots do
+        if ((slot.x == x) and (slot.y == y) and (slot.z == z) and (slot.kind != nil)) {
+            return slot
+        }
+    end
+    return nil
+end
+
+fn in_footprint [b x y z] do
+    if (y < b.y) { return false }
+    let x0 (b.x - (b.size_x / 2))
+    let z0 (b.z - (b.size_z / 2))
+    return ((x >= x0) and (x < (x0 + b.size_x)) and (z >= z0) and (z < (z0 + b.size_z)))
+end
+
+fn structure_at [f x y z] do
+    for b in f.sites do
+        if {in_footprint b x y z} { return b }
+    end
+    for b in f.buildings do
+        if {in_footprint b x y z} { return b }
+    end
+    return nil
+end
+
+fn inspect_at [viewer x y z] do
+    let sight {vision_state viewer x z}
+    if (sight == :unknown) { return {=hidden true} }
+    if (sight == :explored) { return {=stale true} }
+
+    let info {=stale false}
+    let harvest {HARVEST.get {block_at x y z}}
+    if (harvest != nil) do
+        set info.gives harvest.units
+        set info.gives_kind {sym_name harvest.kind}
+    end
+
+    for f in factions do
+        if (f != nil) do
+            let slot {slot_at f x y z}
+            if (slot != nil) do
+                set info.stack slot.amount
+                set info.stack_cap STACK_UNITS
+                set info.stack_kind {sym_name slot.kind}
+                set info.owner f.id
+            end
+
+            let b {structure_at f x y z}
+            if (b != nil) do
+                set info.building b.name
+                set info.owner f.id
+                if (not b.complete) do
+                    let progress {site_progress b.site}
+                    if (progress != nil) {
+                        set info.built ((progress.done * 100) / {max progress.total 1})
+                    }
+                end
+            end
+        end
+    end
+    return info
+end
