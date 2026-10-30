@@ -1,0 +1,60 @@
+skeleton: humanoid
+anim:idle: humanoid_idle
+anim:walk: humanoid_walk
+anim:work: humanoid_work
+
+part: tabard
+bone: torso
+offset: 0 0.28 0
+size: 0.48 0.56 0.32
+color: 0.7 0.7 0.7
+team: 1.0
+
+part: head
+bone: head
+offset: 0 0.19 0
+size: 0.36 0.36 0.34
+color: 0.82 0.66 0.52
+
+part: arm_left
+bone: arm_l
+offset: 0 -0.22 0
+size: 0.13 0.46 0.14
+color: 0.45 0.4 0.34
+
+part: arm_right
+bone: arm_r
+offset: 0 -0.22 0
+size: 0.13 0.46 0.14
+color: 0.45 0.4 0.34
+
+part: leg_left
+bone: leg_l
+offset: 0 -0.38 0
+size: 0.16 0.56 0.18
+color: 0.28 0.26 0.24
+
+part: leg_right
+bone: leg_r
+offset: 0 -0.38 0
+size: 0.16 0.56 0.18
+color: 0.28 0.26 0.24
+
+part: helm
+bone: head
+offset: 0 0.33 0
+size: 0.4 0.14 0.38
+color: 0.5 0.52 0.56
+
+part: shield
+bone: arm_l
+offset: -0.1 -0.28 0.12
+size: 0.06 0.6 0.42
+color: 0.7 0.7 0.7
+team: 0.7
+
+part: spear
+bone: arm_r
+offset: 0.02 -0.3 0.1
+size: 0.05 1.7 0.05
+color: 0.42 0.3 0.18

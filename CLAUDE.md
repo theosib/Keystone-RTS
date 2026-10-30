@@ -22,9 +22,28 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
 - Build dir: `../fv-keystone` (Ninja, Release). Fresh configure needs
   `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (lz4's CMake is too old for CMake 4).
 
+## Script gotchas
+
+finescript traps that cost real time here:
+
+- `(...)` is infix math only. Calls need `{...}`: `(loc "x")` is a parse error.
+- `else` needs `do`: `else do ... end`.
+- A statement ends at the newline. Named args can't wrap to the next line.
+- `match` is a keyword, so it can't be a variable name.
+- `random_range` is inclusive at both ends.
+- Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.
+- Script `:air` is normalised to real air by `world_set_block`/`site_add`.
+- Indented config lines are continuation data: `.emodel` keys must not be indented.
+
 ## Testing
 
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
 - Baseline at branch point: 2100 + 129 + 41 = 2270 passing.
+- `tests/run_all.sh` runs the headless gameplay scenarios. Prefer these over watching the
+  game: `finevox_headless --script` loads a scenario next to the real game script, and
+  any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
+  once passed while the whole economy was frozen at 32ms a tick.
+- Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
+  `--validation` turns on Vulkan validation, `--stats` prints render counts each second.

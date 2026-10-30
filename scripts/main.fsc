@@ -8,17 +8,36 @@ source "scripts/stock.fsc"
 source "scripts/jobs.fsc"
 source "scripts/build.fsc"
 source "scripts/faction.fsc"
+source "scripts/combat.fsc"
+source "scripts/commander.fsc"
+source "scripts/match.fsc"
+
+fn tick_hands [f tick] do
+    let i 0
+    while (i < f.hands.length) do
+        let w f.hands[i]
+        if {ent_alive w.id} do
+            if (((w.id + tick) % THINK_INTERVAL) == 0) { think w }
+            set i (i + 1)
+        else do
+            release_claims w.id
+            if (w.site != nil) { site_release w.site w.id }
+            f.hands.remove i
+        end
+    end
+end
 
 fn tick_faction [f tick] do
-    for w in f.hands do
-        if (((w.id + tick) % THINK_INTERVAL) == 0) { think w }
-    end
+    tick_hands f tick
+    tick_army f tick
+    if (f.commander != nil) { commander_tick f.commander tick }
 
     if ((tick % 30) == (f.id * 7)) do
         update_sites f
         zone_reconcile f.zone
         update_regrow f tick
         update_training f
+        update_muster f
     end
 end
 
@@ -39,7 +58,7 @@ end
 
 fn update_training [f] do
     if (f.train_queue <= 0) { return nil }
-    if (f.hands.length >= f.housing) { return nil }
+    if ({population f} >= f.housing) { return nil }
     set f.train_timer (f.train_timer - 1.0)
     if (f.train_timer > 0.0) { return nil }
     if ({zone_take f.zone :provisions HAND_COST.provisions f.x f.z} < HAND_COST.provisions) {
@@ -57,9 +76,52 @@ fn publish_state [] do
                     =timber {zone_count f.zone :timber}
                     =stone {zone_count f.zone :stone}
                     =provisions {zone_count f.zone :provisions}}
-                =hands f.hands.length =housing f.housing
-                =sites f.sites.length =home [f.x f.z]}
+                =hands {population f} =housing f.housing
+                =sites f.sites.length =home [f.x f.z]
+                =army f.army.length
+                =match contest.state =winner contest.winner
+                =capture f.capture}
 end
+
+# Spread a group out around the order point so they don't all fight for one cell
+fn order_units [f cmd] do
+    let index 0
+    for id in cmd.units do
+        let entry {lookup_unit id}
+        if ((entry != nil) and (entry.faction == f.id)) do
+            let x (cmd.x + ((index % 4) * 2) - 3)
+            let z (cmd.z + ((index / 4) * 2) - 2)
+            let record entry.record
+            if {record.has :stats} do
+                order_soldier record x cmd.y z
+            else do
+                drop_job record
+                set record.state :moving
+                set record.after :rally
+                ent_goto id x cmd.y z =range 2.0 =partial true =max_nodes 6000
+            end
+            set index (index + 1)
+        end
+    end
+end
+
+# The Steward works like one strong Hand: useful early, never a hero (DESIGN 1)
+fn steward_harvest [f x y z] do
+    let block {block_at x y z}
+    let info {HARVEST.get block}
+    if (info == nil) { return nil }
+    if (block == :timber_log) do
+        fell_log [x y z]
+    elif (block == :berry_bush) do
+        world_set_block x y z :berry_bush_bare
+        f.regrow.push {=x x =y y =z z =at ({game_tick} + (BUSH_REGROW_SECONDS * 30))}
+    else do
+        world_set_block x y z :air
+    end
+    zone_deposit f.zone info.kind info.units x z
+end
+
+set RIVAL_LEVEL :standard
 
 on :start do
     log "Keystone starting, seed" WORLD_SEED
@@ -71,7 +133,17 @@ on :start do
     for i in (0..8) do
         spawn_hand player
     end
-    log "settlement at" player.x player.y player.z
+
+    let rival {make_faction 2 96 0}
+    vision_add_faction 2
+    found_settlement rival
+    endow rival 60 30 60
+    for i in (0..8) do
+        spawn_hand rival
+    end
+    set rival.commander {make_commander rival RIVAL_LEVEL}
+
+    log "settlements at" player.x player.z "and" rival.x rival.z
 end
 
 on :tick do
@@ -79,23 +151,19 @@ on :tick do
     for f in factions do
         if (f != nil) { tick_faction f tick }
     end
+    if ((tick % 30) == 3) { tick_match }
     if ((tick % 15) == 0) { publish_state }
 end
 
 on :command do
     let f factions[1]
     match cmd.name
-        :move do
-            let index 0
-            for id in cmd.units do
-                let dx ((index % 4) - 2)
-                let dz ((index / 4) - 1)
-                ent_goto id (cmd.x + dx) cmd.y (cmd.z + dz)
-                set index (index + 1)
-            end
-        end
+        :move { order_units f cmd }
         :build { place_building f cmd.building cmd.x cmd.z cmd.turns }
         :train { set f.train_queue (f.train_queue + 1) }
+        :muster { queue_unit f cmd.unit }
+        :continue { continue_open_ended cmd.pacify }
+        :steward_harvest { steward_harvest f cmd.x cmd.y cmd.z }
         _ { log "unknown command" cmd.name }
     end
 end

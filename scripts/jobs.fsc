@@ -6,7 +6,8 @@
 fn make_worker [f id] do
     return {=id id =faction f.id =state :idle =job nil =kind nil
             =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
-            =target nil =site nil =cell nil =retry 0 =failures 0 =after nil}
+            =target nil =site nil =cell nil =retry 0 =failures 0 =after nil =danger_check 0.0
+            =build_x 0 =build_y 0 =build_z 0 =scaffolding false}
 end
 
 fn worker_pos [w] {ent_pos w.id}
@@ -17,10 +18,21 @@ fn go_to [w x y z range next] do
     ent_goto w.id x y z =range range =max_nodes 16000
 end
 
+# Walk there if possible. Only when that fails does it pay for the much larger
+# search that can route through scaffolding.
 fn go_build_near [w x y z next] do
     set w.state :moving
     set w.after next
-    ent_goto w.id (x + 0.5) y (z + 0.5) =range 2.0 =max_nodes 16000 =place true
+    set w.build_x x
+    set w.build_y y
+    set w.build_z z
+    set w.scaffolding false
+    ent_goto w.id (x + 0.5) y (z + 0.5) =range 2.0 =max_nodes 6000
+end
+
+fn try_scaffolding [w] do
+    set w.scaffolding true
+    ent_goto w.id (w.build_x + 0.5) w.build_y (w.build_z + 0.5) =range 2.0 =max_nodes 16000 =place true
 end
 
 fn wait_for [w seconds next] do
@@ -415,9 +427,33 @@ fn handle_nav_block [w] do
     end
 end
 
+# Hands aren't soldiers. With raiders close they drop everything and run for home.
+fn check_danger [w] do
+    set w.danger_check (w.danger_check - THINK_SECONDS)
+    if (w.danger_check > 0.0) { return false }
+    set w.danger_check FLEE_CHECK_SECONDS
+
+    let pos {worker_pos w}
+    if (pos == nil) { return false }
+    let near {ent_find pos[0] pos[1] pos[2] FLEE_RADIUS =enemy_of w.faction =max 1}
+    if (near.length == 0) do
+        if (w.state == :fleeing) { set w.state :idle }
+        return false
+    end
+    if (w.state != :fleeing) do
+        let f factions[w.faction]
+        drop_job w
+        set w.state :fleeing
+        ent_goto w.id f.x f.y (f.z + 1) =range 3.0 =partial true =max_nodes 6000
+    end
+    return true
+end
+
 fn think [w] do
     set w.hunger (w.hunger - (THINK_SECONDS / HUNGER_SECONDS))
     if (w.hunger < 0.0) { set w.hunger 0.0 }
+
+    if {check_danger w} { return nil }
 
     match w.state
         :idle { pick_job w }
@@ -430,7 +466,11 @@ fn think [w] do
                 end
                 :failed do
                     ent_nav_ack w.id
-                    give_up w
+                    if ((w.job == :build) and (w.after == :place_block) and (not w.scaffolding)) {
+                        try_scaffolding w
+                    } {
+                        give_up w
+                    }
                 end
                 :blocked { handle_nav_block w }
                 :idle {

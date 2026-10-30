@@ -1,0 +1,32 @@
+# Scenario: the rival must develop, scout, find the player, and march, using only
+# what its own eyes tell it. The player sits idle, so the rival should win.
+
+set first_found nil
+set attacks 0
+
+on :tick do
+    let tick {game_tick}
+    let rival factions[2]
+    let player factions[1]
+    let c rival.commander
+
+    if ((first_found == nil) and (c.enemy_at != nil)) do
+        set first_found (tick / 30)
+        log "rival found the player at t=" first_found
+    end
+
+    if ((tick % 1800) == 0) do
+        log "t=" (tick / 30) "rival hands" rival.hands.length "army" rival.army.length "buildings" rival.buildings.length "stock" {stock_of rival :timber} {stock_of rival :provisions} "| player hands" player.hands.length "capture" player.capture "| explored" {vision_explored_cells 2} "match" contest.state
+    end
+
+    if (contest.state == :over) do
+        log "match over at t=" (tick / 30) "winner" contest.winner "rival found us at" first_found
+        if (contest.winner != 2) do
+            log "FAIL: wrong winner"
+            game_exit 1
+        else do
+            log "PASS"
+            game_exit 0
+        end
+    end
+end

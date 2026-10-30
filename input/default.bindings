@@ -21,5 +21,8 @@ context: gameplay
   keypress_e: begin_orbit_right
   keyrelease_e: end_orbit_right
   key_r: turn
+  key_tab: toggle_view
+  keypress_space: begin_jump
+  keyrelease_space: end_jump
   key_escape: menu
   key_f12: screenshot

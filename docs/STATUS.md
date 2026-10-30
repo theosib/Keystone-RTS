@@ -1,0 +1,47 @@
+# Keystone — Status
+
+Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones are in
+[PLAN.md](PLAN.md).
+
+## Working
+
+| Area | State |
+|---|---|
+| Boot | `finevox_run --game-root Keystone`, no game C++ |
+| World | Generated terrain, biomes, trees, forage, boulders, water |
+| Art | Procedural 32×32 textures, box-part unit models with team colours, skeletal animation |
+| Command | Orbit camera, box select, right-click move, build palette with ghost footprint |
+| Economy | Gathering, hauling, material fetch, bottom-up construction, hunger, housing |
+| Stockpile | Physical blocks with fill stages, rows and aisles, partial-stack preference, defrag |
+| Warehouse | Yard fills, Hands build mezzanine, posts, stairs, then store upstairs |
+| Vision | Per-faction 3D line of sight, terrain replica (remembered terrain), filtered units |
+| Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout |
+| Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
+| Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals |
+| Steward | First-person avatar (Tab), harvests by hand |
+| i18n | All UI via `loc`: locale fallback, named parameters, CLDR-style plurals |
+
+## Not done yet
+
+Honest gaps against Stage 1:
+
+- **Road and path placement.** Engine supports `walk-speed`; there's no build tool for it.
+- **Steward combat and carrying the Keystone.** The avatar harvests only.
+- **Settings and main menu.** The game boots straight into a match.
+- **Fog rendering is an overlay.** Dimming sits on the highest block, so tall things can
+  poke through. A fog texture in the chunk shader would be cleaner.
+- **Unit separation.** Units can overlap; there's no local avoidance.
+- **Save/load.** Script state isn't persisted.
+- **Audio.** No sound content yet.
+- **Balance.** Numbers in `scripts/data.fsc` are first guesses.
+- **CJK fonts.** Strings and plurals are ready; finegui has no font fallback yet.
+
+## Known engine limits hit along the way
+
+- Mesh uploads are one GPU submit per subchunk (~4ms each), so first view of a map fills
+  in over several seconds. Batching belongs in FineStructureVK.
+- LOD merging is off (`lod: false`). It caused visible flicker from an overhead camera.
+  That trades away the far-view triangle savings; fine at this map size, but a much
+  larger map would need a different approach.
+- `WorldReplica` doesn't copy block rotation yet. Nothing in Keystone rotates blocks so
+  far, but stairs will need it.

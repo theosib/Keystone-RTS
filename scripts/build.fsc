@@ -75,6 +75,9 @@ fn finish_building [f b] do
     let def {BUILDINGS.get b.name}
     if (def != nil) do
         if ({def.has :housing}) { set f.housing (f.housing + def.housing) }
+        if {def.has :vision} {
+            set b.lookout {vision_source f.id b.x (b.y + def.eye_height) b.z def.vision}
+        }
     end
     f.buildings.push b
     log "faction" f.id "finished" b.name
@@ -98,11 +101,34 @@ fn update_sites [f] do
         let p {site_progress f.zone.expanding}
         if ((p != nil) and p.complete) { zone_finish_floor f.zone }
     end
+
+    tidy_scaffold f
+end
+
+# Temporary scaffolding comes down once nothing's being built
+fn tidy_scaffold [f] do
+    if ((f.sites.length > 0) or (f.zone.expanding != nil)) { return nil }
+    if (f.tidy_site != nil) do
+        let p {site_progress f.tidy_site}
+        if ((p == nil) or p.complete) do
+            site_remove f.tidy_site
+            set f.tidy_site nil
+        end
+        return nil
+    end
+    if (f.scaffold.length == 0) { return nil }
+
+    let site {site_create}
+    for p in f.scaffold do
+        if ({block_at p[0] p[1] p[2]} == :scaffold) { site_add site p[0] p[1] p[2] :air }
+    end
+    set f.scaffold []
+    set f.tidy_site site
 end
 
 # The most urgent thing to build. Floors count: without room the economy stalls.
 fn next_site [f] do
     if (f.zone.expanding != nil) { return f.zone.expanding }
     if (f.sites.length > 0) { return f.sites[0].site }
-    return nil
+    return f.tidy_site
 end

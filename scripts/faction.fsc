@@ -7,7 +7,9 @@ fn make_faction [id x z] do
     let f {=id id =x spot[0] =y spot[1] =z spot[2]
            =hands [] =buildings [] =sites [] =zone nil
            =keystone nil =alive true =housing BASE_HOUSING
-           =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []}
+           =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []
+           =army [] =muster [] =muster_timer 0.0 =capture 0
+           =commander nil =keystone_seen_by nil =tidy_site nil}
     factions.set id f
     return f
 end
@@ -48,5 +50,15 @@ fn spawn_hand [f] do
     let id {ent_spawn :hand x (y + 1) z =faction f.id}
     let w {make_worker f id}
     f.hands.push w
+    index_unit id f w
     return w
 end
+
+# Commands arrive as entity ids
+set unit_index {map}
+
+fn index_unit [id f record] do
+    unit_index.set {to_sym id} {=faction f.id =record record}
+end
+
+fn lookup_unit [id] { return {unit_index.get {to_sym id}} }

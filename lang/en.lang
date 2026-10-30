@@ -9,7 +9,7 @@ ui.fps: {fps} fps
 ui.stock.timber: Timber {count}
 ui.stock.stone: Stone {count}
 ui.stock.provisions: Provisions {count}
-ui.stock.hands: Hands {count} / {cap}
+ui.stock.hands: Population {count} / {cap}
 ui.palette: Build
 ui.train_hand: Train Hand
 building.shelter: Shelter
@@ -17,3 +17,16 @@ building.forager_hut: Forager Hut
 building.sawpit: Sawpit
 building.watchtower: Watchtower
 building.palisade_wall: Log Palisade
+ui.muster: Muster
+unit.militia: Militia
+unit.shortbow: Shortbow
+unit.scout: Pathfinder
+ui.army: Army {count}
+match.victory: Victory
+match.defeat: Your Keystone has fallen
+match.victory.detail: The rival Keystone is yours.
+match.defeat.detail: Your realm is conquered, but the world remains.
+match.exit: View Chronicle and Exit
+match.continue: Continue in Open-Ended World
+match.pacify: Make Rivals Passive
+ui.keystone_danger: The Keystone is under attack!

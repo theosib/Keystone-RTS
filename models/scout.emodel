@@ -1,0 +1,47 @@
+skeleton: humanoid
+anim:idle: humanoid_idle
+anim:walk: humanoid_walk
+anim:work: humanoid_work
+
+part: vest
+bone: torso
+offset: 0 0.28 0
+size: 0.42 0.5 0.26
+color: 0.44 0.38 0.28
+
+part: head
+bone: head
+offset: 0 0.19 0
+size: 0.36 0.36 0.34
+color: 0.82 0.66 0.52
+
+part: arm_left
+bone: arm_l
+offset: 0 -0.22 0
+size: 0.13 0.46 0.14
+color: 0.45 0.4 0.34
+
+part: arm_right
+bone: arm_r
+offset: 0 -0.22 0
+size: 0.13 0.46 0.14
+color: 0.45 0.4 0.34
+
+part: leg_left
+bone: leg_l
+offset: 0 -0.38 0
+size: 0.16 0.56 0.18
+color: 0.28 0.26 0.24
+
+part: leg_right
+bone: leg_r
+offset: 0 -0.38 0
+size: 0.16 0.56 0.18
+color: 0.28 0.26 0.24
+
+part: cloak
+bone: torso
+offset: 0 0.2 -0.17
+size: 0.46 0.74 0.05
+color: 0.7 0.7 0.7
+team: 0.9

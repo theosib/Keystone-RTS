@@ -1,0 +1,11 @@
+# Light archer
+name: shortbow
+half_extents: 0.3 0.85 0.3
+max_speed: 3.7
+max_health: 35
+ai: none
+model: shortbow
+vision: 26
+anim:idle: 0
+anim:walk: 1
+anim:work: 2

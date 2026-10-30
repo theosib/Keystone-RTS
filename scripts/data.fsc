@@ -35,14 +35,49 @@ set BUILDINGS {
     =shelter {=blueprint :shelter =housing 4}
     =forager_hut {=blueprint :forager_hut =gather_bonus :provisions}
     =sawpit {=blueprint :sawpit =gather_bonus :timber}
-    =watchtower {=blueprint :watchtower}
+    =watchtower {=blueprint :watchtower =vision 44.0 =eye_height 11.0}
     =palisade_wall {=blueprint :palisade_wall}
 }
 
 set BASE_HOUSING 8
+
+# Hands run from raiders this close, for home
+set FLEE_RADIUS 9
+set FLEE_CHECK_SECONDS 1.0
 set GATHER_BONUS_RADIUS 32
 set GATHER_BONUS_SPEED 0.7
 
 # Thinks per second is 30 / THINK_INTERVAL
 set THINK_INTERVAL 8
 set THINK_SECONDS (THINK_INTERVAL / 30.0)
+
+# ---- Units ------------------------------------------------------------------
+# kind: melee or ranged. range is reach for melee, draw length for ranged.
+set UNITS {
+    =militia {=role :melee =damage 8.0 =range 2.2 =cooldown 1.0 =aggro 16
+              =cost {=timber 4 =provisions 8}}
+    =shortbow {=role :ranged =damage 6.0 =range 18.0 =cooldown 1.7 =aggro 20
+               =cost {=timber 8 =provisions 6}}
+    =scout {=role :scout =damage 0.0 =range 0.0 =cooldown 1.0 =aggro 0
+            =cost {=provisions 8}}
+}
+set TRAIN_SECONDS 8.0
+set ARROW_SPEED 26.0
+set CHASE_REPATH_DISTANCE_SQ 16
+
+# Actual height wins fights (DESIGN 6.2)
+set HIGH_GROUND_RANGE_PER_BLOCKS 2.0
+set HIGH_GROUND_DAMAGE 1.15
+
+# Morale: 1.0 is steady. Units rout below ROUT_AT and rally above RALLY_AT.
+set ROUT_AT 0.25
+set RALLY_AT 0.6
+set MORALE_LOSS_HIT 0.06
+set MORALE_LOSS_ALLY_DOWN 0.12
+set MORALE_LOSS_OUTNUMBERED 0.05
+set MORALE_GAIN_NEAR_HOME 0.12
+set MORALE_GAIN_RESTING 0.03
+
+# Conquest: enemy-seconds at the Keystone, unopposed, to take it
+set KEYSTONE_CAPTURE_POINTS 40
+set KEYSTONE_RADIUS 5

@@ -1,0 +1,169 @@
+# Tier 2 AI: a rival commander who plays by the player's rules (DESIGN 4.3).
+#
+# Fair play is structural. This file's only knowledge of the enemy comes through
+# the faction's own vision, and its only levers are the commands and economy a
+# player has. It keeps its own notes of what its scouts saw.
+
+set DIFFICULTY {
+    =apprentice {=think 3.0 =hands 10 =strike 6 =first_strike 480 =units [:militia]}
+    =standard {=think 1.0 =hands 14 =strike 8 =first_strike 300 =units [:militia :shortbow]}
+    =veteran {=think 0.5 =hands 18 =strike 10 =first_strike 210 =units [:militia :shortbow]}
+}
+
+fn make_commander [f level] do
+    return {=faction f.id =level {DIFFICULTY.get level} =next_think 0
+            =enemy_at nil =scouted [] =next_waypoint 0 =attacking false
+            =passive false =last_strike 0}
+end
+
+fn enemy_of [f] do
+    if (f.id == 1) { return factions[2] }
+    return factions[1]
+end
+
+# A loop of waypoints around the map, furthest first, as a player would scout
+fn scout_waypoints [f] do
+    let r (WORLD_RADIUS * 16 - 24)
+    return [[(0 - f.x) (0 - f.z)] [0 r] [0 (0 - r)] [r 0] [(0 - r) 0] [(0 - f.x) 0] [0 0]]
+end
+
+# Remember enemy buildings our own eyes have found
+fn note_sightings [c f] do
+    if (c.enemy_at != nil) { return nil }
+    for s in f.army do
+        let pos s.last_pos
+        if (pos != nil) do
+            let seen {ent_find pos[0] pos[1] pos[2] 40 =enemy_of f.id =max 6}
+            for id in seen do
+                if {vision_can_see_ent f.id id} do
+                    let p {ent_pos id}
+                    set c.enemy_at [p[0] p[1] p[2]]
+                    log "commander" f.id "found the enemy at" p
+                    return nil
+                end
+            end
+        end
+    end
+end
+
+fn plan_economy [c f] do
+    if ((f.hands.length < c.level.hands) and (f.train_queue == 0) and ({population f} < f.housing)) {
+        set f.train_queue 1
+    }
+
+    # Housing before it's needed, then the gather bonuses
+    if ((f.sites.length == 0) and ({stock_of f :timber} > 30)) do
+        if (({population f} + 3) >= f.housing) do
+            ai_place f :shelter
+        elif (not {has_building f :sawpit}) do
+            ai_place f :sawpit
+        elif (not {has_building f :forager_hut}) do
+            ai_place f :forager_hut
+        end
+    end
+end
+
+fn has_building [f name] do
+    for b in f.buildings do
+        if (b.name == name) { return true }
+    end
+    for b in f.sites do
+        if (b.name == name) { return true }
+    end
+    return false
+end
+
+# Try a few spots around the hall, away from the yard
+fn ai_place [f name] do
+    let count (f.buildings.length + f.sites.length)
+    let angle (2.4 * count)
+    let radius (16 + (count * 3))
+    let x {floor (f.x - 4 + (radius * {cos angle}))}
+    let z {floor (f.z + (radius * {sin angle}))}
+    place_building f name x z 0
+end
+
+fn plan_army [c f tick] do
+    if ((f.army.length + f.muster.length) >= ({population f} + 2)) { return nil }
+    let wanted (c.level.strike + 2)
+    if ((f.army.length + f.muster.length) >= wanted) { return nil }
+
+    # Always one scout out before anything else
+    let scouts 0
+    for s in f.army do
+        if (s.kind == :scout) { set scouts (scouts + 1) }
+    end
+    for kind in f.muster do
+        if (kind == :scout) { set scouts (scouts + 1) }
+    end
+    if (scouts == 0) do
+        queue_unit f :scout
+        return nil
+    end
+
+    if (({stock_of f :provisions} > 24) and (f.muster.length < 2)) do
+        let units c.level.units
+        queue_unit f units[{random_range 0 (units.length - 1)}]
+    end
+end
+
+fn plan_scouting [c f] do
+    let points {scout_waypoints f}
+    for s in f.army do
+        if ((s.kind == :scout) and (s.order == nil)) do
+            let wp points[c.next_waypoint % points.length]
+            set c.next_waypoint (c.next_waypoint + 1)
+            let y {ground_y wp[0] wp[1]}
+            if (y == nil) { set y 70 }
+            order_soldier s wp[0] (y + 1) wp[1]
+        end
+    end
+end
+
+fn plan_attack [c f tick] do
+    if c.passive { return nil }
+    if (c.enemy_at == nil) { return nil }
+    if ((tick / 30) < c.level.first_strike) { return nil }
+
+    let fighters []
+    for s in f.army do
+        if ((s.kind != :scout) and (s.state != :rout)) { fighters.push s }
+    end
+    if (fighters.length < c.level.strike) { return nil }
+    if ((tick - c.last_strike) < 1800) { return nil }
+
+    set c.last_strike tick
+    log "commander" f.id "strikes with" fighters.length "at" c.enemy_at
+    let enemy {enemy_of f}
+    for s in fighters do
+        # March on what we saw; if the Keystone is known, go for it
+        if (enemy.keystone_seen_by == f.id) do
+            order_soldier s enemy.keystone[0] enemy.keystone[1] enemy.keystone[2]
+        else do
+            order_soldier s c.enemy_at[0] c.enemy_at[1] c.enemy_at[2]
+        end
+    end
+end
+
+fn commander_tick [c tick] do
+    if (tick < c.next_think) { return nil }
+    set c.next_think (tick + (c.level.think * 30))
+
+    let f factions[c.faction]
+    if (not f.alive) { return nil }
+
+    plan_economy c f
+    plan_army c f tick
+    plan_scouting c f
+    note_sightings c f
+    plan_attack c f tick
+end
+
+# Called when the player asks for peace after a match
+fn commander_pacify [c] do
+    set c.passive true
+    let f factions[c.faction]
+    for s in f.army do
+        order_soldier s f.x f.y (f.z + 10)
+    end
+end

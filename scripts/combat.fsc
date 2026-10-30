@@ -1,0 +1,262 @@
+# Soldiers: fighting, height, and morale (DESIGN 6.2).
+#
+# Nobody fights to the last pixel. Hurt, outnumbered, or cut off, a unit's morale
+# falls until it breaks and runs for home.
+
+fn make_soldier [f id kind] do
+    return {=id id =faction f.id =kind kind =stats {UNITS.get kind}
+            =state :hold =order nil =order_x 0 =order_y 0 =order_z 0
+            =target nil =cooldown 0.0 =morale 1.0 =last_hp nil =moving false
+            =chase_x 0 =chase_z 0 =last_pos nil}
+end
+
+fn spawn_soldier [f kind] do
+    let angle ({random_float} * 6.28)
+    let x (f.x + (5 * {cos angle}))
+    let z (f.z + 10 + (2 * {sin angle}))
+    let y {ground_y {floor x} {floor z}}
+    if (y == nil) { set y f.y }
+    let id {ent_spawn kind x (y + 1) z =faction f.id}
+    let s {make_soldier f id kind}
+    set s.last_hp {ent_health id}
+    f.army.push s
+    index_unit id f s
+    return s
+end
+
+fn order_soldier [s x y z] do
+    set s.order :move
+    set s.order_x x
+    set s.order_y y
+    set s.order_z z
+    set s.target nil
+    set s.moving false
+end
+
+fn dist3 [a b] do
+    let dx (a[0] - b[0])
+    let dy (a[1] - b[1])
+    let dz (a[2] - b[2])
+    return {sqrt ((dx * dx) + (dy * dy) + (dz * dz))}
+end
+
+# Enemies this unit can actually see, nearest first. Uses the faction's vision, so
+# the AI and the player play by the same rules.
+fn find_enemy [s pos radius] do
+    let f s.faction
+    let found {ent_find pos[0] pos[1] pos[2] radius =enemy_of f =max 8}
+    for id in found do
+        if {vision_can_see_ent f id} { return id }
+    end
+    return nil
+end
+
+fn in_range [s pos target_pos] do
+    let dy (pos[1] - target_pos[1])
+    let reach s.stats.range
+    if ((s.stats.role == :ranged) and (dy > 0.0)) {
+        set reach (reach + (dy / HIGH_GROUND_RANGE_PER_BLOCKS))
+    }
+    return ({dist3 pos target_pos} <= reach)
+end
+
+fn strike [s pos target_pos] do
+    let damage s.stats.damage
+    if ((pos[1] - target_pos[1]) >= 2.0) { set damage (damage * HIGH_GROUND_DAMAGE) }
+
+    ent_look_at s.id target_pos[0] target_pos[1] target_pos[2]
+    ent_anim s.id :work
+
+    if (s.stats.role == :ranged) do
+        projectile_fire pos[0] (pos[1] + 1.4) pos[2] target_pos[0] (target_pos[1] + 1.0) target_pos[2] =speed ARROW_SPEED =damage damage =owner s.id =faction s.faction
+    else do
+        ent_damage s.target damage s.id
+    end
+    set s.cooldown s.stats.cooldown
+end
+
+fn update_morale [s pos] do
+    let hp {ent_health s.id}
+    if ((s.last_hp != nil) and (hp < s.last_hp)) {
+        set s.morale (s.morale - MORALE_LOSS_HIT)
+    }
+    set s.last_hp hp
+
+    let f factions[s.faction]
+    let enemies {ent_find pos[0] pos[1] pos[2] 14 =enemy_of s.faction =max 16}
+    if (enemies.length > 0) do
+        let friends {ent_find pos[0] pos[1] pos[2] 14 =faction s.faction =max 16}
+        if (enemies.length > friends.length) {
+            set s.morale (s.morale - (MORALE_LOSS_OUTNUMBERED * THINK_SECONDS))
+        }
+    else do
+        set s.morale (s.morale + (MORALE_GAIN_RESTING * THINK_SECONDS))
+    end
+
+    if ({dist2 pos[0] pos[2] f.x f.z} < 400) {
+        set s.morale (s.morale + (MORALE_GAIN_NEAR_HOME * THINK_SECONDS))
+    }
+    if (s.morale > 1.0) { set s.morale 1.0 }
+    if (s.morale < 0.0) { set s.morale 0.0 }
+end
+
+fn rout [s] do
+    set s.state :rout
+    set s.target nil
+    set s.moving false
+    ent_speed s.id 1.2
+    let f factions[s.faction]
+    ent_goto s.id f.x f.y (f.z + 10) =range 6.0 =partial true =max_nodes 6000
+end
+
+fn think_rout [s pos] do
+    let f factions[s.faction]
+    if ((s.morale >= RALLY_AT) and ({dist2 pos[0] pos[2] f.x f.z} < 900)) do
+        set s.state :hold
+        ent_speed s.id 1.0
+        ent_stop s.id
+        return nil
+    end
+    let nav {ent_nav s.id}
+    if ((nav == :arrived) or (nav == :failed) or (nav == :idle)) do
+        ent_nav_ack s.id
+        ent_goto s.id f.x f.y (f.z + 10) =range 6.0 =partial true =max_nodes 6000
+    end
+end
+
+# Searching for a path is the most expensive thing a unit does. Only search again
+# when the old route has stopped being useful.
+fn chase [s target_pos] do
+    let nav {ent_nav s.id}
+    if (nav == :pending) { return nil }
+    let moved {dist2 s.chase_x s.chase_z target_pos[0] target_pos[2]}
+    if ((nav == :moving) and (moved < CHASE_REPATH_DISTANCE_SQ)) { return nil }
+
+    ent_nav_ack s.id
+    set s.chase_x target_pos[0]
+    set s.chase_z target_pos[2]
+    ent_goto s.id target_pos[0] target_pos[1] target_pos[2] =range (s.stats.range * 0.8) =max_nodes 6000
+    set s.moving true
+end
+
+fn think_soldier [s] do
+    if (not {ent_alive s.id}) { return nil }
+    let pos {ent_pos s.id}
+    if (pos == nil) { return nil }
+
+    if (s.cooldown > 0.0) { set s.cooldown (s.cooldown - THINK_SECONDS) }
+    update_morale s pos
+
+    if (s.state == :rout) { return think_rout s pos }
+    if (s.morale < ROUT_AT) { return rout s }
+
+    if (s.stats.role == :scout) { return think_scout s pos }
+
+    # Keep fighting what's in front of you
+    if ((s.target != nil) and (not {ent_alive s.target})) { set s.target nil }
+    if ((s.target != nil) and (not {vision_can_see_ent s.faction s.target})) { set s.target nil }
+    if (s.target == nil) { set s.target {find_enemy s pos s.stats.aggro} }
+
+    if (s.target != nil) do
+        let target_pos {ent_pos s.target}
+        if {in_range s pos target_pos} do
+            if s.moving do
+                ent_stop s.id
+                set s.moving false
+            end
+            if (s.cooldown <= 0.0) { strike s pos target_pos }
+            return nil
+        end
+        chase s target_pos
+        return nil
+    end
+
+    # Nothing to fight: carry out orders
+    if (s.order == :move) do
+        let nav {ent_nav s.id}
+        if ((nav == :idle) or (nav == :failed)) do
+            ent_nav_ack s.id
+            ent_goto s.id s.order_x s.order_y s.order_z =range 4.0 =partial true =max_nodes 6000
+            set s.moving true
+        elif (nav == :arrived) do
+            ent_nav_ack s.id
+            set s.order nil
+            set s.moving false
+        end
+    end
+end
+
+fn think_scout [s pos] do
+    if (s.order == :move) do
+        let nav {ent_nav s.id}
+        if ((nav == :idle) or (nav == :failed)) do
+            ent_nav_ack s.id
+            ent_goto s.id s.order_x s.order_y s.order_z =range 6.0 =partial true =max_nodes 6000
+        elif (nav == :arrived) do
+            ent_nav_ack s.id
+            set s.order nil
+        end
+    end
+end
+
+# A unit going down shakes those nearby
+fn on_soldier_lost [f s] do
+    let pos nil
+    if (s.last_pos != nil) { set pos s.last_pos }
+    if (pos == nil) { return nil }
+    for other in f.army do
+        if ({dist2 other.last_pos[0] other.last_pos[2] pos[0] pos[2]} < 144) {
+            set other.morale (other.morale - MORALE_LOSS_ALLY_DOWN)
+        }
+    end
+end
+
+fn tick_army [f tick] do
+    let i 0
+    while (i < f.army.length) do
+        let s f.army[i]
+        if {ent_alive s.id} do
+            let p {ent_pos s.id}
+            if (p != nil) { set s.last_pos p }
+            if (((s.id + tick) % THINK_INTERVAL) == 0) { think_soldier s }
+            set i (i + 1)
+        else do
+            on_soldier_lost f s
+            f.army.remove i
+        end
+    end
+end
+
+fn can_afford [f cost] do
+    for kind in KIND_NAMES do
+        if ({cost.has kind} and ({stock_of f kind} < {cost.get kind})) { return false }
+    end
+    return true
+end
+
+fn pay [f cost] do
+    for kind in KIND_NAMES do
+        if {cost.has kind} { zone_take f.zone kind {cost.get kind} f.x f.z }
+    end
+end
+
+fn population [f] { return (f.hands.length + f.army.length) }
+
+fn queue_unit [f kind] do
+    f.muster.push kind
+end
+
+fn update_muster [f] do
+    if (f.muster.length == 0) { return nil }
+    if ({population f} >= f.housing) { return nil }
+    set f.muster_timer (f.muster_timer - 1.0)
+    if (f.muster_timer > 0.0) { return nil }
+
+    let kind f.muster[0]
+    let stats {UNITS.get kind}
+    if (not {can_afford f stats.cost}) { return nil }
+    pay f stats.cost
+    f.muster.remove 0
+    set f.muster_timer TRAIN_SECONDS
+    spawn_soldier f kind
+end
