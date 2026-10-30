@@ -1,0 +1,24 @@
+# Keystone input bindings
+context: gameplay
+  keypress_w: begin_pan_forward
+  keyrelease_w: end_pan_forward
+  keypress_s: begin_pan_back
+  keyrelease_s: end_pan_back
+  keypress_a: begin_pan_left
+  keyrelease_a: end_pan_left
+  keypress_d: begin_pan_right
+  keyrelease_d: end_pan_right
+  keypress_arrow_up: begin_pan_forward
+  keyrelease_arrow_up: end_pan_forward
+  keypress_arrow_down: begin_pan_back
+  keyrelease_arrow_down: end_pan_back
+  keypress_arrow_left: begin_pan_left
+  keyrelease_arrow_left: end_pan_left
+  keypress_arrow_right: begin_pan_right
+  keyrelease_arrow_right: end_pan_right
+  keypress_q: begin_orbit_left
+  keyrelease_q: end_orbit_left
+  keypress_e: begin_orbit_right
+  keyrelease_e: end_orbit_right
+  key_escape: menu
+  key_f12: screenshot

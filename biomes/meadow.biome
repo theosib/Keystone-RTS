@@ -1,0 +1,12 @@
+name: Meadow
+temperature_min: 0.3
+temperature_max: 0.8
+humidity_min: 0.0
+humidity_max: 0.55
+base_height: 66.0
+height_variation: 10.0
+height_scale: 1.0
+surface: turf
+filler: loam
+filler_depth: 3
+stone: stone

@@ -1,0 +1,4 @@
+# Standard cube. No geometry key: cubes use the built-in renderer.
+collision: full
+rotations: none
+hardness: 1.0

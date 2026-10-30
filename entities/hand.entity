@@ -1,0 +1,10 @@
+# A settlement worker
+name: hand
+half_extents: 0.3 0.85 0.3
+max_speed: 3.6
+max_health: 30
+ai: none
+model: hand
+anim:idle: 0
+anim:walk: 1
+anim:work: 2

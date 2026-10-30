@@ -1,0 +1,9 @@
+type: tree
+trunk: timber_log
+leaves: canopy
+min_trunk_height: 4
+max_trunk_height: 7
+leaf_radius: 2
+requires_soil: true
+density: 0.012
+surface: turf

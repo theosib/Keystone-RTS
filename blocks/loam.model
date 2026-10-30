@@ -1,0 +1,3 @@
+include: base/solid_cube
+texture: blocks/loam
+hardness: 1.0

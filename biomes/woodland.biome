@@ -1,0 +1,12 @@
+name: Woodland
+temperature_min: 0.2
+temperature_max: 0.8
+humidity_min: 0.5
+humidity_max: 1.0
+base_height: 68.0
+height_variation: 14.0
+height_scale: 1.0
+surface: turf
+filler: loam
+filler_depth: 3
+stone: stone

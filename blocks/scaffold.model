@@ -1,0 +1,4 @@
+include: base/solid_cube
+texture: blocks/scaffold
+opaque: false
+hardness: 0.5

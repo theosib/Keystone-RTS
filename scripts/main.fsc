@@ -1,0 +1,40 @@
+# Keystone game script (game thread)
+#
+# Everything here is game policy. Mechanisms come from engine natives.
+
+set hands []
+
+fn ground_at [x z] do
+    let y {surface_y x z}
+    if (y == nil) { return nil }
+    return (y + 1)
+end
+
+on :start do
+    log "Keystone starting, seed" WORLD_SEED
+    set_time_of_day 0.2
+    for i in (0..8) do
+        let x (i * 2 - 8)
+        let y {ground_at x 0}
+        let id {ent_spawn :hand x y 0 =faction 1}
+        hands.push id
+    end
+    log "spawned" hands.length "hands"
+end
+
+on :command do
+    match cmd.name
+        :move do
+            let index 0
+            for id in cmd.units do
+                let dx (index % 4 - 2)
+                let dz ((index / 4) - 1)
+                ent_goto id (cmd.x + dx) cmd.y (cmd.z + dz)
+                set index (index + 1)
+            end
+        end
+        _ do
+            log "unknown command" cmd.name
+        end
+    end
+end

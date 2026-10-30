@@ -1,0 +1,5 @@
+include: base/solid_cube
+texture: blocks/turf_side
+texture-top: blocks/turf_top
+texture-bottom: blocks/loam
+hardness: 1.0

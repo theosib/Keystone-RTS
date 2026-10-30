@@ -1,0 +1,3 @@
+include: base/solid_cube
+texture: blocks/flagstone
+hardness: 3.0

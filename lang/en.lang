@@ -1,0 +1,7 @@
+# Keystone: English
+ui.title: Keystone
+ui.selected: {count} selected
+ui.selected.one: 1 Hand selected
+ui.selected.other: {count} Hands selected
+ui.hint.select: Left-drag to select, right-click to send
+ui.fps: {fps} fps

@@ -1,0 +1,4 @@
+include: base/solid_cube
+texture: blocks/keystone
+light-emission: 12
+hardness: 8.0

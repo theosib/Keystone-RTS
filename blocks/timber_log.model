@@ -1,0 +1,5 @@
+include: base/solid_cube
+texture: blocks/bark
+texture-top: blocks/log_end
+texture-bottom: blocks/log_end
+hardness: 1.5

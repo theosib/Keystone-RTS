@@ -1,0 +1,22 @@
+# Shared humanoid rig. Feet at y=0, facing +Z.
+bone: hips
+parent: -
+position: 0 0.82 0
+bone: torso
+parent: hips
+position: 0 0.08 0
+bone: head
+parent: torso
+position: 0 0.62 0
+bone: arm_l
+parent: torso
+position: -0.3 0.52 0
+bone: arm_r
+parent: torso
+position: 0.3 0.52 0
+bone: leg_l
+parent: hips
+position: -0.12 0 0
+bone: leg_r
+parent: hips
+position: 0.12 0 0
