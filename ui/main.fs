@@ -8,6 +8,8 @@ set placing nil
 set place_turns 0
 set state nil
 
+ui_skin "ui/skin/hearth.fgs"
+
 set_faction_color 1 0.25 0.45 0.95
 set_faction_color 2 0.85 0.28 0.25
 

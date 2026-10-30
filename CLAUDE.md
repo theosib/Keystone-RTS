@@ -41,6 +41,7 @@ finescript traps that cost real time here:
 - A statement ends at the newline. Named args can't wrap to the next line.
 - `match` is a keyword, so it can't be a variable name.
 - `random_range` is inclusive at both ends.
+- `{}` is an empty block, not an empty map.
 - Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.
 - Script `:air` is normalised to real air by `world_set_block`/`site_add`.
 - Indented config lines are continuation data: `.emodel` keys must not be indented.

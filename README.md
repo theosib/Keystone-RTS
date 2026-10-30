@@ -35,11 +35,14 @@ Build the engine once (see [CLAUDE.md](CLAUDE.md)), then:
 |---|---|
 | `game.conf` | Manifest: world size, scripts, fog of war |
 | `scripts/` | Game logic, game thread. `main.fsc` sources the rest |
-| `ui/` | HUD, render thread. Talks to the game only through commands |
+| `ui/` | HUD, render thread. Talks to the game only through commands. `ui/skin/` is its look |
 | `blocks/` `entities/` `models/` `blueprints/` `biomes/` `features/` | Content |
 | `lang/` | Every player-facing string, per locale |
 | `tools/` | Generators for textures, animation clips, and fill-stage blocks (Python, uses `.venv`) |
 | `tests/` | Headless gameplay scenarios. `tests/run_all.sh` runs them all |
 
-Regenerate assets with `tools/gen_textures.sh`, `python3 tools/gen_models.py`, and
-`python3 tools/gen_blocks.py`.
+Regenerate assets with `tools/gen_textures.sh`, `python3 tools/gen_models.py`,
+`python3 tools/gen_blocks.py`, and `.venv/bin/python tools/gen_ui_skin.py`.
+
+The UI font is [Almendra](https://fonts.google.com/specimen/Almendra) by Ana Sanfelippo, under the
+SIL Open Font License: see `ui/skin/Almendra-OFL.txt`.
