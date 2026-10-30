@@ -22,6 +22,35 @@ fn ground_y [x z] do
     return nil
 end
 
+# What the world is made of. To ground_y a roof is ground too, so anything setting a
+# unit down has to ask about the block as well as its height
+set TERRAIN_BLOCKS [:turf :loam :stone :sand :gravel]
+
+fn open_ground [x z] do
+    let y {ground_y x z}
+    if ((y == nil) or (y <= SEA_LEVEL)) { return nil }
+    if (not {TERRAIN_BLOCKS.contains {block_at x y z}}) { return nil }
+    if (({block_at x (y + 1) z} != :air) or ({block_at x (y + 2) z} != :air)) { return nil }
+    return y
+end
+
+# Where to set a unit down near (cx, cz): open ground, widening out past whatever has
+# been built there. Each ring gets a few tries so units don't all land on one spot.
+fn spawn_point [cx cz radius fallback_y] do
+    let r radius
+    while (r <= (radius + 32)) do
+        for i in (0..16) do
+            let angle ({random_float} * 6.28)
+            let x {floor (cx + (r * {cos angle}))}
+            let z {floor (cz + (r * {sin angle}))}
+            let y {open_ground x z}
+            if (y != nil) { return [(x + 0.5) (y + 1) (z + 0.5)] }
+        end
+        set r (r + 4)
+    end
+    return [cx (fallback_y + 1) cz]
+end
+
 fn dist2 [ax az bx bz] do
     let dx (ax - bx)
     let dz (az - bz)

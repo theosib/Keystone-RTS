@@ -11,12 +11,8 @@ fn make_soldier [f id kind] do
 end
 
 fn spawn_soldier [f kind] do
-    let angle ({random_float} * 6.28)
-    let x (f.x + (5 * {cos angle}))
-    let z (f.z + 10 + (2 * {sin angle}))
-    let y {ground_y {floor x} {floor z}}
-    if (y == nil) { set y f.y }
-    let id {ent_spawn kind x (y + 1) z =faction f.id}
+    let at {spawn_point f.x (f.z + 10) 5 f.y}
+    let id {ent_spawn kind at =faction f.id}
     let s {make_soldier f id kind}
     set s.last_hp {ent_health id}
     f.army.push s

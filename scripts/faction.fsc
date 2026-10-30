@@ -42,12 +42,8 @@ fn endow [f timber stone provisions] do
 end
 
 fn spawn_hand [f] do
-    let angle ({random_float} * 6.28)
-    let x (f.x + (6 * {cos angle}))
-    let z (f.z + 6 + (2 * {sin angle}))
-    let y {ground_y {floor x} {floor z}}
-    if (y == nil) { set y f.y }
-    let id {ent_spawn :hand x (y + 1) z =faction f.id}
+    let at {spawn_point f.x (f.z + 6) 6 f.y}
+    let id {ent_spawn :hand at =faction f.id}
     let w {make_worker f id}
     f.hands.push w
     index_unit id f w

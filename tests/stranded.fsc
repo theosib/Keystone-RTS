@@ -1,0 +1,82 @@
+# Scenario: units never start on top of buildings, and one that ends up somewhere tall
+# gets down when ordered. Neither needs a stair: falling doesn't hurt here.
+
+set GROUND_X -60
+set GROUND_Z 40
+set TOWER_HEIGHT 9
+
+set hand nil
+set goal nil
+set checked_spawns false
+
+fn build_block [x y z] { world_set_block x y z :planks }
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+# A slab of roof over everything near the point units spawn around
+fn roof_over [cx cz radius] do
+    let y ({ground_y cx cz} + 6)
+    for dx in ((0 - radius)..radius) do
+        for dz in ((0 - radius)..radius) do
+            build_block (cx + dx) y (cz + dz)
+        end
+    end
+end
+
+fn check_spawns [] do
+    let f factions[1]
+    roof_over f.x (f.z + 6) 9
+    for i in (0..60) do
+        let at {spawn_point f.x (f.z + 6) 6 f.y}
+        let x {floor at[0]}
+        let z {floor at[2]}
+        let under {block_at x (at[1] - 1) z}
+        if (not {TERRAIN_BLOCKS.contains under}) do
+            fail {str_concat "spawned on " {to_str under}}
+            return nil
+        end
+    end
+    log "spawn points clear of the roof"
+end
+
+on :tick do
+    let tick {game_tick}
+
+    if (tick == 60) do
+        check_spawns
+
+        let g {ground_y GROUND_X GROUND_Z}
+        for dx in (0..3) do
+            for dz in (0..3) do
+                for h in (1..(TOWER_HEIGHT + 1)) do
+                    build_block (GROUND_X + dx) (g + h) (GROUND_Z + dz)
+                end
+            end
+        end
+        set hand {ent_spawn :hand (GROUND_X + 1.5) (g + TOWER_HEIGHT + 1) (GROUND_Z + 1.5) =faction 1}
+        set goal [(GROUND_X + 14) (g + 1) GROUND_Z]
+    end
+
+    # The same order a right-click gives
+    if (tick == 90) do
+        ent_stop hand
+        ent_goto hand goal[0] goal[1] goal[2] =range 2.0 =partial true =max_nodes 6000
+    end
+
+    if ((tick > 90) and (hand != nil)) do
+        let p {ent_pos hand}
+        if (({floor p[0]} >= (GROUND_X + 12)) and (p[1] <= (goal[1] + 1))) do
+            log "got down and across at t=" (tick / 30)
+            log "PASS"
+            game_exit 0
+        end
+    end
+
+    if (tick == 900) do
+        let p {ent_pos hand}
+        fail {str_concat "still stranded at " {to_str p}}
+    end
+end

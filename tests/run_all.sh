@@ -23,6 +23,7 @@ run() {
     fi
 }
 
+run stranded 1000
 run economy 9100
 run warehouse 9100
 run match 54000
