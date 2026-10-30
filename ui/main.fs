@@ -173,13 +173,8 @@ on :action do
     match action
         :screenshot { request_screenshot "screenshots/keystone.png" }
         :turn { set place_turns ((place_turns + 1) % 4) }
-        :menu do
-            if (placing != nil) {
-                set placing nil
-            } {
-                quit_game
-            }
-        end
+        :cancel { set placing nil }
+        :quit { quit_game }
         _ { nil }
     end
 end

@@ -1,5 +1,9 @@
 # Keystone input bindings
+# The first match wins, and a bare key matches with any modifier held, so what's
+# bound with a modifier has to come before the same key bound without one.
 context: gameplay
+  mod_super+key_q: quit
+  mod_ctrl+key_q: quit
   keypress_w: begin_pan_forward
   keyrelease_w: end_pan_forward
   keypress_s: begin_pan_back
@@ -30,5 +34,5 @@ context: gameplay
   key_tab: toggle_view
   keypress_space: begin_jump
   keyrelease_space: end_jump
-  key_escape: menu
+  key_escape: cancel
   key_f12: screenshot

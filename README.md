@@ -27,7 +27,8 @@ Build the engine once (see [CLAUDE.md](CLAUDE.md)), then:
 | Tab | Step down as the Steward, or back up (WASD, mouse, Space, left-click to work) |
 | Build palette | Pick a building, left-click to place, R to turn, right-click to cancel |
 | F12 | Screenshot |
-| Esc | Cancel placement, or quit |
+| Esc | Cancel placement |
+| Cmd+Q / Ctrl+Q | Quit |
 
 ## Layout
 

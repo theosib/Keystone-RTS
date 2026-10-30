@@ -64,6 +64,42 @@ terrain literally isn't there; remembered terrain stays stale until re-scouted (
 
 Later stages (DESIGN §8 Stage 2+) are out of scope until the slice is fun.
 
+## Save and load (not built yet)
+
+The design, worked out from the code as it stands, for when this gets picked up.
+
+**When.** Every clean exit ends in `GameClient::run` after `stopThreads`, whether from Cmd+Q, the
+window's close button, or `quit_game`. With the game thread stopped nothing is moving, so
+that's the one place to save, and there's no race to think about. Saving during play, which a
+crash would need, has to happen on the game thread between ticks.
+
+**Atomic.** Write to a temp folder and rename it into place, keeping the old save as a backup, so
+a failed save can't damage a good one. A save that won't load should stop with an error, not
+start a new game that would overwrite it on quit.
+
+**What gets saved.**
+
+| State | How |
+|---|---|
+| World, and the replica of explored terrain | `RegionFile`. Light is rebuilt on load, as after worldgen |
+| Entities | `EntitySerializer`, plus a way to restore an entity under its old id: scripts hold ids everywhere |
+| Construction sites | Ids and cells from `GameRuntime::sites_`, and `nextSiteId_`. Scripts hold those too |
+| Vision | Each faction's explored cells, and lookouts with their handles |
+| Clocks | `ScriptGameSubsystem::tickCount_`, since commanders schedule by tick, and `WorldTime` |
+| Script state | `on :save` hands over `factions`, `unit_index`, and `contest` |
+| Camera and Steward | Passed down by the client. The Steward is left out of the entities, as the client spawns it |
+
+Script state is plain data with no closures, so one generic encoder covers it, but that has to
+keep shared references: `unit_index` and `f.hands` point at the same worker records. `finescript`'s
+`cborEncode` doesn't, so write a table of containers and refer to them by index.
+
+**Left out on purpose.** Paths, work claims, and arrows in flight. On `on :resume`, workers go back
+to `:idle` with `site`, `cell`, `target`, and `after` cleared, and pick up work again. They keep
+what they carry. Soldiers keep their orders.
+
+**Automation must not touch the player's save.** `--exit-after` implies no saving, and the
+headless runner only saves to a path it's given. `--new` starts over.
+
 ## Script-cost budget
 
 finescript is a tree-walking interpreter. Per-tick-per-unit script is out. Units think at

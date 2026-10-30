@@ -32,7 +32,7 @@ Honest gaps against Stage 1:
 - **Fog rendering is an overlay.** Dimming sits on the highest block, so tall things can
   poke through. A fog texture in the chunk shader would be cleaner.
 - **Unit separation.** Units can overlap; there's no local avoidance.
-- **Save/load.** Script state isn't persisted.
+- **Save/load.** Nothing is saved: quitting ends the game. Designed in [PLAN.md](PLAN.md).
 - **Audio.** No sound content yet.
 - **Balance.** Numbers in `scripts/data.fsc` are first guesses.
 - **CJK fonts.** Strings and plurals are ready; finegui has no font fallback yet.
