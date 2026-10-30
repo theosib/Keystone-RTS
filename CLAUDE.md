@@ -21,6 +21,8 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
   `../finegui`, `../finenet`, `../FineStructureVK`.
 - Build dir: `../fv-keystone` (Ninja, Release). Fresh configure needs
   `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (lz4's CMake is too old for CMake 4).
+- Dependencies must be Release too (`cmake -DCMAKE_BUILD_TYPE=Release` in each `build/`).
+  An empty build type means `-O0`, and finescript runs 16-24x slower.
 
 ## Script gotchas
 
@@ -34,6 +36,10 @@ finescript traps that cost real time here:
 - Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.
 - Script `:air` is normalised to real air by `world_set_block`/`site_add`.
 - Indented config lines are continuation data: `.emodel` keys must not be indented.
+- A new unit order must `ent_stop` first. Otherwise the old route finishes, reads as
+  `:arrived`, and the new order is taken as done.
+- Path searches are the main CPU cost: never re-issue `ent_goto` every think. See the
+  backoff in `give_up` and the re-search rule in `chase`.
 
 ## Testing
 

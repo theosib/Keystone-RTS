@@ -27,9 +27,9 @@ fn scout_waypoints [f] do
     return [[(0 - f.x) (0 - f.z)] [0 r] [0 (0 - r)] [r 0] [(0 - r) 0] [(0 - f.x) 0] [0 0]]
 end
 
-# Remember enemy buildings our own eyes have found
+# Remember where our own eyes last found the enemy. Newest sighting wins: an army
+# marching on a stale report arrives at nothing.
 fn note_sightings [c f] do
-    if (c.enemy_at != nil) { return nil }
     for s in f.army do
         let pos s.last_pos
         if (pos != nil) do
@@ -37,8 +37,8 @@ fn note_sightings [c f] do
             for id in seen do
                 if {vision_can_see_ent f.id id} do
                     let p {ent_pos id}
+                    if (c.enemy_at == nil) { log "commander" f.id "found the enemy at" p }
                     set c.enemy_at [p[0] p[1] p[2]]
-                    log "commander" f.id "found the enemy at" p
                     return nil
                 end
             end
@@ -53,7 +53,8 @@ fn plan_economy [c f] do
 
     # Housing before it's needed, then the gather bonuses
     if ((f.sites.length == 0) and ({stock_of f :timber} > 30)) do
-        if (({population f} + 3) >= f.housing) do
+        # Room for the workforce and the army it means to raise
+        if (f.housing < (c.level.hands + c.level.strike + 4)) do
             ai_place f :shelter
         elif (not {has_building f :sawpit}) do
             ai_place f :sawpit
@@ -107,12 +108,26 @@ fn plan_army [c f tick] do
     end
 end
 
-fn plan_scouting [c f] do
+# Once the enemy is located, the question becomes where their Keystone is. Scouts
+# circle the last sighting, widening, until their own eyes find it.
+fn next_scout_point [c f] do
+    let enemy {enemy_of f}
+    let count c.next_waypoint
+    set c.next_waypoint (count + 1)
+    if ((c.enemy_at != nil) and (enemy.keystone_seen_by != f.id)) do
+        let angle (count * 1.7)
+        let radius (16 + ((count % 5) * 10))
+        return [{to_int (c.enemy_at[0] + (radius * {cos angle}))}
+                {to_int (c.enemy_at[2] + (radius * {sin angle}))}]
+    end
     let points {scout_waypoints f}
+    return points[count % points.length]
+end
+
+fn plan_scouting [c f] do
     for s in f.army do
         if ((s.kind == :scout) and (s.order == nil)) do
-            let wp points[c.next_waypoint % points.length]
-            set c.next_waypoint (c.next_waypoint + 1)
+            let wp {next_scout_point c f}
             let y {ground_y wp[0] wp[1]}
             if (y == nil) { set y 70 }
             order_soldier s wp[0] (y + 1) wp[1]
@@ -129,11 +144,15 @@ fn plan_attack [c f tick] do
     for s in f.army do
         if ((s.kind != :scout) and (s.state != :rout)) { fighters.push s }
     end
-    if (fighters.length < c.level.strike) { return nil }
-    if ((tick - c.last_strike) < 1800) { return nil }
+    # Launching takes a full force; keeping up the pressure doesn't
+    let needed c.level.strike
+    if c.attacking { set needed (needed / 2) }
+    if (fighters.length < needed) { return nil }
+    if ((tick - c.last_strike) < 1200) { return nil }
 
+    if (not c.attacking) { log "commander" f.id "strikes with" fighters.length "at" c.enemy_at }
+    set c.attacking true
     set c.last_strike tick
-    log "commander" f.id "strikes with" fighters.length "at" c.enemy_at
     let enemy {enemy_of f}
     for s in fighters do
         # March on what we saw; if the Keystone is known, go for it

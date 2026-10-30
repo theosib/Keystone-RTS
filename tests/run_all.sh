@@ -26,5 +26,6 @@ run() {
 run economy 9100
 run warehouse 9100
 run match 54000
+run continue 54000
 
 exit "$failed"

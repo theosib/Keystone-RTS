@@ -16,7 +16,7 @@ on :tick do
     end
 
     if ((tick % 1800) == 0) do
-        log "t=" (tick / 30) "rival hands" rival.hands.length "army" rival.army.length "buildings" rival.buildings.length "stock" {stock_of rival :timber} {stock_of rival :provisions} "| player hands" player.hands.length "capture" player.capture "| explored" {vision_explored_cells 2} "match" contest.state
+        log "t=" (tick / 30) "keystone seen" player.keystone_seen_by "rival hands" rival.hands.length "army" rival.army.length "buildings" rival.buildings.length "stock" {stock_of rival :timber} {stock_of rival :provisions} "| player hands" player.hands.length "capture" player.capture "| explored" {vision_explored_cells 2} "match" contest.state
     end
 
     if (contest.state == :over) do
@@ -28,5 +28,11 @@ on :tick do
             log "PASS"
             game_exit 0
         end
+    end
+
+    # Silence must not pass: an idle player has to lose inside the match length
+    if (tick == 53000) do
+        log "FAIL: the rival never took the Keystone"
+        game_exit 1
     end
 end

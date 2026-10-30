@@ -7,7 +7,7 @@ fn make_soldier [f id kind] do
     return {=id id =faction f.id =kind kind =stats {UNITS.get kind}
             =state :hold =order nil =order_x 0 =order_y 0 =order_z 0
             =target nil =cooldown 0.0 =morale 1.0 =last_hp nil =moving false
-            =chase_x 0 =chase_z 0 =last_pos nil}
+            =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil}
 end
 
 fn spawn_soldier [f kind] do
@@ -31,6 +31,8 @@ fn order_soldier [s x y z] do
     set s.order_z z
     set s.target nil
     set s.moving false
+    # Drop any route in progress, or it arrives and reads as this order being done
+    ent_stop s.id
 end
 
 fn dist3 [a b] do
@@ -42,13 +44,26 @@ end
 
 # Enemies this unit can actually see, nearest first. Uses the faction's vision, so
 # the AI and the player play by the same rules.
-fn find_enemy [s pos radius] do
-    let f s.faction
-    let found {ent_find pos[0] pos[1] pos[2] radius =enemy_of f =max 8}
+fn nearest_visible [s found] do
     for id in found do
-        if {vision_can_see_ent f id} { return id }
+        if ((id != s.ignore) and {vision_can_see_ent s.faction id}) { return id }
     end
     return nil
+end
+
+# Soldiers answer to other soldiers first. A unit on the march won't peel off after
+# a farmer it can't already reach, or an attack dissolves into chasing workers.
+fn find_enemy [s pos radius] do
+    let f s.faction
+    for kind in [:militia :shortbow] do
+        let found {ent_find pos[0] pos[1] pos[2] radius =enemy_of f =type kind =max 8}
+        let id {nearest_visible s found}
+        if (id != nil) { return id }
+    end
+
+    let reach radius
+    if (s.order == :move) { set reach (s.stats.range + 1.0) }
+    return {nearest_visible s {ent_find pos[0] pos[1] pos[2] reach =enemy_of f =max 8}}
 end
 
 fn in_range [s pos target_pos] do
@@ -57,7 +72,12 @@ fn in_range [s pos target_pos] do
     if ((s.stats.role == :ranged) and (dy > 0.0)) {
         set reach (reach + (dy / HIGH_GROUND_RANGE_PER_BLOCKS))
     }
-    return ({dist3 pos target_pos} <= reach)
+    if ({dist3 pos target_pos} > reach) { return false }
+    if (s.stats.role == :ranged) {
+        # Arrows stop at the first wall, so an archer has to find a clear shot
+        return {line_of_sight pos[0] (pos[1] + 1.4) pos[2] target_pos[0] (target_pos[1] + 1.0) target_pos[2]}
+    }
+    return true
 end
 
 fn strike [s pos target_pos] do
@@ -75,6 +95,20 @@ fn strike [s pos target_pos] do
     set s.cooldown s.stats.cooldown
 end
 
+fn count_armed [pos radius faction hostile] do
+    let total 0
+    for kind in [:militia :shortbow] do
+        if hostile do
+            let found {ent_find pos[0] pos[1] pos[2] radius =enemy_of faction =type kind =max 16}
+            set total (total + found.length)
+        else do
+            let found {ent_find pos[0] pos[1] pos[2] radius =faction faction =type kind =max 16}
+            set total (total + found.length)
+        end
+    end
+    return total
+end
+
 fn update_morale [s pos] do
     let hp {ent_health s.id}
     if ((s.last_hp != nil) and (hp < s.last_hp)) {
@@ -83,10 +117,11 @@ fn update_morale [s pos] do
     set s.last_hp hp
 
     let f factions[s.faction]
-    let enemies {ent_find pos[0] pos[1] pos[2] 14 =enemy_of s.faction =max 16}
-    if (enemies.length > 0) do
-        let friends {ent_find pos[0] pos[1] pos[2] 14 =faction s.faction =max 16}
-        if (enemies.length > friends.length) {
+    # Only soldiers are a threat. Nobody breaks at the sight of farmers.
+    let enemies {count_armed pos 14 s.faction true}
+    if (enemies > 0) do
+        let friends {count_armed pos 14 s.faction false}
+        if (enemies > friends) {
             set s.morale (s.morale - (MORALE_LOSS_OUTNUMBERED * THINK_SECONDS))
         }
     else do
@@ -152,10 +187,15 @@ fn think_soldier [s] do
 
     if (s.stats.role == :scout) { return think_scout s pos }
 
+    # At peace, a soldier just goes where it's told
+    let commander factions[s.faction].commander
+    let at_peace ((commander != nil) and commander.passive)
+    if at_peace { set s.target nil }
+
     # Keep fighting what's in front of you
     if ((s.target != nil) and (not {ent_alive s.target})) { set s.target nil }
     if ((s.target != nil) and (not {vision_can_see_ent s.faction s.target})) { set s.target nil }
-    if (s.target == nil) { set s.target {find_enemy s pos s.stats.aggro} }
+    if ((s.target == nil) and (not at_peace)) { set s.target {find_enemy s pos s.stats.aggro} }
 
     if (s.target != nil) do
         let target_pos {ent_pos s.target}
@@ -164,7 +204,17 @@ fn think_soldier [s] do
                 ent_stop s.id
                 set s.moving false
             end
+            set s.chase_time 0.0
             if (s.cooldown <= 0.0) { strike s pos target_pos }
+            return nil
+        end
+        set s.chase_time (s.chase_time + THINK_SECONDS)
+        if (s.chase_time > CHASE_GIVE_UP_SECONDS) do
+            # Can't catch it. Forget it and get on with the job.
+            set s.ignore s.target
+            set s.target nil
+            set s.chase_time 0.0
+            ent_stop s.id
             return nil
         end
         chase s target_pos
@@ -189,10 +239,10 @@ end
 fn think_scout [s pos] do
     if (s.order == :move) do
         let nav {ent_nav s.id}
-        if ((nav == :idle) or (nav == :failed)) do
-            ent_nav_ack s.id
+        if (nav == :idle) do
             ent_goto s.id s.order_x s.order_y s.order_z =range 6.0 =partial true =max_nodes 6000
-        elif (nav == :arrived) do
+        elif ((nav == :arrived) or (nav == :failed)) do
+            # Unreachable waypoints are skipped: the commander hands out the next one
             ent_nav_ack s.id
             set s.order nil
         end

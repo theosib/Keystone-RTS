@@ -64,6 +64,7 @@ set UNITS {
 set TRAIN_SECONDS 8.0
 set ARROW_SPEED 26.0
 set CHASE_REPATH_DISTANCE_SQ 16
+set CHASE_GIVE_UP_SECONDS 7.0
 
 # Actual height wins fights (DESIGN 6.2)
 set HIGH_GROUND_RANGE_PER_BLOCKS 2.0
@@ -80,4 +81,5 @@ set MORALE_GAIN_RESTING 0.03
 
 # Conquest: enemy-seconds at the Keystone, unopposed, to take it
 set KEYSTONE_CAPTURE_POINTS 40
-set KEYSTONE_RADIUS 5
+# Reaches the Hall's walls and doorway: being inside the Hall is what counts
+set KEYSTONE_RADIUS 7

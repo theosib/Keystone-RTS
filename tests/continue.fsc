@@ -1,0 +1,45 @@
+# Scenario: after losing, the player can carry on with rivals pacified (DESIGN 7.2).
+# Rivals must stop attacking and go home, and the game must keep running cleanly.
+
+set ended_at nil
+set checked false
+
+fn rival_near_player [] do
+    let p factions[1]
+    let found {ent_find p.x p.y p.z 30 =faction 2 =type :militia =max 32}
+    let bows {ent_find p.x p.y p.z 30 =faction 2 =type :shortbow =max 32}
+    return (found.length + bows.length)
+end
+
+on :tick do
+    let tick {game_tick}
+
+    if ((ended_at == nil) and (contest.state == :over)) do
+        set ended_at tick
+        log "match over at t=" (tick / 30) "rivals near home" {rival_near_player}
+        continue_open_ended true
+    end
+
+    if ((ended_at != nil) and (tick == (ended_at + 3600))) do
+        let near {rival_near_player}
+        log "two minutes after pacifying: rivals near home" near "state" {to_str contest.state}
+        if (contest.state != :open_ended) do
+            log "FAIL: not open-ended"
+            game_exit 1
+        elif (not factions[2].commander.passive) do
+            log "FAIL: rival still hostile"
+            game_exit 1
+        elif (near > 0) do
+            log "FAIL: rivals did not withdraw"
+            game_exit 1
+        else do
+            log "PASS"
+            game_exit 0
+        end
+    end
+
+    if (tick == 53000) do
+        log "FAIL: match never ended"
+        game_exit 1
+    end
+end

@@ -17,7 +17,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Vision | Per-faction 3D line of sight, terrain replica (remembered terrain), filtered units |
 | Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout |
 | Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
-| Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals |
+| Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
 | Steward | First-person avatar (Tab), harvests by hand |
 | i18n | All UI via `loc`: locale fallback, named parameters, CLDR-style plurals |
 
