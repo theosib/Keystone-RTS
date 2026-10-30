@@ -13,14 +13,22 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
   own table says "Hearth Age" — that's a slip; use **Hearth Epoch** etc. In-game text says
   "Epoch". Also avoid Minecraft/Mojang-resembling names, art, or 16×16 noisy textures.
 - **All player-facing text goes through `loc`** — no literal strings in UI scripts.
-- Engine work goes on branch `keystone/stage1` in each dependency repo.
+- Personal open-source project: commit to `main` and push, in every repo here. No PRs.
+- Nothing from any employer belongs in these public repos, commit metadata included. Each
+  repo sets `user.email` locally to the GitHub noreply address, over the global git config.
+  Check it in any new clone: `git config user.email`.
+- World storage follows "writers lock, readers don't". See the threading section of the
+  engine's `docs/ARCHITECTURE.md`, and don't add a lock to a read path.
 
 ## Layout
 
 - Engine repo and deps are siblings: `../FineStructureVoxel`, `../game-language` (finescript),
   `../finegui`, `../finenet`, `../FineStructureVK`.
-- Build dir: `../fv-keystone` (Ninja, Release). Fresh configure needs
-  `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (lz4's CMake is too old for CMake 4).
+- Build dir: `../fv-keystone` (Ninja, Release with symbols). A fresh configure needs
+  `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (lz4's CMake is too old for CMake 4), and
+  `-DCMAKE_CXX_FLAGS_RELEASE="-O3 -g -DNDEBUG"` so core dumps have line numbers.
+- Race hunting: `../fv-tsan` is the same build with `-fsanitize=thread` in the C/C++ and
+  linker flags. Run the real game on it. It should report nothing.
 - Dependencies must be Release too (`cmake -DCMAKE_BUILD_TYPE=Release` in each `build/`).
   An empty build type means `-O0`, and finescript runs 16-24x slower.
 
@@ -46,10 +54,19 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline at branch point: 2100 + 129 + 41 = 2270 passing.
+- Baseline: 2218 + 142 + 41 = 2401 passing.
 - `tests/run_all.sh` runs the headless gameplay scenarios. Prefer these over watching the
   game: `finevox_headless --script` loads a scenario next to the real game script, and
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
   once passed while the whole economy was frozen at 32ms a tick.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
   `--validation` turns on Vulkan validation, `--stats` prints render counts each second.
+
+## Crashes
+
+- `run.sh` turns core dumps on. macOS only writes one if the binary has `get-task-allow`,
+  and relinking drops it, so `run.sh` re-signs when needed. A core is 7GB or more: it keeps
+  the newest and turns itself off under 25GB free.
+- Read one with `lldb -c /cores/core.<pid> ../fv-keystone/finevox_run`.
+- Reports with stacks for every thread: `~/Library/Logs/DiagnosticReports/finevox_run-*.ips`.
+  Often enough on their own: look at what the other threads were doing.
