@@ -147,6 +147,42 @@ on :start do
     log "settlements at" player.x player.z "and" rival.x rival.z
 end
 
+on :save do
+    game_state_store {=factions factions =unit_index unit_index =contest contest}
+end
+
+# Paths, work claims, and shots in flight aren't saved, so whatever units were in the
+# middle of is gone. Hands choose new work and keep what they carry; soldiers keep orders.
+fn settle_after_resume [f] do
+    for w in f.hands do
+        set w.state :idle
+        set w.job nil
+        set w.site nil
+        set w.cell nil
+        set w.target nil
+        set w.after nil
+        set w.retry 0
+        set w.timer 0.0
+        set w.scaffolding false
+    end
+    for s in f.army do
+        set s.moving false
+        set s.target nil
+        set s.last_pos nil
+    end
+end
+
+on :resume do
+    let saved {game_state_load}
+    set factions saved.factions
+    set unit_index saved.unit_index
+    set contest saved.contest
+    for f in factions do
+        if (f != nil) { settle_after_resume f }
+    end
+    log "resumed at t=" ({game_tick} / 30)
+end
+
 on :tick do
     let tick {game_tick}
     for f in factions do

@@ -23,6 +23,38 @@ run() {
     fi
 }
 
+# Save a game partway, resume it in a new process, and check it's the same game
+resume_scenario() {
+    local dir output_a output_b status
+    dir="$(mktemp -d)"
+    output_a="$("$build/finevox_headless" --game-root "$here" --ticks 2400 \
+        --script "$here/tests/resume.fsc" --save "$dir/game" 2>&1)"
+    status=$?
+    if [ "$status" -ne 0 ]; then
+        echo "FAIL  resume, saving (exit $status)"
+        echo "$output_a" | tail -8
+        failed=1
+    else
+        output_b="$("$build/finevox_headless" --game-root "$here" --ticks 1800 \
+            --script "$here/tests/resume.fsc" --resume "$dir/game" 2>&1)"
+        status=$?
+        local before after
+        before="$(echo "$output_a" | grep SUMMARY)"
+        after="$(echo "$output_b" | grep SUMMARY | head -1)"
+        if [ "$status" -ne 0 ] || [ -z "$before" ] || [ "$before" != "$after" ]; then
+            echo "FAIL  resume (exit $status)"
+            echo "  saved:   $before"
+            echo "  resumed: $after"
+            echo "$output_b" | tail -8
+            failed=1
+        else
+            echo "PASS  resume"
+        fi
+    fi
+    rm -rf "$dir"
+}
+
+resume_scenario
 run stranded 1000
 run inspect 100
 run economy 9100

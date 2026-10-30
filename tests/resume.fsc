@@ -1,0 +1,75 @@
+# Scenario: a saved game comes back as the same game, and carries on. See run_all.sh, which
+# runs this twice: once to save, once to resume, comparing the SUMMARY lines between them.
+
+set resumed_at nil
+set activity_then nil
+
+fn stock_of [f] do
+    return ({zone_count f.zone :timber} + {zone_count f.zone :stone} + {zone_count f.zone :provisions})
+end
+
+fn summary [] do
+    let lines ""
+    for f in factions do
+        if (f != nil) do
+            let alive 0
+            for w in f.hands do
+                if {ent_alive w.id} { set alive (alive + 1) }
+            end
+            set lines "{lines} [{f.id}: stock {stock_of f} hands {f.hands.length}/{alive} army {f.army.length} buildings {f.buildings.length} sites {f.sites.length} levels {f.zone.levels} housing {f.housing}]"
+        end
+    end
+    return "SUMMARY t={game_tick} state {contest.state}{lines}"
+end
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+on :save do
+    # A tell, to see that unit_index and the hand list still share their records afterward
+    let w factions[1].hands[0]
+    set w.marker 7
+    log {summary}
+end
+
+on :resume do
+    log {summary}
+    set resumed_at {game_tick}
+
+    let f factions[1]
+    let w f.hands[0]
+    if ({w.get :marker} != 7) { fail "hand record lost" }
+    set w.marker 8
+    let indexed {lookup_unit w.id}
+    if (indexed.record.marker != 8) { fail "unit_index no longer shares its records" }
+
+    let top {surface_y f.x (f.z + 6)}
+    if (top == nil) { fail "no terrain" }
+    if (not {ent_alive w.id}) { fail "entity id didn't survive" }
+    if (f.zone == nil) { fail "no stockpile" }
+end
+
+fn busy_hands [f] do
+    let busy 0
+    for w in f.hands do
+        if (w.state != :idle) { set busy (busy + 1) }
+    end
+    return busy
+end
+
+on :tick do
+    if (resumed_at == nil) { return nil }
+    let since ({game_tick} - resumed_at)
+    let f factions[1]
+
+    if (since == 60) { set activity_then {stock_of f} }
+
+    if (since == 1700) do
+        if ({busy_hands f} == 0) { fail "hands stood idle after resuming" }
+        if ({stock_of f} == activity_then) { fail "the economy never moved after resuming" }
+        log "PASS"
+        game_exit 0
+    end
+end

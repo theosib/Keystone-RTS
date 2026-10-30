@@ -38,3 +38,11 @@ inspect.site: {name}, construit à {percent} %
 inspect.yours: À vous
 inspect.rival: Rival
 inspect.remembered: Tel que vu la dernière fois
+
+menu.open: Menu
+menu.resume: Reprendre
+menu.new: Nouvelle partie
+menu.quit: Sauvegarder et quitter
+menu.cancel: Annuler
+menu.new_yes: Commencer une nouvelle partie
+menu.new_confirm: Recommencer ? Cette partie sera remplacée.

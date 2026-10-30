@@ -65,3 +65,11 @@ inspect.site: {name}, {percent}% built
 inspect.yours: Yours
 inspect.rival: Rival
 inspect.remembered: As last seen
+
+menu.open: Menu
+menu.resume: Resume
+menu.new: New Game
+menu.quit: Save and Quit
+menu.cancel: Cancel
+menu.new_yes: Start a New Game
+menu.new_confirm: Start over? This game will be replaced.

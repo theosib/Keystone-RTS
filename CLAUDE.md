@@ -69,5 +69,7 @@ finescript traps that cost real time here:
   and relinking drops it, so `run.sh` re-signs when needed. A core is 7GB or more: it keeps
   the newest and turns itself off under 25GB free.
 - Read one with `lldb -c /cores/core.<pid> ../fv-keystone/finevox_run`.
+- Your save survives a crash up to the last autosave. `--no-save` or `--exit-after` keep test
+  runs away from it, and anything by hand against `--game-root .` otherwise resumes it.
 - Reports with stacks for every thread: `~/Library/Logs/DiagnosticReports/finevox_run-*.ips`.
   Often enough on their own: look at what the other threads were doing.

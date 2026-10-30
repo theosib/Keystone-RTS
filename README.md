@@ -27,8 +27,13 @@ Build the engine once (see [CLAUDE.md](CLAUDE.md)), then:
 | Tab | Step down as the Steward, or back up (WASD, mouse, Space, left-click to work) |
 | Build palette | Pick a building, left-click to place, R to turn, right-click to cancel |
 | F12 | Screenshot |
-| Esc | Cancel placement |
-| Cmd+Q / Ctrl+Q | Quit |
+| Hover, or look at, a block | See what it is and what it holds |
+| Esc | Cancel placement, or close the menu |
+| Cmd+Q / Ctrl+Q | Save and quit |
+
+Your game saves when you quit and every 5 minutes, and picks up where you left off. To start
+over, use New Game in the Menu, or `./run.sh --new`. Saves live in `saves/`, with the one before
+kept as `autosave.bak`.
 
 ## Layout
 

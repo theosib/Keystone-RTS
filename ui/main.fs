@@ -155,6 +155,9 @@ ui_show {ui.window "##palette"
     =window_pos_x 8 =window_pos_y 110
     =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing]
     =children [
+        {ui.button {loc "menu.open"} =on_click fn [] do
+            open_menu
+        end}
         {ui.text {loc "ui.palette"}}
         {build_button "shelter"}
         {build_button "forager_hut"}
@@ -225,6 +228,51 @@ on :mouse do
     end
 end
 
+set menu_panel nil
+
+fn close_menu [] do
+    if (menu_panel != nil) do
+        ui_hide menu_panel
+        set menu_panel nil
+    end
+end
+
+fn show_menu_window [children] do
+    close_menu
+    let size {window_size}
+    set menu_panel {ui_show {ui.window "##menu"
+        =window_pos_x ((size[0] / 2) - 120) =window_pos_y ((size[1] / 2) - 110)
+        =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings]
+        =children children
+    } =immediate true}
+end
+
+fn open_new_game_confirm [] do
+    show_menu_window [
+        {ui.text {loc "menu.new_confirm"}}
+        {ui.button {loc "menu.new_yes"} =on_click fn [] do
+            new_game
+        end}
+        {ui.button {loc "menu.cancel"} =on_click fn [] do
+            open_menu
+        end}
+    ]
+end
+
+fn open_menu [] do
+    show_menu_window [
+        {ui.button {loc "menu.resume"} =on_click fn [] do
+            close_menu
+        end}
+        {ui.button {loc "menu.new"} =on_click fn [] do
+            open_new_game_confirm
+        end}
+        {ui.button {loc "menu.quit"} =on_click fn [] do
+            quit_game
+        end}
+    ]
+end
+
 # DESIGN 7.2: when a match ends, the world is still yours
 set end_screen nil
 set pacify_rivals false
@@ -265,7 +313,7 @@ on :state do
         show_inspect inspected
         return nil
     end
-    if (state == nil) {cam_focus msg.home[0] msg.home[1]}
+    if ((state == nil) and (not resumed)) {cam_focus msg.home[0] msg.home[1]}
     if ((msg.match == :over) and (end_screen == nil)) {
         show_end_screen (msg.winner == 1)
     }
@@ -276,7 +324,10 @@ on :action do
     match action
         :screenshot { request_screenshot "screenshots/keystone.png" }
         :turn { set place_turns ((place_turns + 1) % 4) }
-        :cancel { set placing nil }
+        :cancel do
+            set placing nil
+            close_menu
+        end
         :quit { quit_game }
         _ { nil }
     end
