@@ -1,0 +1,61 @@
+# Scenario: when the yard fills, Hands must build floors and stairs upward, and
+# then actually use them.
+
+set mid_total 0
+
+fn total_stock [f] do
+    return ({zone_count f.zone :timber} + {zone_count f.zone :stone} + {zone_count f.zone :provisions})
+end
+
+fn zone_summary [f] do
+    let top 0
+    for slot in f.zone.slots do
+        if ((slot.kind != nil) and (slot.y > top)) { set top slot.y }
+    end
+    return "levels {f.zone.levels} slots {f.zone.slots.length} used {zone_used_slots f.zone} top {top} base {f.zone.y} expanding {f.zone.expanding}"
+end
+
+on :tick do
+    let f factions[1]
+    let tick {game_tick}
+
+    if (tick == 30) do
+        # Fill the yard nearly to the brim, in every section
+        grant_stock f :stone 240
+        grant_stock f :timber 240
+        grant_stock f :provisions 200
+        log "after grant:" {zone_summary f}
+    end
+
+    if ((tick % 900) == 0) do
+        log "t=" (tick / 30) "stock" {zone_count f.zone :timber} {zone_count f.zone :stone} {zone_count f.zone :provisions} {zone_summary f}
+    end
+
+    if (tick == 3000) { set mid_total {total_stock f} }
+
+    if (tick == 9000) do
+        if (f.zone.levels < 2) do
+            log "FAIL: never built a floor"
+            game_exit 1
+            return nil
+        end
+        let top 0
+        for slot in f.zone.slots do
+            if ((slot.kind != nil) and (slot.y > top)) { set top slot.y }
+        end
+        if (top < (f.zone.y + 3)) do
+            log "FAIL: floor built but never used"
+            game_exit 1
+            return nil
+        end
+        let total {total_stock f}
+        log "stock went" mid_total "->" total
+        if (total <= (mid_total + 20)) do
+            log "FAIL: economy stalled after the floor"
+            game_exit 1
+            return nil
+        end
+        log "PASS"
+        game_exit 0
+    end
+end

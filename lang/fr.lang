@@ -1,0 +1,5 @@
+# Keystone: French. Proves the plural and fallback paths; not a finished translation.
+ui.selected.one: 1 Main sélectionnée
+ui.selected.other: {count} Mains sélectionnées
+ui.palette: Bâtir
+ui.train_hand: Former une Main

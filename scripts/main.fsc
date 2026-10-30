@@ -58,7 +58,7 @@ fn publish_state [] do
                     =stone {zone_count f.zone :stone}
                     =provisions {zone_count f.zone :provisions}}
                 =hands f.hands.length =housing f.housing
-                =sites f.sites.length}
+                =sites f.sites.length =home [f.x f.z]}
 end
 
 on :start do

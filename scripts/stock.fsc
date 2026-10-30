@@ -12,10 +12,14 @@ fn stack_block [kind amount] do
     return {to_sym "{base}_{amount}"}
 end
 
+# On a deck the aisles run the length of the rows, and nothing can walk around the
+# outside. The first row stays open as a walkway joining every aisle to the stairs.
 fn add_level_slots [zone y] do
+    let first_row 0
+    if (y > zone.y) { set first_row 1 }
     for dx in (0..zone.width) do
         if ((dx % 3) == 2) { continue }
-        for dz in (0..zone.depth) do
+        for dz in (first_row..zone.depth) do
             let lower {=x (zone.x + dx) =y y =z (zone.z + dz) =kind nil =amount 0 =above nil}
             let upper {=x lower.x =y (y + 1) =z lower.z =kind nil =amount 0 =above nil}
             set lower.above upper
@@ -207,7 +211,9 @@ end
 
 fn deck_y [zone level] { return (zone.y + (3 * level) - 1) }
 
-# Queue a mezzanine: posts, a plank deck over the rows, and stairs up the near side
+# Queue a mezzanine: posts, a plank deck over the rows, and a flight of stairs.
+# Each floor gets its own flight, one column further out, climbing from the ground
+# along the near side to land on that floor's walkway.
 fn zone_plan_floor [zone] do
     if (zone.expanding != nil) { return nil }
 
@@ -215,18 +221,13 @@ fn zone_plan_floor [zone] do
     let y {deck_y zone level}
     let site {site_create}
 
-    # Posts stand outside the rows so aisles stay clear
-    let x0 (zone.x - 1)
     let x1 (zone.x + zone.width)
-    let z0 (zone.z - 1)
     let z1 (zone.z + zone.depth)
-    for px in [x0 x1] do
-        for pz in [z0 z1] do
-            let h zone.y
-            while (h <= y) do
-                site_add site px h pz :palisade
-                set h (h + 1)
-            end
+    for post in [[x1 (zone.z - 1)] [x1 z1] [(zone.x - 1) z1]] do
+        let h zone.y
+        while (h <= y) do
+            site_add site post[0] h post[1] :palisade
+            set h (h + 1)
         end
     end
 
@@ -236,17 +237,24 @@ fn zone_plan_floor [zone] do
         end
     end
 
-    # Stairs climb along the zone's west side, one rise per cell
-    let stair_x (zone.x - 1)
-    let rise 0
+    let stair_x (zone.x - level)
     let top ((level * 3) - 1)
+    let rise 0
     while (rise <= top) do
+        let stair_z (zone.z + rise - top)
         let h 0
         while (h <= rise) do
-            site_add site stair_x (zone.y + h) (zone.z + rise) :planks
+            site_add site stair_x (zone.y + h) stair_z :planks
             set h (h + 1)
         end
         set rise (rise + 1)
+    end
+
+    # Landing: tie the top step across to the deck for floors above the first
+    let span 1
+    while (span < level) do
+        site_add site (zone.x - span) y zone.z :planks
+        set span (span + 1)
     end
 
     set zone.expanding site

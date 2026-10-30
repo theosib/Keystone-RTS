@@ -6,7 +6,7 @@
 fn make_worker [f id] do
     return {=id id =faction f.id =state :idle =job nil =kind nil
             =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
-            =target nil =site nil =cell nil =from_x 0 =from_z 0 =retry 0 =slot nil}
+            =target nil =site nil =cell nil =retry 0 =failures 0 =after nil}
 end
 
 fn worker_pos [w] {ent_pos w.id}
@@ -39,6 +39,17 @@ fn drop_job [w] do
     set w.target nil
     set w.state :idle
     ent_anim w.id :idle
+end
+
+# A failed path means the target can't be reached right now. Hands who retried at
+# once would spend the whole search budget on the same dead end, so they wait, for
+# longer each time it keeps happening.
+fn give_up [w] do
+    drop_job w
+    set w.failures (w.failures + 1)
+    set w.state :resting
+    set w.timer (2.0 + (w.failures * 1.5))
+    if (w.timer > 12.0) { set w.timer 12.0 }
 end
 
 fn zone_of [w] { return factions[w.faction].zone }
@@ -413,10 +424,13 @@ fn think [w] do
         :moving do
             let nav {ent_nav w.id}
             match nav
-                :arrived { on_arrive w }
+                :arrived do
+                    set w.failures 0
+                    on_arrive w
+                end
                 :failed do
                     ent_nav_ack w.id
-                    drop_job w
+                    give_up w
                 end
                 :blocked { handle_nav_block w }
                 :idle {
@@ -429,6 +443,10 @@ fn think [w] do
         :working do
             set w.timer (w.timer - THINK_SECONDS)
             if (w.timer <= 0.0) { on_work_done w }
+        end
+        :resting do
+            set w.timer (w.timer - THINK_SECONDS)
+            if (w.timer <= 0.0) { set w.state :idle }
         end
         _ { nil }
     end

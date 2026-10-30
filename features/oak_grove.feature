@@ -5,5 +5,5 @@ min_trunk_height: 4
 max_trunk_height: 7
 leaf_radius: 2
 requires_soil: true
-density: 0.012
+density: 0.006
 surface: turf

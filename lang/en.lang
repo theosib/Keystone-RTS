@@ -1,7 +1,19 @@
 # Keystone: English
 ui.title: Keystone
-ui.selected: {count} selected
+ui.epoch: Hearth Epoch
 ui.selected.one: 1 Hand selected
 ui.selected.other: {count} Hands selected
 ui.hint.select: Left-drag to select, right-click to send
+ui.hint.place: Left-click to place, R to turn, right-click to cancel
 ui.fps: {fps} fps
+ui.stock.timber: Timber {count}
+ui.stock.stone: Stone {count}
+ui.stock.provisions: Provisions {count}
+ui.stock.hands: Hands {count} / {cap}
+ui.palette: Build
+ui.train_hand: Train Hand
+building.shelter: Shelter
+building.forager_hut: Forager Hut
+building.sawpit: Sawpit
+building.watchtower: Watchtower
+building.palisade_wall: Log Palisade
