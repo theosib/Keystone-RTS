@@ -1,0 +1,108 @@
+# Construction: placing buildings and turning sites into finished structures.
+
+fn build_instantly [site] do
+    let guard 0
+    let cell {site_claim site 0 0 0 0}
+    while ((cell != nil) and (guard < 20000)) do
+        world_set_block cell.x cell.y cell.z cell.block
+        set cell {site_claim site 0 0 0 0}
+        set guard (guard + 1)
+    end
+end
+
+fn turns_size [info turns] do
+    if ((turns % 2) == 0) { return [info.size_x info.size_z] }
+    return [info.size_z info.size_x]
+end
+
+# Foundations: cut what stands above the base and fill below it, so a building
+# sits true on sloped ground (DESIGN 6.1).
+fn add_foundation [site x0 z0 size_x size_z y height] do
+    for dx in (0..size_x) do
+        for dz in (0..size_z) do
+            let x (x0 + dx)
+            let z (z0 + dz)
+            let top {surface_y x z}
+            if (top != nil) do
+                let h y
+                while ((h <= top) and (h < (y + height + 8))) do
+                    if ({block_at x h z} != :air) { site_add site x h z :air }
+                    set h (h + 1)
+                end
+            end
+            let g {ground_y x z}
+            if (g != nil) do
+                let h (g + 1)
+                while (h < y) do
+                    site_add site x h z :loam
+                    set h (h + 1)
+                end
+            end
+        end
+    end
+end
+
+fn can_place [f name x z] do
+    let def {BUILDINGS.get name}
+    if (def == nil) { return false }
+    return ({blueprint_info def.blueprint} != nil)
+end
+
+# Start a building at (x, z), its footprint centred there
+fn place_building [f name x z turns] do
+    let def {BUILDINGS.get name}
+    if (def == nil) { return nil }
+    let info {blueprint_info def.blueprint}
+    if (info == nil) { return nil }
+    let size {turns_size info turns}
+    let x0 (x - (size[0] / 2))
+    let z0 (z - (size[1] / 2))
+    let g {ground_y x z}
+    if (g == nil) { return nil }
+    let y (g + 1)
+
+    let site {site_create def.blueprint x0 y z0 turns}
+    add_foundation site x0 z0 size[0] size[1] y info.size_y
+    let b {=name name =site site =x x =y y =z z =size_x size[0] =size_z size[1]
+           =complete false =faction f.id}
+    f.sites.push b
+    log "faction" f.id "started" name "at" x y z
+    return b
+end
+
+fn finish_building [f b] do
+    set b.complete true
+    let def {BUILDINGS.get b.name}
+    if (def != nil) do
+        if ({def.has :housing}) { set f.housing (f.housing + def.housing) }
+    end
+    f.buildings.push b
+    log "faction" f.id "finished" b.name
+end
+
+# Retire sites that are done, and floors the Quartermaster queued
+fn update_sites [f] do
+    let i 0
+    while (i < f.sites.length) do
+        let b f.sites[i]
+        let p {site_progress b.site}
+        if ((p != nil) and p.complete) do
+            finish_building f b
+            f.sites.remove i
+        else do
+            set i (i + 1)
+        end
+    end
+
+    if (f.zone.expanding != nil) do
+        let p {site_progress f.zone.expanding}
+        if ((p != nil) and p.complete) { zone_finish_floor f.zone }
+    end
+end
+
+# The most urgent thing to build. Floors count: without room the economy stalls.
+fn next_site [f] do
+    if (f.zone.expanding != nil) { return f.zone.expanding }
+    if (f.sites.length > 0) { return f.sites[0].site }
+    return nil
+end

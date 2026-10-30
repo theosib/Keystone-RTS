@@ -1,0 +1,52 @@
+# Civilizations: their state and setup.
+
+set factions [nil nil nil]
+
+fn make_faction [id x z] do
+    let spot {find_settlement_site x z}
+    let f {=id id =x spot[0] =y spot[1] =z spot[2]
+           =hands [] =buildings [] =sites [] =zone nil
+           =keystone nil =alive true =housing BASE_HOUSING
+           =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []}
+    factions.set id f
+    return f
+end
+
+fn grant_stock [f kind amount] do
+    zone_deposit f.zone kind amount f.x f.z
+end
+
+fn found_settlement [f] do
+    let y f.y
+    level_area (f.x - 14) (f.z - 14) (f.x + 14) (f.z + 14) y
+
+    # Core Hall stands finished from the start
+    let hall_x (f.x - 4)
+    let hall_z (f.z - 4)
+    let site {site_create :core_hall hall_x y hall_z}
+    let cells {site_remaining site}
+    build_instantly site
+    site_remove site
+    set f.keystone [(hall_x + 4) (y + 1) (hall_z + 4)]
+
+    set f.zone {make_zone f.id (f.x + 7) y (f.z - 6) 7 12}
+end
+
+# Hands' stock is physical, so the starting endowment is real blocks in the yard
+fn endow [f timber stone provisions] do
+    grant_stock f :timber timber
+    grant_stock f :stone stone
+    grant_stock f :provisions provisions
+end
+
+fn spawn_hand [f] do
+    let angle ({random_float} * 6.28)
+    let x (f.x + (6 * {cos angle}))
+    let z (f.z + 6 + (2 * {sin angle}))
+    let y {ground_y {floor x} {floor z}}
+    if (y == nil) { set y f.y }
+    let id {ent_spawn :hand x (y + 1) z =faction f.id}
+    let w {make_worker f id}
+    f.hands.push w
+    return w
+end

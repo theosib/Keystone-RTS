@@ -1,0 +1,48 @@
+# Game data: everything tunable lives here.
+
+set KIND_NAMES [:timber :stone :provisions]
+
+# Blocks a Hand carries at once, and units a resource block holds
+set CARRY_CAP 4
+set STACK_UNITS 4
+
+# What a block costs to place. Blocks not listed are free.
+set BLOCK_MATERIAL {
+    =planks :timber =palisade :timber =scaffold :timber
+    =thatch :provisions
+    =flagstone :stone =dressed_stone :stone =gravel_path :stone
+}
+
+# Harvesting: source block -> resource, units per block, work seconds
+set HARVEST {
+    =timber_log {=kind :timber =units 2 =seconds 1.4}
+    =boulder {=kind :stone =units 2 =seconds 1.8}
+    =berry_bush {=kind :provisions =units 3 =seconds 1.0}
+}
+set HARVEST_BLOCKS {=timber [:timber_log] =stone [:boulder] =provisions [:berry_bush]}
+
+set SEARCH_RADIUS 72
+set BUSH_REGROW_SECONDS 90.0
+
+# Hunger: full at 1.0, falls to 0 over this many seconds
+set HUNGER_SECONDS 360.0
+set HUNGER_EAT_AT 0.35
+
+set HAND_COST {=provisions 5}
+set HAND_TRAIN_SECONDS 10.0
+
+set BUILDINGS {
+    =shelter {=blueprint :shelter =housing 4}
+    =forager_hut {=blueprint :forager_hut =gather_bonus :provisions}
+    =sawpit {=blueprint :sawpit =gather_bonus :timber}
+    =watchtower {=blueprint :watchtower}
+    =palisade_wall {=blueprint :palisade_wall}
+}
+
+set BASE_HOUSING 8
+set GATHER_BONUS_RADIUS 32
+set GATHER_BONUS_SPEED 0.7
+
+# Thinks per second is 30 / THINK_INTERVAL
+set THINK_INTERVAL 8
+set THINK_SECONDS (THINK_INTERVAL / 30.0)

@@ -2,39 +2,100 @@
 #
 # Everything here is game policy. Mechanisms come from engine natives.
 
-set hands []
+source "scripts/data.fsc"
+source "scripts/util.fsc"
+source "scripts/stock.fsc"
+source "scripts/jobs.fsc"
+source "scripts/build.fsc"
+source "scripts/faction.fsc"
 
-fn ground_at [x z] do
-    let y {surface_y x z}
-    if (y == nil) { return nil }
-    return (y + 1)
+fn tick_faction [f tick] do
+    for w in f.hands do
+        if (((w.id + tick) % THINK_INTERVAL) == 0) { think w }
+    end
+
+    if ((tick % 30) == (f.id * 7)) do
+        update_sites f
+        zone_reconcile f.zone
+        update_regrow f tick
+        update_training f
+    end
+end
+
+fn update_regrow [f tick] do
+    let i 0
+    while (i < f.regrow.length) do
+        let bush f.regrow[i]
+        if (tick >= bush.at) do
+            if ({block_at bush.x bush.y bush.z} == :berry_bush_bare) {
+                world_set_block bush.x bush.y bush.z :berry_bush
+            }
+            f.regrow.remove i
+        else do
+            set i (i + 1)
+        end
+    end
+end
+
+fn update_training [f] do
+    if (f.train_queue <= 0) { return nil }
+    if (f.hands.length >= f.housing) { return nil }
+    set f.train_timer (f.train_timer - 1.0)
+    if (f.train_timer > 0.0) { return nil }
+    if ({zone_take f.zone :provisions HAND_COST.provisions f.x f.z} < HAND_COST.provisions) {
+        return nil
+    }
+    set f.train_queue (f.train_queue - 1)
+    set f.train_timer HAND_TRAIN_SECONDS
+    spawn_hand f
+end
+
+fn publish_state [] do
+    let f factions[1]
+    if (f == nil) { return nil }
+    ui_publish {=stock {
+                    =timber {zone_count f.zone :timber}
+                    =stone {zone_count f.zone :stone}
+                    =provisions {zone_count f.zone :provisions}}
+                =hands f.hands.length =housing f.housing
+                =sites f.sites.length}
 end
 
 on :start do
     log "Keystone starting, seed" WORLD_SEED
-    set_time_of_day 0.2
+    set_time_of_day 0.1
+
+    let player {make_faction 1 -96 0}
+    found_settlement player
+    endow player 60 30 60
     for i in (0..8) do
-        let x (i * 2 - 8)
-        let y {ground_at x 0}
-        let id {ent_spawn :hand x y 0 =faction 1}
-        hands.push id
+        spawn_hand player
     end
-    log "spawned" hands.length "hands"
+    log "settlement at" player.x player.y player.z
+end
+
+on :tick do
+    let tick {game_tick}
+    for f in factions do
+        if (f != nil) { tick_faction f tick }
+    end
+    if ((tick % 15) == 0) { publish_state }
 end
 
 on :command do
+    let f factions[1]
     match cmd.name
         :move do
             let index 0
             for id in cmd.units do
-                let dx (index % 4 - 2)
+                let dx ((index % 4) - 2)
                 let dz ((index / 4) - 1)
                 ent_goto id (cmd.x + dx) cmd.y (cmd.z + dz)
                 set index (index + 1)
             end
         end
-        _ do
-            log "unknown command" cmd.name
-        end
+        :build { place_building f cmd.building cmd.x cmd.z cmd.turns }
+        :train { set f.train_queue (f.train_queue + 1) }
+        _ { log "unknown command" cmd.name }
     end
 end

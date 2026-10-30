@@ -1,0 +1,435 @@
+# Tier 1 AI: a Hand's jobs and needs (DESIGN 4.2).
+#
+# Each Hand thinks a few times a second; C++ walks them between thinks. A Hand is
+# a small state machine: pick a job, go somewhere, spend time there, move on.
+
+fn make_worker [f id] do
+    return {=id id =faction f.id =state :idle =job nil =kind nil
+            =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
+            =target nil =site nil =cell nil =from_x 0 =from_z 0 =retry 0 =slot nil}
+end
+
+fn worker_pos [w] {ent_pos w.id}
+
+fn go_to [w x y z range next] do
+    set w.state :moving
+    set w.after next
+    ent_goto w.id x y z =range range =max_nodes 16000
+end
+
+fn go_build_near [w x y z next] do
+    set w.state :moving
+    set w.after next
+    ent_goto w.id (x + 0.5) y (z + 0.5) =range 2.0 =max_nodes 16000 =place true
+end
+
+fn wait_for [w seconds next] do
+    set w.state :working
+    set w.timer seconds
+    set w.after next
+    ent_anim w.id :work
+end
+
+fn drop_job [w] do
+    if (w.site != nil) { site_release w.site w.id }
+    release_claims w.id
+    set w.job nil
+    set w.site nil
+    set w.cell nil
+    set w.target nil
+    set w.state :idle
+    ent_anim w.id :idle
+end
+
+fn zone_of [w] { return factions[w.faction].zone }
+
+# ---- Choosing work ----------------------------------------------------------
+
+fn stock_of [f kind] {zone_count f.zone kind}
+
+# Gather whatever the settlement is shortest of, weighted by what's being built
+fn wanted_kind [f] do
+    let timber {stock_of f :timber}
+    let stone {stock_of f :stone}
+    let food {stock_of f :provisions}
+    # Food first when low: nobody builds on an empty stomach
+    if (food < 20) { return :provisions }
+    if (timber <= stone) {
+        if (timber <= (food * 1)) { return :timber }
+        return :provisions
+    }
+    if (stone <= food) { return :stone }
+    return :provisions
+end
+
+fn pick_job [w] do
+    let f factions[w.faction]
+
+    if ((w.hunger < HUNGER_EAT_AT) and ({stock_of f :provisions} > 0)) do
+        start_eat w
+        return nil
+    end
+
+    if (w.carry_n > 0) do
+        start_haul w
+        return nil
+    end
+
+    # Roughly a third of the settlement builds; the rest keep materials coming
+    let site {next_site f}
+    if ((site != nil) and ((w.id % 3) != 0)) do
+        start_build w site
+        return nil
+    end
+
+    let move {find_defrag_move f.zone}
+    if ((move != nil) and ((w.id % 5) == 0)) do
+        start_defrag w move
+        return nil
+    end
+
+    start_gather w {wanted_kind f}
+end
+
+# ---- Gathering --------------------------------------------------------------
+
+fn harvest_info [block] {HARVEST.get block}
+
+# Lowest log of a trunk, so Hands work at the base rather than reaching up
+fn is_trunk_base [p] do
+    if ({block_at p[0] p[1] p[2]} != :timber_log) { return true }
+    return ({block_at p[0] (p[1] - 1) p[2]} != :timber_log)
+end
+
+fn start_gather [w kind] do
+    let pos {worker_pos w}
+    if (pos == nil) { return nil }
+    let names {HARVEST_BLOCKS.get kind}
+    let found {find_blocks pos[0] pos[1] pos[2] SEARCH_RADIUS names =max 24}
+
+    for p in found do
+        if {is_trunk_base p} do
+            if {claim_block w.faction p[0] p[1] p[2] w.id 1800} do
+                set w.job :gather
+                set w.kind kind
+                set w.target p
+                go_to w (p[0] + 0.5) p[1] (p[2] + 0.5) 1.5 :harvest
+                return nil
+            end
+        end
+    end
+
+    # Nothing nearby of what we wanted; try the other materials before idling
+    set w.retry (w.retry + 1)
+    if (w.retry < 3) do
+        let next :timber
+        if (kind == :timber) { set next :stone }
+        if (kind == :stone) { set next :provisions }
+        start_gather w next
+    else do
+        set w.retry 0
+        set w.state :idle
+    end
+end
+
+fn gather_speed [w] do
+    let f factions[w.faction]
+    let pos {worker_pos w}
+    for b in f.buildings do
+        let def {BUILDINGS.get b.name}
+        if ({def.has :gather_bonus} and (def.gather_bonus == w.kind)) do
+            if ({dist2 b.x b.z pos[0] pos[2]} < (GATHER_BONUS_RADIUS * GATHER_BONUS_RADIUS)) {
+                return GATHER_BONUS_SPEED
+            }
+        end
+    end
+    return 1.0
+end
+
+fn begin_harvest [w] do
+    let p w.target
+    if (p == nil) { return drop_job w }
+    let block {block_at p[0] p[1] p[2]}
+    let info {harvest_info block}
+    if (info == nil) { return drop_job w }
+    ent_look_at w.id (p[0] + 0.5) (p[1] + 0.5) (p[2] + 0.5)
+    wait_for w (info.seconds * {gather_speed w}) :harvested
+end
+
+# Felling takes a trunk from the top, so nothing is ever left floating
+fn fell_log [p] do
+    let y p[1]
+    while ({block_at p[0] (y + 1) p[2]} == :timber_log) do
+        set y (y + 1)
+    end
+    # Canopy goes with the first cut
+    if ({block_at p[0] (y + 1) p[2]} == :canopy) { clear_canopy p[0] (y + 1) p[2] }
+    world_set_block p[0] y p[2] :air
+    return (y > p[1])
+end
+
+fn clear_canopy [x y z] do
+    for dx in (-3..=3) do
+        for dz in (-3..=3) do
+            for dy in (-3..=3) do
+                if ({block_at (x + dx) (y + dy) (z + dz)} == :canopy) {
+                    world_set_block (x + dx) (y + dy) (z + dz) :air
+                }
+            end
+        end
+    end
+end
+
+fn finish_harvest [w] do
+    let p w.target
+    let block {block_at p[0] p[1] p[2]}
+    let info {harvest_info block}
+    if (info == nil) { return drop_job w }
+
+    let more false
+    if (block == :timber_log) do
+        set more {fell_log p}
+    elif (block == :berry_bush) do
+        world_set_block p[0] p[1] p[2] :berry_bush_bare
+        factions[w.faction].regrow.push {=x p[0] =y p[1] =z p[2] =at ({game_tick} + (BUSH_REGROW_SECONDS * 30))}
+    else do
+        world_set_block p[0] p[1] p[2] :air
+    end
+
+    if ((w.carry_kind != info.kind) and (w.carry_n > 0)) { set w.carry_n 0 }
+    set w.carry_kind info.kind
+    set w.carry_n (w.carry_n + info.units)
+
+    if (more and (w.carry_n < CARRY_CAP)) {
+        return begin_harvest w
+    }
+    release_block w.faction p[0] p[1] p[2] w.id
+    set w.target nil
+
+    if (w.carry_n >= CARRY_CAP) {
+        return start_haul w
+    }
+    start_gather w info.kind
+end
+
+# ---- Hauling ----------------------------------------------------------------
+
+fn start_haul [w] do
+    let pos {worker_pos w}
+    if (pos == nil) { return nil }
+    let zone {zone_of w}
+    let slot {find_deposit_slot zone w.carry_kind pos[0] pos[2]}
+    if (slot == nil) do
+        # Yard's full. Ask for a floor, and help build it with what's in hand.
+        let f factions[w.faction]
+        zone_plan_floor zone
+        set w.state :idle
+        set w.carry_n 0
+        return nil
+    end
+    set w.job :haul
+    go_to w (slot.x + 0.5) slot.y (slot.z + 0.5) 1.5 :deposit
+end
+
+fn finish_deposit [w] do
+    let pos {worker_pos w}
+    if (pos == nil) { return nil }
+    let left {zone_deposit {zone_of w} w.carry_kind w.carry_n pos[0] pos[2]}
+    set w.carry_n left
+    if (left == 0) { set w.carry_kind nil }
+    set w.job nil
+    set w.state :idle
+end
+
+# ---- Eating -----------------------------------------------------------------
+
+fn start_eat [w] do
+    let pos {worker_pos w}
+    let zone {zone_of w}
+    let slot {find_take_slot zone :provisions pos[0] pos[2]}
+    if (slot == nil) { return pick_job_no_eat w }
+    set w.job :eat
+    go_to w (slot.x + 0.5) slot.y (slot.z + 0.5) 1.5 :eat
+end
+
+fn pick_job_no_eat [w] do
+    set w.hunger HUNGER_EAT_AT
+    set w.state :idle
+end
+
+fn finish_eat [w] do
+    let pos {worker_pos w}
+    if ({zone_take {zone_of w} :provisions 1 pos[0] pos[2]} > 0) { set w.hunger 1.0 }
+    set w.job nil
+    set w.state :idle
+end
+
+# ---- Building ---------------------------------------------------------------
+
+fn start_build [w site] do
+    let pos {worker_pos w}
+    if (pos == nil) { return nil }
+    let cell {site_claim site w.id pos[0] pos[1] pos[2]}
+    if (cell == nil) do
+        # Everything's claimed by others. Do something useful meanwhile.
+        return start_gather w {wanted_kind factions[w.faction]}
+    end
+
+    set w.job :build
+    set w.site site
+    set w.cell cell
+
+    let material {BLOCK_MATERIAL.get cell.block}
+    if ((material == nil) or ((w.carry_kind == material) and (w.carry_n > 0))) do
+        go_build_near w cell.x cell.y cell.z :place_block
+        return nil
+    end
+
+    # Fetch materials first. If there are none, the claim goes back.
+    if ((w.carry_n > 0) and (w.carry_kind != material)) do
+        site_release site w.id
+        set w.site nil
+        set w.cell nil
+        set w.job nil
+        return start_haul w
+    end
+
+    let slot {find_take_slot {zone_of w} material pos[0] pos[2]}
+    if (slot == nil) do
+        site_release site w.id
+        set w.site nil
+        set w.cell nil
+        set w.job nil
+        return start_gather w material
+    end
+    set w.kind material
+    go_to w (slot.x + 0.5) slot.y (slot.z + 0.5) 1.5 :fetched
+end
+
+fn finish_fetch [w] do
+    let pos {worker_pos w}
+    let got {zone_take {zone_of w} w.kind CARRY_CAP pos[0] pos[2]}
+    if (got == 0) { return drop_job w }
+    set w.carry_kind w.kind
+    set w.carry_n got
+    let cell w.cell
+    go_build_near w cell.x cell.y cell.z :place_block
+end
+
+fn begin_place [w] do
+    let cell w.cell
+    ent_look_at w.id (cell.x + 0.5) (cell.y + 0.5) (cell.z + 0.5)
+    wait_for w 0.5 :placed
+end
+
+fn finish_place [w] do
+    let cell w.cell
+    world_set_block cell.x cell.y cell.z cell.block
+    let material {BLOCK_MATERIAL.get cell.block}
+    if (material != nil) do
+        set w.carry_n (w.carry_n - 1)
+        if (w.carry_n <= 0) do
+            set w.carry_n 0
+            set w.carry_kind nil
+        end
+    end
+    let site w.site
+    set w.cell nil
+    set w.site nil
+    start_build w site
+end
+
+# ---- Quartermaster defrag ---------------------------------------------------
+
+fn start_defrag [w move] do
+    set w.job :defrag
+    set w.target move
+    let s move.from
+    go_to w (s.x + 0.5) s.y (s.z + 0.5) 1.5 :defrag_take
+end
+
+fn finish_defrag_take [w] do
+    let move w.target
+    let s move.from
+    if ((s.kind != move.kind) or (s.amount <= 0)) { return drop_job w }
+    set w.carry_kind move.kind
+    set w.carry_n s.amount
+    set s.amount 0
+    slot_paint s
+    set w.target nil
+    start_haul w
+end
+
+# ---- Think ------------------------------------------------------------------
+
+fn on_arrive [w] do
+    ent_nav_ack w.id
+    match w.after
+        :harvest { begin_harvest w }
+        :deposit { finish_deposit w }
+        :eat { finish_eat w }
+        :fetched { finish_fetch w }
+        :place_block { begin_place w }
+        :defrag_take { finish_defrag_take w }
+        :rally { set w.state :idle }
+        _ { set w.state :idle }
+    end
+end
+
+fn on_work_done [w] do
+    ent_anim w.id :idle
+    match w.after
+        :harvested { finish_harvest w }
+        :placed { finish_place w }
+        :scaffolded { ent_nav_resume w.id; set w.state :moving }
+        _ { set w.state :idle }
+    end
+end
+
+# A constructive path stopped us at a step that needs a block. Spend one.
+fn handle_nav_block [w] do
+    let action {ent_nav_action w.id}
+    if (action == nil) { return nil }
+    if (action.kind == :place) do
+        let p action.pos
+        world_set_block p[0] p[1] p[2] :scaffold
+        factions[w.faction].scaffold.push p
+        set w.state :working
+        set w.timer 0.3
+        set w.after :scaffolded
+    else do
+        let p action.pos
+        world_set_block p[0] p[1] p[2] :air
+        ent_nav_resume w.id
+    end
+end
+
+fn think [w] do
+    set w.hunger (w.hunger - (THINK_SECONDS / HUNGER_SECONDS))
+    if (w.hunger < 0.0) { set w.hunger 0.0 }
+
+    match w.state
+        :idle { pick_job w }
+        :moving do
+            let nav {ent_nav w.id}
+            match nav
+                :arrived { on_arrive w }
+                :failed do
+                    ent_nav_ack w.id
+                    drop_job w
+                end
+                :blocked { handle_nav_block w }
+                :idle {
+                    # Order was lost, e.g. a command replaced it
+                    drop_job w
+                }
+                _ { nil }
+            end
+        end
+        :working do
+            set w.timer (w.timer - THINK_SECONDS)
+            if (w.timer <= 0.0) { on_work_done w }
+        end
+        _ { nil }
+    end
+end

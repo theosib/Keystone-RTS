@@ -1,0 +1,44 @@
+# Scenario: a fresh settlement must gather, stockpile, and build, untouched.
+
+set economy_started false
+set shelter nil
+set start_stock nil
+set log_timer 0
+
+fn stock_summary [f] do
+    return [{zone_count f.zone :timber} {zone_count f.zone :stone} {zone_count f.zone :provisions}]
+end
+
+on :tick do
+    let f factions[1]
+    let tick {game_tick}
+
+    if (tick == 30) do
+        set start_stock {stock_summary f}
+        log "start stock" start_stock
+        set shelter {place_building f :shelter (f.x - 14) (f.z + 14) 0}
+    end
+
+    if ((tick % 900) == 0) do
+        let states ""
+        for w in f.hands do
+            set states "{states} {w.state}/{w.job}/{w.after}/{w.carry_kind}{w.carry_n}"
+        end
+        log "t=" (tick / 30) "s stock" {stock_summary f} "sites" f.sites.length "built" f.buildings.length "states" states "mobs" f.hands.length
+    end
+
+    if (tick == 9000) do
+        let now {stock_summary f}
+        log "end stock" now "buildings" f.buildings.length
+        if (f.buildings.length < 1) do
+            log "FAIL: shelter never finished"
+            game_exit 1
+        elif (now[0] <= 0) do
+            log "FAIL: no timber"
+            game_exit 1
+        else do
+            log "PASS"
+            game_exit 0
+        end
+    end
+end

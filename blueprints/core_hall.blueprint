@@ -1,0 +1,75 @@
+# The settlement's heart. The Keystone stands on its plinth at the centre.
+f = flagstone
+w = planks
+p = palisade
+t = thatch
+k = keystone
+d = dressed_stone
+---
+fffffffff
+fffffffff
+fffffffff
+fffffffff
+ffffdffff
+fffffffff
+fffffffff
+fffffffff
+fffffffff
+---
+ppppppppp
+p       p
+p       p
+p       p
+p   k   p
+p       p
+p       p
+p       p
+pp_____pp
+---
+ppppppppp
+p       p
+p       p
+p       p
+p       p
+p       p
+p       p
+p       p
+pp_____pp
+---
+ppppppppp
+p       p
+p       p
+p       p
+p       p
+p       p
+p       p
+p       p
+ppppppppp
+---
+ttttttttt
+twwwwwwwt
+twwwwwwwt
+twwwwwwwt
+twwwwwwwt
+twwwwwwwt
+twwwwwwwt
+twwwwwwwt
+ttttttttt
+---
+
+ ttttttt
+ ttttttt
+ ttttttt
+ ttttttt
+ ttttttt
+ ttttttt
+ ttttttt
+
+---
+
+
+  ttttt
+  ttttt
+  ttttt
+  ttttt
+  ttttt

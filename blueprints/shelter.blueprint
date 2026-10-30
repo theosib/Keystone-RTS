@@ -1,0 +1,33 @@
+# Housing for four Hands
+f = planks
+w = palisade
+t = thatch
+---
+fffff
+fffff
+fffff
+fffff
+fffff
+---
+wwwww
+w   w
+w   w
+w   w
+ww_ww
+---
+wwwww
+w   w
+w   w
+w   w
+ww_ww
+---
+ttttt
+ttttt
+ttttt
+ttttt
+ttttt
+---
+
+ ttt
+ ttt
+ ttt

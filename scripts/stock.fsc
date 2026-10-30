@@ -1,0 +1,260 @@
+# Physical stockpiles and the Quartermaster.
+#
+# A zone is a rectangle of storage rows two cells wide with a one-cell aisle
+# between them, so every block has a face a Hand can reach (DESIGN 3.2). Each slot
+# is one world block holding 1..STACK_UNITS units, and its block shows how full
+# it is. Slots stack two high, then the zone grows a floor and goes upward.
+
+fn stack_block [kind amount] do
+    let base "grain_sack"
+    if (kind == :timber) { set base "timber_stack" }
+    if (kind == :stone) { set base "stone_pallet" }
+    return {to_sym "{base}_{amount}"}
+end
+
+fn add_level_slots [zone y] do
+    for dx in (0..zone.width) do
+        if ((dx % 3) == 2) { continue }
+        for dz in (0..zone.depth) do
+            let lower {=x (zone.x + dx) =y y =z (zone.z + dz) =kind nil =amount 0 =above nil}
+            let upper {=x lower.x =y (y + 1) =z lower.z =kind nil =amount 0 =above nil}
+            set lower.above upper
+            zone.slots.push lower
+            zone.slots.push upper
+        end
+    end
+end
+
+fn make_zone [faction x y z width depth] do
+    let zone {=faction faction =x x =y y =z z =width width =depth depth
+              =slots [] =levels 1 =expanding nil}
+    add_level_slots zone y
+    return zone
+end
+
+fn slot_paint [slot] do
+    if (slot.amount <= 0) do
+        set slot.kind nil
+        set slot.amount 0
+        world_set_block slot.x slot.y slot.z :air
+    else do
+        world_set_block slot.x slot.y slot.z {stack_block slot.kind slot.amount}
+    end
+end
+
+# Which part of a zone a resource prefers, so timber stays with timber
+fn kind_section [zone kind] do
+    let third (zone.width / 3)
+    if (kind == :timber) { return [0 third] }
+    if (kind == :stone) { return [third (third * 2)] }
+    return [(third * 2) zone.width]
+end
+
+fn is_lower_slot [slot base_y] do
+    return (((slot.y - base_y) % 3) == 0)
+end
+
+# A slot can take more of `kind` if it's a partial stack of it, or it's empty and
+# not floating: an upper slot needs the block beneath it to be full.
+fn slot_accepts [zone slot kind] do
+    if (slot.kind == kind) { return (slot.amount < STACK_UNITS) }
+    if (slot.kind != nil) { return false }
+    return true
+end
+
+fn find_deposit_slot [zone kind near_x near_z] do
+    let section {kind_section zone kind}
+    let best nil
+    let best_score 1000000000
+
+    let i 0
+    let count zone.slots.length
+    while (i < count) do
+        let lower zone.slots[i]
+        let upper zone.slots[i + 1]
+        set i (i + 2)
+
+        # Fill lower before upper; an upper slot is usable only over a full lower
+        let slot nil
+        if {slot_accepts zone lower kind} do
+            set slot lower
+        elif ((lower.kind == kind or lower.amount >= STACK_UNITS) and {slot_accepts zone upper kind}) do
+            if (lower.amount >= STACK_UNITS) { set slot upper }
+        end
+
+        if (slot != nil) do
+            let score {dist2 slot.x slot.z near_x near_z}
+            let dx (slot.x - zone.x)
+            if ((dx < section[0]) or (dx >= section[1])) { set score (score + 4000) }
+            # Partial stacks first: keeps floor space free
+            if (slot.kind == kind) { set score (score - 20000) }
+            if (slot.y > zone.y) { set score (score + 200) }
+            if (score < best_score) do
+                set best_score score
+                set best slot
+            end
+        end
+    end
+    return best
+end
+
+fn zone_deposit [zone kind amount near_x near_z] do
+    let remaining amount
+    while (remaining > 0) do
+        let slot {find_deposit_slot zone kind near_x near_z}
+        if (slot == nil) { return remaining }
+        set slot.kind kind
+        let room (STACK_UNITS - slot.amount)
+        let moved {min_int room remaining}
+        set slot.amount (slot.amount + moved)
+        set remaining (remaining - moved)
+        slot_paint slot
+    end
+    return 0
+end
+
+fn find_take_slot [zone kind near_x near_z] do
+    let best nil
+    let best_score 1000000000
+    let i 0
+    let count zone.slots.length
+    while (i < count) do
+        let lower zone.slots[i]
+        let upper zone.slots[i + 1]
+        set i (i + 2)
+
+        # Take from the top of a stack, so nothing is left floating
+        let slot nil
+        if (upper.kind == kind) do
+            set slot upper
+        elif ((lower.kind == kind) and (upper.kind == nil)) do
+            set slot lower
+        end
+
+        if (slot != nil) do
+            let score {dist2 slot.x slot.z near_x near_z}
+            # Partial stacks first: emptying them frees cells
+            if (slot.amount < STACK_UNITS) { set score (score - 500) }
+            if (score < best_score) do
+                set best_score score
+                set best slot
+            end
+        end
+    end
+    return best
+end
+
+fn zone_take [zone kind amount near_x near_z] do
+    let taken 0
+    while (taken < amount) do
+        let slot {find_take_slot zone kind near_x near_z}
+        if (slot == nil) { return taken }
+        let moved {min_int slot.amount (amount - taken)}
+        set slot.amount (slot.amount - moved)
+        set taken (taken + moved)
+        slot_paint slot
+    end
+    return taken
+end
+
+fn zone_count [zone kind] do
+    let total 0
+    for slot in zone.slots do
+        if (slot.kind == kind) { set total (total + slot.amount) }
+    end
+    return total
+end
+
+fn zone_used_slots [zone] do
+    let used 0
+    for slot in zone.slots do
+        if (slot.kind != nil) { set used (used + 1) }
+    end
+    return used
+end
+
+# What's on the ground wins. A torched or looted stack stops being stock.
+fn zone_reconcile [zone] do
+    for slot in zone.slots do
+        if (slot.kind != nil) do
+            let expected {stack_block slot.kind slot.amount}
+            if ({block_at slot.x slot.y slot.z} != expected) do
+                set slot.kind nil
+                set slot.amount 0
+            end
+        end
+    end
+end
+
+# Quartermaster: move units between partial stacks of one kind so cells free up.
+# Returns a {from to kind} move, or nil when the zone is tidy.
+fn find_defrag_move [zone] do
+    let partial {=timber nil =stone nil =provisions nil}
+    for slot in zone.slots do
+        if ((slot.kind != nil) and (slot.amount < STACK_UNITS)) do
+            let other {partial.get slot.kind}
+            if (other == nil) do
+                partial.set slot.kind slot
+            elif ((slot.above == nil) or (slot.above.kind == nil)) do
+                return {=from slot =to other =kind slot.kind}
+            end
+        end
+    end
+    return nil
+end
+
+# ---- Growing upward ---------------------------------------------------------
+
+fn deck_y [zone level] { return (zone.y + (3 * level) - 1) }
+
+# Queue a mezzanine: posts, a plank deck over the rows, and stairs up the near side
+fn zone_plan_floor [zone] do
+    if (zone.expanding != nil) { return nil }
+
+    let level zone.levels
+    let y {deck_y zone level}
+    let site {site_create}
+
+    # Posts stand outside the rows so aisles stay clear
+    let x0 (zone.x - 1)
+    let x1 (zone.x + zone.width)
+    let z0 (zone.z - 1)
+    let z1 (zone.z + zone.depth)
+    for px in [x0 x1] do
+        for pz in [z0 z1] do
+            let h zone.y
+            while (h <= y) do
+                site_add site px h pz :palisade
+                set h (h + 1)
+            end
+        end
+    end
+
+    for dx in (0..zone.width) do
+        for dz in (0..zone.depth) do
+            site_add site (zone.x + dx) y (zone.z + dz) :planks
+        end
+    end
+
+    # Stairs climb along the zone's west side, one rise per cell
+    let stair_x (zone.x - 1)
+    let rise 0
+    let top ((level * 3) - 1)
+    while (rise <= top) do
+        let h 0
+        while (h <= rise) do
+            site_add site stair_x (zone.y + h) (zone.z + rise) :planks
+            set h (h + 1)
+        end
+        set rise (rise + 1)
+    end
+
+    set zone.expanding site
+    return site
+end
+
+fn zone_finish_floor [zone] do
+    add_level_slots zone ({deck_y zone zone.levels} + 1)
+    set zone.levels (zone.levels + 1)
+    set zone.expanding nil
+end

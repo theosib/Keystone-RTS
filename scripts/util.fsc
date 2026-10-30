@@ -1,0 +1,74 @@
+# Small helpers shared by the game scripts.
+
+fn block_at [x y z] {world_get_block x y z}
+
+# Terrain doesn't include plants and loose rock
+
+set SOFT_BLOCKS [:canopy :timber_log :berry_bush :berry_bush_bare :boulder]
+
+fn not_soft [b] do
+    if (b == :air) { return false }
+    return (not {SOFT_BLOCKS.contains b})
+end
+
+# Top solid terrain block in a column, ignoring what grows on it
+fn ground_y [x z] do
+    let y {surface_y x z}
+    if (y == nil) { return nil }
+    while (y > 0) do
+        if {not_soft {block_at x y z}} { return y }
+        set y (y - 1)
+    end
+    return nil
+end
+
+fn dist2 [ax az bx bz] do
+    let dx (ax - bx)
+    let dz (az - bz)
+    return ((dx * dx) + (dz * dz))
+end
+
+fn min_int [a b] do
+    if (a < b) { return a }
+    return b
+end
+
+# Flatten a rectangle so its top solid layer sits at y-1, clearing what's above
+fn level_area [x0 z0 x1 z1 y] do
+    for x in (x0..=x1) do
+        for z in (z0..=z1) do
+            let h y
+            while (h < (y + 24)) do
+                world_set_block x h z :air
+                set h (h + 1)
+            end
+            set h (y - 1)
+            while (h > (y - 8)) do
+                let here {block_at x h z}
+                if ({not_soft here} and (h < (y - 1))) { break }
+                let fill :loam
+                if (h == (y - 1)) { set fill :turf }
+                world_set_block x h z fill
+                set h (h - 1)
+            end
+        end
+    end
+end
+
+# A spot near (x, z) with room, above water. Scans outward in steps.
+fn find_settlement_site [x z] do
+    let best nil
+    let radius 0
+    while (radius <= 64) do
+        for dx in [(0 - radius) 0 radius] do
+            for dz in [(0 - radius) 0 radius] do
+                let y {ground_y (x + dx) (z + dz)}
+                if ((y != nil) and (y > (SEA_LEVEL + 1))) {
+                    return [(x + dx) (y + 1) (z + dz)]
+                }
+            end
+        end
+        set radius (radius + 8)
+    end
+    return [x 80 z]
+end

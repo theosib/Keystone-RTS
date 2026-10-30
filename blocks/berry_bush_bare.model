@@ -1,0 +1,5 @@
+include: base/solid_cube
+texture: blocks/canopy
+collision: none
+opaque: false
+hardness: 0.3
