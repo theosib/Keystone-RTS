@@ -21,6 +21,7 @@ Build the engine once (see [CLAUDE.md](CLAUDE.md)), then:
 | Left-drag | Select your units |
 | Right-click | Send them there |
 | WASD / arrows, screen edge | Pan |
+| Middle-drag, or hold Option/Alt and move the mouse | Grab the ground and drag it |
 | Q / E | Rotate |
 | Scroll | Zoom |
 | Tab | Step down as the Steward, or back up (WASD, mouse, Space, left-click to work) |

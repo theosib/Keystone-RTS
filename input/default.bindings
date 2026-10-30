@@ -20,6 +20,12 @@ context: gameplay
   keyrelease_q: end_orbit_left
   keypress_e: begin_orbit_right
   keyrelease_e: end_orbit_right
+  mousepress_middle: begin_grab
+  mouserelease_middle: end_grab
+  keypress_left_alt: begin_grab
+  keyrelease_left_alt: end_grab
+  keypress_right_alt: begin_grab
+  keyrelease_right_alt: end_grab
   key_r: turn
   key_tab: toggle_view
   keypress_space: begin_jump
