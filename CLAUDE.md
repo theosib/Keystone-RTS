@@ -49,6 +49,8 @@ finescript traps that cost real time here:
 - Interpolation can't nest quotes: `"{loc "x"}"` doesn't parse. Assign it to a `let` first.
 - Script `:air` is normalised to real air by `world_set_block`/`site_add`.
 - Indented config lines are continuation data: `.emodel` keys must not be indented.
+- `.geom` UVs are image coordinates: `v = 0` is the top row, so a side face's top edge has the
+  lower `v`. `finevox_render_tests` goldens can't see this; `MeshTest.*SideFaces*` covers cubes.
 - A new unit order must `ent_stop` first. Otherwise the old route finishes, reads as
   `:arrived`, and the new order is taken as done.
 - Path searches are the main CPU cost: never re-issue `ent_goto` every think. See the
@@ -59,7 +61,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2243 + 149 + 45 = 2437 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2245 + 149 + 45 = 2439 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script,
   `gui_hover x y` rests the mouse to show a tooltip, and `do_action "toggle_view"` presses a
