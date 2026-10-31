@@ -1,0 +1,7 @@
+# The player's body. Vision and health stay at the defaults, and the engine sets its size.
+name: steward
+ai: none
+model: steward
+anim:idle: 0
+anim:walk: 1
+anim:work: 2

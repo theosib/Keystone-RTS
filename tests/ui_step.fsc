@@ -1,4 +1,5 @@
-# For ui_input.fs: on the flat from the origin, two one-block steps and then a two-block wall
+# For ui_input.fs: on the flat from the origin, two one-block steps and then a two-block wall,
+# with a Hand standing behind the start
 set built false
 
 on :tick do
@@ -21,4 +22,5 @@ on :tick do
             end
         end
     end
+    ent_spawn :hand [0.5 (g + 1) -2.5] =faction 1
 end

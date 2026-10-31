@@ -21,6 +21,12 @@ fn t_check [label ok] do
     end
 end
 
+# Other Hands are at home, and the wide sky view reaches them
+fn t_near [id] do
+    let p {entity_pos id}
+    return ({abs p[0]} < 20)
+end
+
 on :mouse do
     if ((view_mode == :embodied) and (mouse_event == :down)) { set t_clicks (t_clicks + 1) }
 end
@@ -122,6 +128,16 @@ on :frame do
     if (t_frame == 448) do
         let now {pick_view}
         t_check "and the server agrees" (now.distance > t_hit.distance)
+        do_action "toggle_view"
+    end
+
+    # Left standing, the Steward is no unit to select: a box around it and a Hand finds the Hand
+    if (t_frame == 454) { cam_focus 0 3 }
+    if (t_frame == 462) do
+        let picked {pick_entities 0 0 1280 720}
+        let near {picked.filter fn [id] {t_near id}}
+        print "picked {near.length} nearby"
+        t_check "only the Hand can be selected, not the Steward" (near.length == 1)
         print "UI TEST DONE"
     end
 end
