@@ -1,0 +1,106 @@
+# Scenario: a palisade lays out over the cells it's given, charges per section, and seals. Walkers
+# can't cut a corner, so a ring of nothing but diagonal joints still holds them in.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set line nil
+set line_start nil
+set timber_before 0
+set penned nil
+set outside nil
+set ring_gap nil
+set stage :laying
+
+fn wall_ok [cell] do
+    # The top of a finished section reads as ground, so count down from the sky
+    let y {surface_y cell[0] cell[1]}
+    if ({block_at cell[0] y cell[1]} != :log_palisade_top) { return false }
+    if ({block_at cell[0] (y - 1) cell[1]} != :log_palisade) { return false }
+    return ({block_at cell[0] (y - 2) cell[1]} == :log_palisade)
+end
+
+fn ring_cells [cx cz radius] do
+    let cells []
+    for dx in ((0 - radius)..=radius) do
+        for dz in ((0 - radius)..=radius) do
+            if (({abs dx} + {abs dz}) == radius) { cells.push [(cx + dx) (cz + dz)] }
+        end
+    end
+    return cells
+end
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+
+    if (tick == 5) do
+        # Straight, then diagonal, then straight
+        set line_start [(f.x + 10) (f.z + 10)]
+        let x line_start[0]
+        let z line_start[1]
+        set line [[x z] [(x + 1) z] [(x + 2) (z + 1)] [(x + 3) (z + 2)] [(x + 4) (z + 2)]]
+        lay_fence f line
+        if (f.sites.length != 1) { fail "the line didn't become one site" }
+        set timber_before {zone_count f.zone :timber}
+
+        # Crossing a wall that's already there doesn't stack another on top of it
+        world_set_block (x + 10) f.y z :log_palisade
+        let before f.sites.length
+        lay_fence f [[(x + 10) z]]
+        if (f.sites.length != before) { fail "laid a wall on top of a wall" }
+        world_set_block (x + 10) f.y z :air
+    end
+
+    if ((stage == :laying) and (tick > 5) and ((tick % 30) == 0) and (f.sites.length == 0)) do
+        for cell in line do
+            if (not {wall_ok cell}) { fail "section at {cell[0]} {cell[1]} isn't a full wall" }
+        end
+        let spent (timber_before - {zone_count f.zone :timber})
+        log "spent" spent "timber on" line.length "sections"
+
+        let cx (f.x - 9)
+        let cz (f.z + 9)
+        for cell in {ring_cells cx cz 3} do
+            let y f.y
+            for block in FENCE_BLOCKS do
+                world_set_block cell[0] y cell[1] block
+                set y (y + 1)
+            end
+        end
+        set penned {ent_spawn :hand [(cx + 0.5) f.y (cz + 0.5)] =faction 1}
+        set outside [(cx + 8) f.y cz]
+        set ring_gap [(cx + 3) cz]
+        ent_goto penned outside[0] outside[1] outside[2] =range 1.0 =partial false =max_nodes 6000
+        set stage :penned
+    end
+
+    if ((stage == :penned) and ({ent_nav penned} == :failed)) do
+        ent_nav_ack penned
+        # With one post gone the same walk works, so the wall is what stopped it
+        let y f.y
+        for block in FENCE_BLOCKS do
+            world_set_block ring_gap[0] y ring_gap[1] :air
+            set y (y + 1)
+        end
+        set stage :opened
+        set opened_at tick
+    end
+
+    if ((stage == :opened) and (tick == (opened_at + 30))) do
+        ent_goto penned outside[0] outside[1] outside[2] =range 1.0 =partial false =max_nodes 6000
+    end
+
+    if ((stage == :penned) and ({ent_nav penned} == :arrived)) { fail "walked through the wall" }
+
+    if ((stage == :opened) and (tick > (opened_at + 30)) and ({ent_nav penned} == :arrived)) do
+        log "PASS"
+        game_exit 0
+    end
+
+    if (tick == 5900) { fail "stuck at stage {stage}" }
+end
+
+set opened_at 0

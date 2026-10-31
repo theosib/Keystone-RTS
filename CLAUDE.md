@@ -37,11 +37,13 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
 finescript traps that cost real time here:
 
 - `(...)` is infix math only. Calls need `{...}`: `(loc "x")` is a parse error.
-- `else` needs `do`: `else do ... end`. So does `while`: only `if` takes a `{ ... }` body.
+- `else` needs `do`: `else do ... end`. So do `while` and `for`: only `if` takes a `{ ... }` body.
 - A statement ends at the newline. Named args can't wrap to the next line.
 - `match` and `source` are keywords, so they can't be variable names.
 - `random_range` is inclusive at both ends.
 - `{}` is an empty block, not an empty map.
+- A closure made in a `for` loop shares the loop's variable: every button built that way acts
+  on the last value. Make the closure in a function that takes the value as a parameter.
 - Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.
 - Interpolation can't nest quotes: `"{loc "x"}"` doesn't parse. Assign it to a `let` first.
 - Script `:air` is normalised to real air by `world_set_block`/`site_add`.
@@ -56,7 +58,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2239 + 149 + 41 = 2429 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2242 + 149 + 41 = 2432 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script,
   `gui_hover x y` rests the mouse to show a tooltip, and `do_action "toggle_view"` presses a

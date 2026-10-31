@@ -81,6 +81,7 @@ run stranded 1000
 run inspect 100
 run canopy 6000
 run catalog 20
+run fence 6000
 run tasks 9000
 run economy 9100
 run light 9100

@@ -6,6 +6,7 @@ ui.selected.other: {count} units selected
 ui.hint.select: Left-drag to select, right-click to send
 ui.hint.place: Left-click to place, R to turn, right-click to cancel
 ui.hint.lay: Drag to mark blocks for Hands to build, right-click to stop
+ui.hint.fence: Drag to run a wall, right-click to finish
 ui.hint.embodied: Left-click to break, right-click to place, 1-6 to choose, Tab for the overview
 ui.denied: No {kind} in the stockpile
 ui.blocks: Blocks
@@ -86,6 +87,8 @@ block.gravel_path: Gravel Path
 block.keystone: The Keystone
 block.loam: Loam
 block.palisade: Palisade
+block.log_palisade: Log Palisade
+block.log_palisade_top: Log Palisade
 block.planks: Planks
 block.sand: Sand
 block.scaffold: Scaffold
@@ -116,7 +119,7 @@ tip.shelter: Beds for {count} more of your people.
 tip.forager_hut: Hands gather provisions {percent}% quicker within {radius} blocks.
 tip.sawpit: Hands cut timber {percent}% quicker within {radius} blocks.
 tip.watchtower: Sees {radius} blocks in every direction.
-tip.palisade_wall: A section of log wall that blocks the way.
+tip.palisade_wall: Drag out a log wall. It joins up straight or on the diagonal. Needs are per section.
 tip.hand: Gathers, hauls and builds. Ready in {seconds} seconds.
 tip.militia: Fights hand to hand. Ready in {seconds} seconds.
 tip.shortbow: Shoots from up to {range} blocks away. Ready in {seconds} seconds.

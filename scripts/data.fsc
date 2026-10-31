@@ -9,6 +9,7 @@ set STACK_UNITS 8
 # What a block costs to place. Blocks not listed are free.
 set BLOCK_MATERIAL {
     =planks :timber =palisade :timber =scaffold :timber
+    =log_palisade :timber =log_palisade_top :timber
     =thatch :provisions
     =flagstone :stone =dressed_stone :stone =gravel_path :stone
 }
@@ -37,6 +38,8 @@ set HAND_TRAIN_SECONDS 10.0
 # Laid into the ground rather than set on top of it
 set SURFACE_BLOCKS [:gravel_path :flagstone]
 set LAY_MAX_CELLS 32
+# One section of wall, from the ground up
+set FENCE_BLOCKS [:log_palisade :log_palisade :log_palisade_top]
 
 set BUILDINGS {
     =shelter {=blueprint :shelter =housing 4}

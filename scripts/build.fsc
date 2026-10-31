@@ -94,12 +94,35 @@ fn lay_blocks [f block x0 z0 x1 z1] do
             set added (added + 1)
         end
     end
+    queue_laid f site added x0 z0
+end
+
+fn queue_laid [f site added x z] do
     if (added == 0) do
         site_remove site
         return nil
     end
-    f.sites.push {=name :laid =site site =x x0 =y 0 =z z0 =size_x 0 =size_z 0
+    f.sites.push {=name :laid =site site =x x =y 0 =z z =size_x 0 =size_z 0
                   =complete false =faction f.id =laid true}
+end
+
+# A run of wall over the cells marked out, each section standing on its own ground. Where it
+# crosses a wall already there it's already joined, and to ground_y that wall is ground.
+fn lay_fence [f cells] do
+    let site {site_create}
+    let added 0
+    for cell in cells do
+        let g {ground_y cell[0] cell[1]}
+        if ((g != nil) and (added < LAY_MAX_CELLS) and (not {FENCE_BLOCKS.contains {block_at cell[0] g cell[1]}})) do
+            let y (g + 1)
+            for block in FENCE_BLOCKS do
+                site_add site cell[0] y cell[1] block
+                set y (y + 1)
+            end
+            set added (added + 1)
+        end
+    end
+    queue_laid f site added cells[0][0] cells[0][1]
 end
 
 fn finish_building [f b] do

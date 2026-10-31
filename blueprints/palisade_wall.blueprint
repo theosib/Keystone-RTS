@@ -1,8 +1,9 @@
 # One section of log wall
-w = palisade
+w = log_palisade
+t = log_palisade_top
 ---
 w
 ---
 w
 ---
-w
+t

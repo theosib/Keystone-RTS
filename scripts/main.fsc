@@ -250,6 +250,7 @@ on :command do
         :steward_break { steward_break f cmd.x cmd.y cmd.z }
         :steward_place { steward_place f cmd.x cmd.y cmd.z cmd.block }
         :lay { lay_blocks f cmd.block cmd.x0 cmd.z0 cmd.x1 cmd.z1 }
+        :fence { lay_fence f cmd.cells }
         :tasks { ui_publish {=tasks {tasks_of cmd.units}} }
         :catalog { ui_publish {=catalog {catalog_of}} }
         :inspect { ui_publish {=inspect {inspect_at f.id cmd.x cmd.y cmd.z}} }

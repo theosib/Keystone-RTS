@@ -23,6 +23,7 @@ set PALETTE_WIDTH 176
 set PALETTE_ICON 24
 set TOOL_WIDTH 74
 set TOOL_ICON 32
+set FENCE_HEIGHT 3
 set TIP_WRAP 250
 set KINDS ["timber" "stone" "provisions"]
 set TEXT_COLOR [0.95 0.88 0.74 1.0]
@@ -339,6 +340,8 @@ end
 
 set tool_index 0
 set laying false
+set laying_fence false
+set fence_button nil
 set lay_start nil
 set denied nil
 set denied_frames 0
@@ -350,15 +353,17 @@ fn refresh_tools [] do
     let i 0
     while (i < BLOCK_TOOLS.length) do
         let button tool_buttons[i]
-        set button.selected ((i == tool_index) and (laying or (view_mode == :embodied)))
+        set button.selected ((i == tool_index) and (not laying_fence) and (laying or (view_mode == :embodied)))
         set i (i + 1)
     end
+    if (fence_button != nil) { set fence_button.selected laying_fence }
 end
 
 fn choose_tool [index] do
     set tool_index index
     if (view_mode != :embodied) do
         set laying true
+        set laying_fence false
         set placing nil
         set lay_start nil
     end
@@ -367,8 +372,32 @@ end
 
 fn stop_laying [] do
     set laying false
+    set laying_fence false
     set lay_start nil
     refresh_tools
+end
+
+fn start_fence [] do
+    set placing nil
+    set laying true
+    set laying_fence true
+    set lay_start nil
+    refresh_tools
+end
+
+# The cells between two points, each joined to the last straight or on the diagonal
+fn line_cells [x0 z0 x1 z1] do
+    let dx (x1 - x0)
+    let dz (z1 - z0)
+    let span {max {abs dx} {abs dz}}
+    if (span == 0) { return [[x0 z0]] }
+    let cells []
+    for i in (0..={min span (LAY_MAX_CELLS - 1)}) do
+        let x (x0 + {floor (((i * dx) / (span * 1.0)) + 0.5)})
+        let z (z0 + {floor (((i * dz) / (span * 1.0)) + 0.5)})
+        cells.push [x z]
+    end
+    return cells
 end
 
 fn tool_button [index] do
@@ -410,9 +439,13 @@ end
 fn finish_lay [] do
     if (lay_start == nil) { return nil }
     let hit {pick_ground mouse_x mouse_y}
-    if (hit != nil) {
-        send_command {=name :lay =block {to_sym {tool_name}} =x0 lay_start[0] =z0 lay_start[2] =x1 hit.x =z1 hit.z}
-    }
+    if (hit != nil) do
+        if laying_fence do
+            send_command {=name :fence =cells {line_cells lay_start[0] lay_start[2] hit.x hit.z}}
+        else do
+            send_command {=name :lay =block {to_sym {tool_name}} =x0 lay_start[0] =z0 lay_start[2] =x1 hit.x =z1 hit.z}
+        end
+    end
     set lay_start nil
 end
 
@@ -423,6 +456,12 @@ fn draw_laying [] do
     if (hit == nil) { return nil }
     let start lay_start
     if (start == nil) { set start [hit.x hit.y hit.z] }
+    if laying_fence do
+        for cell in {line_cells start[0] start[2] hit.x hit.z} do
+            marker_box cell[0] (start[1] + 1) cell[1] 1 FENCE_HEIGHT 1 0.35 0.75 1.0 0.28
+        end
+        return nil
+    end
     let dx (hit.x - start[0])
     let dz (hit.z - start[2])
     if ({abs dx} >= {abs dz}) { set dz 0 } { set dx 0 }
@@ -456,8 +495,23 @@ fn start_placing [name] do
 end
 
 fn palette_button [children label icon tip on_click] do
-    children.push {ui.button label =icon icon =icon_size PALETTE_ICON =width PALETTE_WIDTH =on_click on_click}
+    let button {ui.button label =icon icon =icon_size PALETTE_ICON =width PALETTE_WIDTH =on_click on_click}
+    children.push button
     children.push {make_tip tip label}
+    return button
+end
+
+# Each its own function, for its own name: a closure made in a loop shares the loop's variable
+fn building_button [children name] do
+    palette_button children {loc "building.{name}"} name name fn [] do
+        start_placing name
+    end
+end
+
+fn muster_button [children name] do
+    palette_button children {loc "unit.{name}"} name name fn [] do
+        send_command {=name :muster =unit {to_sym name}}
+    end
 end
 
 fn palette_children [] do
@@ -467,20 +521,19 @@ fn palette_children [] do
     end
     children.push {ui.separator}
     children.push {ui.text {loc "ui.palette"}}
-    for name in ["shelter" "forager_hut" "sawpit" "watchtower" "palisade_wall"] do
-        palette_button children {loc "building.{name}"} name name fn [] do
-            start_placing name
-        end
+    for name in ["shelter" "forager_hut" "sawpit" "watchtower"] do
+        building_button children name
     end
+    set fence_button {palette_button children {loc "building.palisade_wall"} "palisade_wall" "palisade_wall" fn [] do
+        start_fence
+    end}
     children.push {ui.separator}
     children.push {ui.text {loc "ui.muster"}}
     palette_button children {loc "ui.train_hand"} "train_hand" "hand" fn [] do
         send_command {=name :train}
     end
     for name in ["militia" "shortbow" "scout"] do
-        palette_button children {loc "unit.{name}"} name name fn [] do
-            send_command {=name :muster =unit {to_sym name}}
-        end
+        muster_button children name
     end
     return children
 end
@@ -728,6 +781,8 @@ on :frame do
         set hud_hint.text {loc "ui.denied" =kind {loc "kind.{denied}"}}
     elif (view_mode == :embodied) do
         set hud_hint.text {loc "ui.hint.embodied"}
+    elif laying_fence do
+        set hud_hint.text {loc "ui.hint.fence"}
     elif laying do
         set hud_hint.text {loc "ui.hint.lay"}
     elif (placing != nil) do
