@@ -41,6 +41,7 @@ finescript traps that cost real time here:
 - A statement ends at the newline. Named args can't wrap to the next line.
 - `match` and `source` are keywords, so they can't be variable names.
 - `random_range` is inclusive at both ends.
+- Maths is plain functions: `{sqrt x}`, `{max a b}`, `{abs x}`. There's no `math.` map.
 - `{}` is an empty block, not an empty map.
 - A closure made in a `for` loop shares the loop's variable: every button built that way acts
   on the last value. Make the closure in a function that takes the value as a parameter.
@@ -58,12 +59,17 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2242 + 149 + 41 = 2432 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2243 + 149 + 45 = 2437 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script,
   `gui_hover x y` rests the mouse to show a tooltip, and `do_action "toggle_view"` presses a
   bound action. A scratch `--game-root` with extra lines at
   the end of `ui/main.fs` drives them without touching the real tree.
+- `gui_click` goes straight to ImGui. To test who gets an event, use `input_key`,
+  `input_button` and `input_move`, which go down the whole listener chain, as
+  `tests/run_ui.sh` does. That run opens a window, so it's separate from `run_all.sh`.
+- `assert` compiles away in Release, so the `test_phase*` binaries in finevk and finegui
+  check little there. Rebuild with `-UNDEBUG`, or use a check that always runs.
 - `tests/run_all.sh` runs the headless gameplay scenarios. Prefer these over watching the
   game: `finevox_headless --script` loads a scenario next to the real game script, and
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
@@ -81,5 +87,8 @@ finescript traps that cost real time here:
 - Read one with `lldb -c /cores/core.<pid> ../fv-keystone/finevox_run`.
 - Your save survives a crash up to the last autosave. `--no-save` or `--exit-after` keep test
   runs away from it, and anything by hand against `--game-root .` otherwise resumes it.
+- `lldb -p <pid> -b` attaches to a running game, and a one-shot breakpoint on
+  `GameClient::Impl::updateCamera` gives you `this`. finevk and finegui have no debug info, so
+  read their structs by offset. Each stop is a long `dt` for the game.
 - Reports with stacks for every thread: `~/Library/Logs/DiagnosticReports/finevox_run-*.ips`.
   Often enough on their own: look at what the other threads were doing.

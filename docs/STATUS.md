@@ -18,7 +18,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout |
 | Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
 | Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
-| Steward | First-person avatar (Tab). Harvests, digs, and places blocks from the stockpile by hand |
+| Steward | First-person avatar (Tab). Walks up one-block ledges, harvests, digs, and places blocks from the stockpile by hand |
 | Blocks | Blocks bar: a drag overhead marks a run for Hands, which is also how roads get laid |
 | Work panel | The queue of work for anyone, or each selected unit's task stack |
 | HUD | Resource table with icons from `tools/gen_icons.py` |

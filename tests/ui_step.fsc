@@ -1,0 +1,24 @@
+# For ui_input.fs: on the flat from the origin, two one-block steps and then a two-block wall
+set built false
+
+on :tick do
+    if built { return nil }
+    set built true
+    let g {surface_y 0 0}
+    for x in (-4..=4) do
+        for z in (-3..=9) do
+            let height 0
+            if (z >= 3) { set height 1 }
+            if (z >= 5) { set height 2 }
+            if (z >= 7) { set height 4 }
+            world_set_block x g z :flagstone
+            for up in (1..=12) do
+                if (up <= height) do
+                    world_set_block x (g + up) z :stone
+                else do
+                    world_set_block x (g + up) z :air
+                end
+            end
+        end
+    end
+end
