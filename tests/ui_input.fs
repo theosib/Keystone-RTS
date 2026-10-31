@@ -4,7 +4,7 @@
 set t_frame 0
 set t_clicks 0
 set t_eye 0
-set t_floor 0
+set t_low 0
 set t_rise 0
 set t_hit nil
 
@@ -100,18 +100,20 @@ on :frame do
     if (t_frame == 200) do
         let p {cam_pos}
         set t_eye p[1]
-        set t_floor (t_eye - 1.65)
-        print "floor {t_floor}"
+        set t_low p[1]
         input_key "w" true
     end
     if (t_frame > 200) do
         let p {cam_pos}
         set t_rise {max t_rise (p[1] - t_eye)}
         set t_eye p[1]
+        # The body may still be coming down after however many frames that was, and walking only
+        # goes up from where it lands
+        set t_low {min t_low p[1]}
     end
     if (t_frame == 440) do
         input_key "w" false
-        let climbed (t_eye - 1.65 - t_floor)
+        let climbed (t_eye - t_low)
         print "climbed {climbed}, at most {t_rise} in a frame"
         t_check "walks up one block at a time, and no further" ({abs (climbed - 2.0)} < 0.01)
         t_check "the eye never jumps up a block" (t_rise < 0.4)
