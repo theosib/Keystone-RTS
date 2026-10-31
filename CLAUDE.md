@@ -56,7 +56,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2237 + 149 + 41 = 2427 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2239 + 149 + 41 = 2429 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script, and
   `do_action "toggle_view"` presses a bound action. A scratch `--game-root` with extra lines at
