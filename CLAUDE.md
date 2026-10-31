@@ -63,7 +63,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2254 + 149 + 45 = 2448 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2254 + 173 + 45 = 2472 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -87,6 +87,20 @@ finescript traps that cost real time here:
   reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
   `--validation` turns on Vulkan validation, `--stats` prints render counts each second.
+
+## Live inspection (MCP)
+
+- `./run.sh --mcp` serves the running game to the `keystone` MCP server in `.mcp.json`:
+  `server_*` tools see the whole simulation, `client_*` see what the player sees, fog included.
+  `server_eval` and `client_eval` run finescript with the game's or UI's globals and natives.
+  Prefer these to scratch scripts and screenshots when looking at a live problem.
+- The bridge in `.mcp.json` stays connected with no game running. A second game on the same
+  port fails to bind and carries on without a server: use `--mcp-port N` and `FINEVOX_MCP_PORT`.
+- With no MCP client to hand, tools are a plain POST: JSON-RPC `tools/call` to
+  `http://127.0.0.1:7801/mcp`.
+- `--mcp-player` offers only what a player could use, for LLM players.
+- `tests/run_mcp.sh` tests it end to end, through the bridge, in a real window. It's separate
+  from `run_all.sh`. Design and measurements are in the engine's `docs/systems/game-runtime.md`.
 
 ## Crashes
 

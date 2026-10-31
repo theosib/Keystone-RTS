@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "keystone": {
+      "command": "python3",
+      "args": ["../FineStructureVoxel/tools/mcp_bridge.py"]
+    }
+  }
+}
