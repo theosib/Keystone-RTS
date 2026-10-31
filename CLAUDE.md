@@ -63,7 +63,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2254 + 173 + 45 = 2472 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2258 + 173 + 45 = 2476 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -83,6 +83,8 @@ finescript traps that cost real time here:
 - The client's world is `WorldReplica`, which sweeps for changes and can lag by a second. A
   player's own action needs `predict_block` or `expect_change` beside its `send_command`. The
   server's word overrides a prediction after 3 ticks.
+- Light doesn't lag with it: the client draws old blocks with the server's current light. A
+  mesh that reads a block's own cell can see it dark for a few frames after it turned solid.
 - Loading relights the whole world, so a light bug only exists in a game in progress and a
   reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
@@ -99,6 +101,8 @@ finescript traps that cost real time here:
 - With no MCP client to hand, tools are a plain POST: JSON-RPC `tools/call` to
   `http://127.0.0.1:7801/mcp`.
 - `--mcp-player` offers only what a player could use, for LLM players.
+- To catch a blink, call `client_screenshot` in a loop with a small `region` and `max_size: 8`.
+  It keeps up with the frame rate, and a graph of mean brightness shows what stills can't.
 - `tests/run_mcp.sh` tests it end to end, through the bridge, in a real window. It's separate
   from `run_all.sh`. Design and measurements are in the engine's `docs/systems/game-runtime.md`.
 
