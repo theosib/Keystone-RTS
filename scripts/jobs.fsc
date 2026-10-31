@@ -187,9 +187,11 @@ fn fell_log [p] do
     while ({block_at p[0] (y + 1) p[2]} == :timber_log) do
         set y (y + 1)
     end
-    # Canopy goes with the first cut
+    # Canopy goes with the first cut. A neighbour felled first can have taken the leaf above
+    # this trunk, and then it's the cuts that find what's left of the crown.
     if ({block_at p[0] (y + 1) p[2]} == :canopy) { clear_canopy p[0] (y + 1) p[2] }
     world_set_block p[0] y p[2] :air
+    prune_around p[0] y p[2]
     return (y > p[1])
 end
 
@@ -203,6 +205,35 @@ fn clear_canopy [x y z] do
             end
         end
     end
+end
+
+fn near_trunk [x y z] do
+    for dx in ((0 - LEAF_REACH)..=LEAF_REACH) do
+        for dz in ((0 - LEAF_REACH)..=LEAF_REACH) do
+            for dy in ((0 - LEAF_REACH)..=LEAF_REACH) do
+                if ({block_at (x + dx) (y + dy) (z + dz)} == :timber_log) { return true }
+            end
+        end
+    end
+    return false
+end
+
+# Whatever takes a trunk can strand its crown. A leaf that loses its last log was within
+# LEAF_REACH of that log, so checking around each cut catches every one.
+fn prune_canopy [x0 y0 z0 x1 y1 z1] do
+    for x in (x0..=x1) do
+        for z in (z0..=z1) do
+            for y in (y0..=y1) do
+                if (({block_at x y z} == :canopy) and (not {near_trunk x y z})) {
+                    world_set_block x y z :air
+                }
+            end
+        end
+    end
+end
+
+fn prune_around [x y z] do
+    prune_canopy (x - LEAF_REACH) (y - LEAF_REACH) (z - LEAF_REACH) (x + LEAF_REACH) (y + LEAF_REACH) (z + LEAF_REACH)
 end
 
 fn finish_harvest [w] do
@@ -350,7 +381,9 @@ end
 
 fn finish_place [w] do
     let cell w.cell
+    let cut ({block_at cell.x cell.y cell.z} == :timber_log)
     world_set_block cell.x cell.y cell.z cell.block
+    if cut { prune_around cell.x cell.y cell.z }
     let material {BLOCK_MATERIAL.get cell.block}
     if (material != nil) do
         set w.carry_n (w.carry_n - 1)

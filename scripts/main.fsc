@@ -201,6 +201,20 @@ fn settle_after_resume [f] do
         set f.hall nil
         if (f.keystone != nil) { note_hall f (f.keystone[0] - 4) (f.keystone[1] - 1) (f.keystone[2] - 4) }
     end
+    repair_canopy f
+end
+
+# Saves from before every cut cleaned up after itself. Once, over everywhere Hands work:
+# crowns are at the top of a column, so a tree's height down from the surface will do.
+fn repair_canopy [f] do
+    if ({f.get :canopy_repaired} == true) { return nil }
+    set f.canopy_repaired true
+    for x in ((f.x - SEARCH_RADIUS)..=(f.x + SEARCH_RADIUS)) do
+        for z in ((f.z - SEARCH_RADIUS)..=(f.z + SEARCH_RADIUS)) do
+            let top {surface_y x z}
+            if (top != nil) { prune_canopy x (top - CROWN_DEPTH) z x top z }
+        end
+    end
 end
 
 on :resume do

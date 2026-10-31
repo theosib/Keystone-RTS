@@ -22,6 +22,9 @@ set HARVEST {
 set HARVEST_BLOCKS {=timber [:timber_log] =stone [:boulder] =provisions [:berry_bush]}
 
 set SEARCH_RADIUS 72
+# The generator never sets a leaf further than this from its trunk
+set LEAF_REACH 2
+set CROWN_DEPTH 12
 set BUSH_REGROW_SECONDS 90.0
 
 # Hunger: full at 1.0, falls to 0 over this many seconds
@@ -44,6 +47,10 @@ set BUILDINGS {
 }
 
 set BASE_HOUSING 8
+
+# Ground cleared around a settlement, either side of its centre and above and below its level
+set LEVEL_RADIUS 14
+set LEVEL_HEIGHT 24
 
 # Hands run from raiders this close, for home
 set FLEE_RADIUS 9

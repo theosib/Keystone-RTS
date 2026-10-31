@@ -9,7 +9,7 @@ fn make_faction [id x z] do
            =keystone nil =alive true =housing BASE_HOUSING
            =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []
            =army [] =muster [] =muster_timer 0.0 =capture 0
-           =commander nil =keystone_seen_by nil =tidy_site nil =hall nil}
+           =commander nil =keystone_seen_by nil =tidy_site nil =hall nil =canopy_repaired true}
     factions.set id f
     return f
 end
@@ -26,9 +26,16 @@ fn note_hall [f hall_x y hall_z] do
                 =complete true =faction f.id}
 end
 
+# Levelling cuts straight through trees at its edge, which would leave the far side of a crown
+fn prune_settlement [f] do
+    let reach (LEVEL_RADIUS + LEAF_REACH)
+    prune_canopy (f.x - reach) (f.y - LEVEL_HEIGHT) (f.z - reach) (f.x + reach) (f.y + LEVEL_HEIGHT) (f.z + reach)
+end
+
 fn found_settlement [f] do
     let y f.y
-    level_area (f.x - 14) (f.z - 14) (f.x + 14) (f.z + 14) y
+    level_area (f.x - LEVEL_RADIUS) (f.z - LEVEL_RADIUS) (f.x + LEVEL_RADIUS) (f.z + LEVEL_RADIUS) y
+    prune_settlement f
 
     # Core Hall stands finished from the start
     let hall_x (f.x - 4)

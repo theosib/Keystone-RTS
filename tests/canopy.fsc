@@ -1,0 +1,155 @@
+# Scenario: no leaves hang in the air. Levelling a settlement leaves none at its edge, felling
+# overlapping trees leaves none between them, and a foundation built across a tree takes the
+# part of its crown outside the footprint.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn stranded_in [x0 z0 x1 z1 y0 y1] do
+    let count 0
+    for x in (x0..=x1) do
+        for z in (z0..=z1) do
+            for y in (y0..=y1) do
+                if (({block_at x y z} == :canopy) and (not {near_trunk x y z})) { set count (count + 1) }
+            end
+        end
+    end
+    return count
+end
+
+fn crown_size [x z y0 y1] do
+    let count 0
+    for dx in (-2..=2) do
+        for dz in (-2..=2) do
+            for y in (y0..=y1) do
+                if ({block_at (x + dx) y (z + dz)} == :canopy) { set count (count + 1) }
+            end
+        end
+    end
+    return count
+end
+
+# A lone trunk well clear of both the settlement's ground and any other tree
+fn find_tree [f] do
+    for x in ((f.x + 20)..=(f.x + 44)) do
+        for z in ((f.z - 24)..=(f.z + 24)) do
+            let g {ground_y x z}
+            if ((g != nil) and ({block_at x (g + 1) z} == :timber_log)) {
+                if ({near_tree_count x z (g + 1)} == 1) { return [x (g + 1) z] }
+            }
+        end
+    end
+    return nil
+end
+
+fn near_tree_count [x z y] do
+    let count 0
+    for dx in (-5..=5) do
+        for dz in (-5..=5) do
+            if ({block_at (x + dx) y (z + dz)} == :timber_log) { set count (count + 1) }
+        end
+    end
+    return count
+end
+
+fn trunk_top [x y z] do
+    while ({block_at x (y + 1) z} == :timber_log) do
+        set y (y + 1)
+    end
+    return y
+end
+
+# Two trunks close enough that felling the first takes the leaf above the second
+fn find_pair [f] do
+    for x in ((f.x + 20)..=(f.x + 60)) do
+        for z in ((f.z - 40)..=(f.z + 40)) do
+            let g {ground_y x z}
+            if ((g != nil) and ({block_at x (g + 1) z} == :timber_log)) do
+                let top {trunk_top x (g + 1) z}
+                for dx in (-3..=3) do
+                    for dz in (-3..=3) do
+                        if ((dx != 0) or (dz != 0)) do
+                            let y (g + 1)
+                            while (y <= top) do
+                                if ({block_at (x + dx) y (z + dz)} == :timber_log) { return [[x (g + 1) z] [(x + dx) y (z + dz)]] }
+                                set y (y + 1)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nil
+end
+
+fn fell_whole [p] do
+    let y p[1]
+    while ({block_at p[0] (y - 1) p[2]} == :timber_log) do
+        set y (y - 1)
+    end
+    let more true
+    while more do
+        set more {fell_log [p[0] y p[2]]}
+    end
+end
+
+# Felling one tree takes the leaf the other's first cut looks for. Without that, this tests nothing.
+fn fell_a_pair [f] do
+    let pair {find_pair f}
+    if (pair == nil) { fail "no overlapping trees to fell" }
+    let a pair[0]
+    let b pair[1]
+    let b_top {trunk_top b[0] b[1] b[2]}
+    fell_whole a
+    if ({block_at b[0] (b_top + 1) b[2]} == :canopy) { fail "the first tree left the leaf above the second" }
+    fell_whole b
+    let left {stranded_in (a[0] - 8) (a[2] - 8) (a[0] + 8) (a[2] + 8) (a[1] - 2) (a[1] + 14)}
+    if (left > 0) { fail "{left} leaves left hanging by felling neighbouring trees" }
+end
+
+set tree nil
+set building nil
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+
+    if (tick == 5) do
+        for each in factions do
+            if (each != nil) do
+                let reach (LEVEL_RADIUS + 8)
+                let left {stranded_in (each.x - reach) (each.z - reach) (each.x + reach) (each.z + reach) (each.y - 16) (each.y + 24)}
+                if (left > 0) { fail "{left} leaves stranded around a new settlement" }
+            end
+        end
+        fell_a_pair f
+        set tree {find_tree f}
+        if (tree == nil) { fail "no lone tree to build across" }
+        let info {blueprint_info :shelter}
+        # The trunk at the footprint's west edge, so its crown hangs out on that side
+        set building {place_building f :shelter (tree[0] + (info.size_x / 2)) tree[2] 0}
+        let outside {crown_size (tree[0] - 2) tree[2] tree[1] (tree[1] + 12)}
+        if (outside == 0) { fail "the crown doesn't reach outside the footprint, so this tests nothing" }
+        log "tree at" tree[0] tree[1] tree[2] "crown outside footprint" outside
+    end
+
+    if ((tick > 5) and ((tick % 60) == 0) and (tree != nil)) do
+        let y tree[1]
+        let logs 0
+        while (y < (tree[1] + 10)) do
+            if ({block_at tree[0] y tree[2]} == :timber_log) { set logs (logs + 1) }
+            set y (y + 1)
+        end
+        if (logs == 0) do
+            let left {stranded_in (tree[0] - 6) (tree[2] - 6) (tree[0] + 6) (tree[2] + 6) tree[1] (tree[1] + 14)}
+            if (left > 0) { fail "{left} leaves left hanging by a foundation" }
+            log "PASS"
+            game_exit 0
+        end
+    end
+
+    if (tick == 5900) { fail "the trunk was never cut" }
+end
