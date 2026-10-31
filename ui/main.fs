@@ -23,6 +23,7 @@ set PALETTE_WIDTH 176
 set PALETTE_ICON 24
 set TOOL_WIDTH 74
 set TOOL_ICON 32
+set TIP_WRAP 250
 set KINDS ["timber" "stone" "provisions"]
 set TEXT_COLOR [0.95 0.88 0.74 1.0]
 set TITLE_COLOR [1.0 0.72 0.3 1.0]
@@ -265,7 +266,7 @@ set tips []
 
 # Each is a tooltip widget, filled in when the catalog arrives
 fn make_tip [key title] do
-    let detail {ui.text_wrapped ""}
+    let detail {ui.text_wrapped "" =wrap_width TIP_WRAP}
     let widget {ui.item_tooltip [{ui.text_colored TITLE_COLOR title} detail]}
     tips.push {=key key =widget widget =detail detail =amounts [] =bed nil}
     return widget
