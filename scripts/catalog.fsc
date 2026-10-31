@@ -20,6 +20,24 @@ fn unit_entry [name] do
     return {=needs stats.cost =seconds {floor TRAIN_SECONDS} =range {floor stats.range} =bed true}
 end
 
+# What the Steward's hands leave behind, for the client to show at once. Felling isn't here: a
+# log comes off the top of its tree, whichever one was hit.
+fn break_results [] do
+    let out {map}
+    for block in BLOCK_MATERIAL.keys do
+        out.set block "air"
+    end
+    for block in TERRAIN_BLOCKS do
+        out.set block "air"
+    end
+    for block in HARVEST.keys do
+        out.set block "air"
+    end
+    out.remove :timber_log
+    out.set :berry_bush "berry_bush_bare"
+    return out
+end
+
 fn catalog_of [] do
     let quicker {floor (((1.0 - GATHER_BONUS_SPEED) * 100.0) + 0.5)}
     let shelter {building_entry :shelter}
@@ -37,5 +55,5 @@ fn catalog_of [] do
                       =hand {=needs HAND_COST =seconds {floor HAND_TRAIN_SECONDS} =bed true}
                       =militia {unit_entry :militia} =shortbow {unit_entry :shortbow}
                       =scout {unit_entry :scout}}
-            =blocks BLOCK_MATERIAL}
+            =blocks BLOCK_MATERIAL =breaks {break_results}}
 end

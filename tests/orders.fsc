@@ -1,0 +1,85 @@
+# Scenario: units go where they're sent, and don't land against a wall. A short order used to end
+# half way there, between an off-centre formation and a generous idea of arriving.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set lone nil
+set group []
+set lone_goal nil
+set group_goal nil
+set spawned []
+
+fn flat_distance [a b] do
+    return {sqrt {dist2 a[0] a[2] b[0] b[2]}}
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 20) do
+        # Fence off the muster point, to see that nothing is set down touching it
+        let g {ground_y f.x (f.z + 10)}
+        for x in ((f.x - 9)..=(f.x + 9)) do
+            for z in ((f.z + 1)..=(f.z + 19)) do
+                if (((x % 3) == 0) and ((z % 5) == 0)) {
+                    world_set_block x (g + 1) z :palisade
+                }
+            end
+        end
+    end
+
+    if (t == 30) do
+        for i in (0..40) do
+            spawned.push {spawn_soldier f :militia}
+        end
+        for s in spawned do
+            let p {ent_pos s.id}
+            let x {floor p[0]}
+            let z {floor p[2]}
+            for dx in (-1..=1) do
+                for dz in (-1..=1) do
+                    if ({block_at (x + dx) {floor (p[1] + 1)} (z + dz)} != :air) {
+                        fail "a unit was set down against a block"
+                    }
+                end
+            end
+        end
+    end
+
+    if (t == 40) do
+        set lone spawned[0]
+        let p {ent_pos lone.id}
+        set lone_goal [({floor p[0]} + 12) 0 {floor p[2]}]
+        order_units f {=units [lone.id] =x lone_goal[0] =y {ground_y lone_goal[0] lone_goal[2]} =z lone_goal[2]}
+    end
+
+    if (t == 300) do
+        let left {flat_distance {ent_pos lone.id} [(lone_goal[0] + 0.5) 0 (lone_goal[2] + 0.5)]}
+        if (left > 2.0) { fail {str_concat "a short order stopped " {to_str left} " blocks short"} }
+
+        for i in (1..=4) do
+            group.push spawned[i].id
+        end
+        set group_goal [(f.x + 24) 0 (f.z - 12)]
+        order_units f {=units group =x group_goal[0] =y {ground_y group_goal[0] group_goal[2]} =z group_goal[2]}
+    end
+
+    if (t == 900) do
+        let sum_x 0.0
+        let sum_z 0.0
+        for id in group do
+            let p {ent_pos id}
+            set sum_x (sum_x + p[0])
+            set sum_z (sum_z + p[2])
+        end
+        let middle [(sum_x / 4.0) 0 (sum_z / 4.0)]
+        let off {flat_distance middle [(group_goal[0] + 0.5) 0 (group_goal[2] + 0.5)]}
+        if (off > 2.0) { fail {str_concat "a group ended up " {to_str off} " off centre"} }
+        log "PASS"
+        game_exit 0
+    end
+end

@@ -2,6 +2,10 @@
 
 set KIND_NAMES [:timber :stone :provisions]
 
+# How near a unit has to get to where it was sent, and how near will do if it can't get closer
+set ORDER_RANGE 1.5
+set ORDER_GIVE_UP_RANGE 6.0
+
 # Blocks a Hand carries at once, and units a resource block holds
 set CARRY_CAP 3
 set STACK_UNITS 8

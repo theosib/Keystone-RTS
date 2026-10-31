@@ -87,22 +87,33 @@ fn publish_state [] do
                 =capture f.capture}
 end
 
-# Spread a group out around the order point so they don't all fight for one cell
+# A tight block centred on the order point, so that one unit goes just where it was sent, and
+# a group gets a cell each instead of all fighting for one
 fn order_units [f cmd] do
+    let count cmd.units.length
+    let across 1
+    while ((across * across) < count) do
+        set across (across + 1)
+    end
+    let rows {floor ((count + across - 1) / across)}
+
     let index 0
     for id in cmd.units do
         let entry {lookup_unit id}
         if ((entry != nil) and (entry.faction == f.id)) do
-            let x (cmd.x + ((index % 4) * 2) - 3)
-            let z (cmd.z + ((index / 4) * 2) - 2)
+            let x (cmd.x + 0.5 + (((index % across) * 2) - (across - 1)))
+            let z (cmd.z + 0.5 + (({floor (index / across)} * 2) - (rows - 1)))
+            let ground {ground_y {floor x} {floor z}}
+            let y cmd.y
+            if ((ground != nil) and ({abs ((ground + 1) - cmd.y)} <= 3)) { set y (ground + 1) }
             let record entry.record
             if {record.has :stats} do
-                order_soldier record x cmd.y z
+                order_soldier record x y z
             else do
                 drop_job record
                 set record.state :moving
                 set record.after :rally
-                ent_goto id x cmd.y z =range 2.0 =partial true =max_nodes 6000
+                ent_goto id x y z =range ORDER_RANGE =partial true =max_nodes 6000
             end
             set index (index + 1)
         end

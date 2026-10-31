@@ -478,6 +478,7 @@ fn steward_place_block [] do
     let y (hit.y + hit.ny)
     let z (hit.z + hit.nz)
     if {avatar_overlaps x y z} { return nil }
+    predict_block x y z {tool_name}
     send_command {=name :steward_place =x x =y y =z z =block {to_sym {tool_name}}}
 end
 
@@ -573,6 +574,13 @@ end
 fn steward_click [] do
     let hit {pick_view}
     if ((hit == nil) or (hit.distance > STEWARD_REACH)) { return nil }
+    let after nil
+    if (catalog != nil) { set after {catalog.breaks.get {to_sym hit.block}} }
+    if (after != nil) do
+        predict_block hit.x hit.y hit.z after
+    else do
+        expect_change hit.x hit.y hit.z
+    end
     send_command {=name :steward_break =x hit.x =y hit.y =z hit.z}
 end
 

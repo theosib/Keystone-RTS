@@ -227,11 +227,13 @@ fn think_soldier [s] do
     # Nothing to fight: carry out orders
     if (s.order == :move) do
         let nav {ent_nav s.id}
-        if ((nav == :idle) or (nav == :failed)) do
+        # Somebody can be standing in the spot, or it can be a tree. As near as that will do.
+        let close ({dist2 pos[0] pos[2] s.order_x s.order_z} < (ORDER_GIVE_UP_RANGE * ORDER_GIVE_UP_RANGE))
+        if (((nav == :idle) or (nav == :failed)) and (not ((nav == :failed) and close))) do
             ent_nav_ack s.id
-            ent_goto s.id s.order_x s.order_y s.order_z =range 4.0 =partial true =max_nodes 6000
+            ent_goto s.id s.order_x s.order_y s.order_z =range ORDER_RANGE =partial true =max_nodes 6000
             set s.moving true
-        elif (nav == :arrived) do
+        elif ((nav == :arrived) or (nav == :failed)) do
             ent_nav_ack s.id
             set s.order nil
             set s.moving false

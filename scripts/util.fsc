@@ -34,6 +34,21 @@ fn open_ground [x z] do
     return y
 end
 
+# Open ground with a cell of room all round. A soldier's spear and shield reach well past its
+# body, so a cell that only just fits it leaves them poking through the wall next door.
+fn clear_ground [x z] do
+    let y {open_ground x z}
+    if (y == nil) { return nil }
+    for dx in (-1..=1) do
+        for dz in (-1..=1) do
+            for up in [1 2] do
+                if ({block_at (x + dx) (y + up) (z + dz)} != :air) { return nil }
+            end
+        end
+    end
+    return y
+end
+
 # Where to set a unit down near (cx, cz): open ground, widening out past whatever has
 # been built there. Each ring gets a few tries so units don't all land on one spot.
 fn spawn_point [cx cz radius fallback_y] do
@@ -43,7 +58,7 @@ fn spawn_point [cx cz radius fallback_y] do
             let angle ({random_float} * 6.28)
             let x {floor (cx + (r * {cos angle}))}
             let z {floor (cz + (r * {sin angle}))}
-            let y {open_ground x z}
+            let y {clear_ground x z}
             if (y != nil) { return [(x + 0.5) (y + 1) (z + 0.5)] }
         end
         set r (r + 4)

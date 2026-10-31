@@ -6,6 +6,7 @@ set t_clicks 0
 set t_eye 0
 set t_floor 0
 set t_rise 0
+set t_hit nil
 
 fn t_to [x y] do
     let m {mouse_pos}
@@ -108,6 +109,19 @@ on :frame do
         print "climbed {climbed}, at most {t_rise} in a frame"
         t_check "walks up one block at a time, and no further" ({abs (climbed - 2.0)} < 0.01)
         t_check "the eye never jumps up a block" (t_rise < 0.4)
+        set t_hit {pick_view}
+        input_button 0 true 640 360
+        input_button 0 false 640 360
+    end
+
+    # What the Steward's own hands do shows at once, and doesn't wait for the server
+    if (t_frame == 441) do
+        let now {pick_view}
+        t_check "a broken block is gone by the next frame" (now.distance > t_hit.distance)
+    end
+    if (t_frame == 448) do
+        let now {pick_view}
+        t_check "and the server agrees" (now.distance > t_hit.distance)
         print "UI TEST DONE"
     end
 end

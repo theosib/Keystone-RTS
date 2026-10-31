@@ -53,6 +53,8 @@ finescript traps that cost real time here:
   lower `v`. `finevox_render_tests` goldens can't see this; `MeshTest.*SideFaces*` covers cubes.
 - A new unit order must `ent_stop` first. Otherwise the old route finishes, reads as
   `:arrived`, and the new order is taken as done.
+- The UI runs after the scene has drawn. `marker_*` geometry shows a frame later, so it goes
+  through `markers` and `flushMarkers`, which allow for the camera having moved since.
 - Path searches are the main CPU cost: never re-issue `ent_goto` every think. See the
   backoff in `give_up` and the re-search rule in `chase`.
 
@@ -61,7 +63,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2245 + 149 + 45 = 2439 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2252 + 149 + 45 = 2446 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script,
   `gui_hover x y` rests the mouse to show a tooltip, and `do_action "toggle_view"` presses a
@@ -76,6 +78,9 @@ finescript traps that cost real time here:
   game: `finevox_headless --script` loads a scenario next to the real game script, and
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
   once passed while the whole economy was frozen at 32ms a tick.
+- The client's world is `WorldReplica`, which sweeps for changes and can lag by a second. A
+  player's own action needs `predict_block` or `expect_change` beside its `send_command`. The
+  server's word overrides a prediction after 3 ticks.
 - Loading relights the whole world, so a light bug only exists in a game in progress and a
   reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
