@@ -19,29 +19,44 @@ set STEWARD_REACH 6.0
 set LAY_MAX_CELLS 32
 set BLOCK_TOOLS ["planks" "palisade" "flagstone" "dressed_stone" "gravel_path" "thatch"]
 
-set ribbon_timber {ui.text "" =id "r_timber"}
-set ribbon_stone {ui.text "" =id "r_stone"}
-set ribbon_food {ui.text "" =id "r_food"}
-set ribbon_hands {ui.text "" =id "r_hands"}
-set ribbon_army {ui.text "" =id "r_army"}
+set amount_timber {ui.text "" =id "a_timber"}
+set amount_stone {ui.text "" =id "a_stone"}
+set amount_food {ui.text "" =id "a_food"}
+set amount_people {ui.text "" =id "a_people"}
+set amount_army {ui.text "" =id "a_army"}
 set hud_hint {ui.text "" =id "hud_hint"}
 set hud_fps {ui.text "" =id "hud_fps"}
+
+for name in ["timber" "stone" "provisions" "population" "army"] do
+    ui_texture name "ui/icons/{name}.png"
+end
+
+fn stat_row [icon amount] do
+    return {ui.table_row [{ui.image icon 24 24} {ui.text {loc "ui.stat.{icon}"}} amount]}
+end
 
 ui_show {ui.window "##ribbon"
     =window_pos_x 8 =window_pos_y 8
     =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing]
     =children [
         {ui.text {loc "ui.epoch"}}
-        {ui.same_line 0}
-        ribbon_timber {ui.same_line 0}
-        ribbon_stone {ui.same_line 0}
-        ribbon_food {ui.same_line 0}
-        ribbon_hands {ui.same_line 0}
-        ribbon_army
-        hud_hint
+        {ui.table "stats" 3 [
+            {stat_row "timber" amount_timber}
+            {stat_row "stone" amount_stone}
+            {stat_row "provisions" amount_food}
+            {stat_row "population" amount_people}
+            {stat_row "army" amount_army}
+        ] =flags [:sizing_fixed_fit :borders_inner_h]}
         hud_fps
     ]
 } =immediate true
+
+set hint_window {ui.window "##hint"
+    =window_pos_x 0 =window_pos_y 8 =window_pivot_x 0.5
+    =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing :no_inputs]
+    =children [hud_hint]
+}
+ui_show hint_window =immediate true
 
 # What's under the cursor, or the crosshair when on foot. Details come from the game.
 set inspect_title {ui.text "" =id "i_title"}
@@ -363,7 +378,7 @@ fn muster_button [name] do
 end
 
 ui_show {ui.window "##palette"
-    =window_pos_x 8 =window_pos_y 110
+    =window_pos_x 8 =window_pos_y 240
     =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing]
     =children [
         {ui.button {loc "menu.open"} =on_click fn [] do
@@ -595,11 +610,11 @@ set tools_view :tactical
 
 on :frame do
     if (state != nil) do
-        set ribbon_timber.text {loc "ui.stock.timber" =count state.stock.timber}
-        set ribbon_stone.text {loc "ui.stock.stone" =count state.stock.stone}
-        set ribbon_food.text {loc "ui.stock.provisions" =count state.stock.provisions}
-        set ribbon_hands.text {loc "ui.stock.hands" =count state.hands =cap state.housing}
-        set ribbon_army.text {loc "ui.army" =count state.army}
+        set amount_timber.text {to_str state.stock.timber}
+        set amount_stone.text {to_str state.stock.stone}
+        set amount_food.text {to_str state.stock.provisions}
+        set amount_people.text {loc "ui.housed" =count state.hands =cap state.housing}
+        set amount_army.text {to_str state.army}
     end
 
     if (denied_frames > 0) { set denied_frames (denied_frames - 1) }
@@ -623,6 +638,7 @@ on :frame do
 
     let size {window_size}
     set work_window.window_pos_x (size[0] - 8)
+    set hint_window.window_pos_x (size[0] / 2)
     set tool_window.window_pos_x (size[0] / 2)
     set tool_window.window_pos_y (size[1] - 8)
 

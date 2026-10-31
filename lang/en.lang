@@ -10,10 +10,12 @@ ui.hint.embodied: Left-click to break, right-click to place, 1-6 to choose, Tab 
 ui.denied: No {kind} in the stockpile
 ui.blocks: Blocks
 ui.fps: {fps} fps
-ui.stock.timber: Timber {count}
-ui.stock.stone: Stone {count}
-ui.stock.provisions: Provisions {count}
-ui.stock.hands: Population {count} / {cap}
+ui.stat.timber: Timber
+ui.stat.stone: Stone
+ui.stat.provisions: Provisions
+ui.stat.population: Population
+ui.stat.army: Army
+ui.housed: {count} / {cap}
 ui.palette: Build
 ui.train_hand: Train Hand
 building.shelter: Shelter
@@ -62,7 +64,6 @@ unit.hand: Hand
 unit.militia: Militia
 unit.shortbow: Shortbow
 unit.scout: Pathfinder
-ui.army: Army {count}
 match.victory: Victory
 match.defeat: Your Keystone has fallen
 match.victory.detail: The rival Keystone is yours.

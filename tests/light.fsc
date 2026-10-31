@@ -1,0 +1,27 @@
+# Scenario: as trees fall and stone is taken, open ground stays lit. Light is worked out from
+# the world on load, so a fault in updating it only ever shows in a game being played.
+
+on :tick do
+    if ({game_tick} != 9000) { return nil }
+    let f factions[1]
+    let dark 0
+    for dx in (-70..=70) do
+        for dz in (-70..=70) do
+            let x (f.x + dx)
+            let z (f.z + dz)
+            let y {surface_y x z}
+            if (y != nil) do
+                if ({light_at x (y + 1) z}.sky < 14) {
+                    set dark (dark + 1)
+                    log "dark" x (y + 1) z
+                }
+            end
+        end
+    end
+    if (dark > 0) do
+        log "FAIL:" dark "cells under open sky are dark"
+        game_exit 1
+    end
+    log "PASS"
+    game_exit 0
+end

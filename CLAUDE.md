@@ -56,7 +56,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2234 + 149 + 41 = 2424 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2237 + 149 + 41 = 2427 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script, and
   `do_action "toggle_view"` presses a bound action. A scratch `--game-root` with extra lines at
@@ -65,6 +65,8 @@ finescript traps that cost real time here:
   game: `finevox_headless --script` loads a scenario next to the real game script, and
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
   once passed while the whole economy was frozen at 32ms a tick.
+- Loading relights the whole world, so a light bug only exists in a game in progress and a
+  reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
   `--validation` turns on Vulkan validation, `--stats` prints render counts each second.
 

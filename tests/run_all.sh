@@ -59,6 +59,7 @@ run stranded 1000
 run inspect 100
 run tasks 9000
 run economy 9100
+run light 9100
 run warehouse 9100
 run match 54000
 run continue 54000

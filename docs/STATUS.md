@@ -21,6 +21,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Steward | First-person avatar (Tab). Harvests, digs, and places blocks from the stockpile by hand |
 | Blocks | Blocks bar: a drag overhead marks a run for Hands, which is also how roads get laid |
 | Work panel | The queue of work for anyone, or each selected unit's task stack |
+| HUD | Resource table with icons from `tools/gen_icons.py` |
 | i18n | All UI via `loc`: locale fallback, named parameters, CLDR-style plurals |
 | Saves | On exit and every 5 minutes, with resume on launch. In-flight work restarts |
 | Inspection | Cursor or crosshair names a block and what it holds, honest about the fog |
