@@ -70,7 +70,43 @@ fn place_building [f name x z turns] do
     return b
 end
 
+# A stroke of the block tool: a straight run of cells for Hands to work through
+fn lay_blocks [f block x0 z0 x1 z1] do
+    if ({BLOCK_MATERIAL.get block} == nil) { return nil }
+    let dx (x1 - x0)
+    let dz (z1 - z0)
+    if ({abs dx} >= {abs dz}) { set dz 0 } { set dx 0 }
+    let cells ({max {abs dx} {abs dz}} + 1)
+    if (cells > LAY_MAX_CELLS) { set cells LAY_MAX_CELLS }
+    let step_x {clamp dx -1 1}
+    let step_z {clamp dz -1 1}
+
+    let site {site_create}
+    let added 0
+    for i in (0..cells) do
+        let x (x0 + (i * step_x))
+        let z (z0 + (i * step_z))
+        let g {ground_y x z}
+        if (g != nil) do
+            let y (g + 1)
+            if {SURFACE_BLOCKS.contains block} { set y g }
+            site_add site x y z block
+            set added (added + 1)
+        end
+    end
+    if (added == 0) do
+        site_remove site
+        return nil
+    end
+    f.sites.push {=name :laid =site site =x x0 =y 0 =z z0 =size_x 0 =size_z 0
+                  =complete false =faction f.id =laid true}
+end
+
 fn finish_building [f b] do
+    if {b.has :laid} do
+        site_remove b.site
+        return nil
+    end
     set b.complete true
     let def {BUILDINGS.get b.name}
     if (def != nil) do
@@ -124,6 +160,16 @@ fn tidy_scaffold [f] do
     end
     set f.scaffold []
     set f.tidy_site site
+end
+
+# What's still to come, drawn where it will stand
+fn publish_ghosts [f] do
+    let ids []
+    if (f.zone.expanding != nil) { ids.push f.zone.expanding }
+    for b in f.sites do
+        ids.push b.site
+    end
+    site_show_ghosts ids
 end
 
 # The most urgent thing to build. Floors count: without room the economy stalls.

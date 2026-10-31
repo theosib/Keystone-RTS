@@ -1,5 +1,6 @@
 include: base/solid_cube
 texture: blocks/banner_blue
 collision: none
+hit: full
 opaque: false
 hardness: 0.2

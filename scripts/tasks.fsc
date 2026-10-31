@@ -1,0 +1,169 @@
+# What everyone's up to, for the player to read. Nothing here decides anything.
+#
+# Work for anyone to take is a queue. A unit's own work reads as a stack, outermost
+# first: the job it's on, then the step of that job.
+
+fn percent_built [site] do
+    let p {site_progress site}
+    if ((p == nil) or (p.total == 0)) { return 0 }
+    return {floor ((p.done * 100) / p.total)}
+end
+
+fn site_frame [f site] do
+    if (site == nil) { return nil }
+    if (site == f.zone.expanding) { return {=key "floor" =percent {percent_built site}} }
+    if (site == f.tidy_site) { return {=key "scaffold_down"} }
+    for b in f.sites do
+        if (b.site == site) do
+            if {b.has :laid} { return {=key "lay" =percent {percent_built site}} }
+            return {=key "build" =building {sym_name b.name} =percent {percent_built site}}
+        end
+    end
+    return nil
+end
+
+fn hands_on [f site] do
+    let count 0
+    for w in f.hands do
+        if ((w.site == site) or (w.supplying == site)) { set count (count + 1) }
+    end
+    return count
+end
+
+# The material a site is waiting on, if the yard has none of it
+fn short_of [f site] do
+    let left {site_remaining site}
+    for block in left.keys do
+        let kind {BLOCK_MATERIAL.get block}
+        if ((kind != nil) and ({stock_of f kind} == 0)) { return {sym_name kind} }
+    end
+    return nil
+end
+
+fn queue_row [f site] do
+    let row {site_frame f site}
+    if (row == nil) { return nil }
+    set row.hands {hands_on f site}
+    set row.needs {short_of f site}
+    return row
+end
+
+# Everything waiting to be done, most urgent first: the order next_site takes it in
+fn work_queue [f] do
+    let rows []
+    fn add [site] do
+        let row {queue_row f site}
+        if (row != nil) { rows.push row }
+    end
+    add f.zone.expanding
+    for b in f.sites do
+        add b.site
+    end
+    add f.tidy_site
+
+    if (f.train_queue > 0) do
+        rows.push {=key "train" =count f.train_queue =housed ({population f} < f.housing)}
+    end
+    for kind in f.muster do
+        rows.push {=key "muster" =unit {sym_name kind} =housed ({population f} < f.housing)}
+    end
+    return rows
+end
+
+fn hand_step [w] do
+    if (w.state == :moving) do
+        if w.scaffolding { return {=key "scaffold"} }
+        return {=key "walk"}
+    end
+    if (w.state == :working) do
+        if (w.job == :build) do
+            if ((w.cell != nil) and (w.cell.block == :air)) { return {=key "clear"} }
+            return {=key "place"}
+        end
+        if (w.job == :gather) { return {=key "harvest" =kind {sym_name w.kind}} }
+    end
+    return nil
+end
+
+fn hand_job [f w] do
+    match w.job
+        :build do
+            if (w.after == :fetched) { return {=key "fetch" =kind {sym_name w.kind}} }
+            return nil
+        end
+        :gather { return {=key "gather" =kind {sym_name w.kind}} }
+        :haul { return {=key "haul" =kind {sym_name w.carry_kind}} }
+        :eat { return {=key "eat"} }
+        :defrag { return {=key "tidy_yard"} }
+        _ { return nil }
+    end
+end
+
+fn hand_stack [f w] do
+    if (w.state == :fleeing) { return [{=key "flee"}] }
+    if (w.state == :resting) { return [{=key "no_path"}] }
+    if (w.after == :rally) {
+        if (w.state == :moving) { return [{=key "ordered"}] }
+    }
+
+    let stack []
+    let goal {site_frame f w.site}
+    if (goal == nil) { set goal {site_frame f w.supplying} }
+    if (goal != nil) { stack.push goal }
+    let job {hand_job f w}
+    if (job != nil) { stack.push job }
+    let step {hand_step w}
+    if (step != nil) { stack.push step }
+    if (stack.length == 0) { stack.push {=key "idle"} }
+    return stack
+end
+
+fn soldier_stack [s] do
+    if (s.state == :rout) { return [{=key "rout"}] }
+    if (s.target != nil) { return [{=key "fight"}] }
+    if (s.order == :move) {
+        if (s.stats.role == :scout) { return [{=key "scout"}] }
+        return [{=key "march"}]
+    }
+    return [{=key "hold"}]
+end
+
+fn stack_key [who stack] do
+    let key who
+    for frame in stack do
+        set key "{key}/{frame.key}"
+        if {frame.has :building} { set key "{key}:{frame.building}" }
+        if {frame.has :kind} { set key "{key}:{frame.kind}" }
+    end
+    return key
+end
+
+# For the units selected: their stacks, the same ones folded together with a count
+fn tasks_of [ids] do
+    let groups []
+    for id in ids do
+        let entry {lookup_unit id}
+        if ((entry != nil) and {ent_alive id}) do
+            let record entry.record
+            let who "hand"
+            let stack nil
+            if {record.has :stats} do
+                set who {sym_name record.kind}
+                set stack {soldier_stack record}
+            else do
+                set stack {hand_stack factions[entry.faction] record}
+            end
+            let key {stack_key who stack}
+            let found nil
+            for group in groups do
+                if (group.key == key) { set found group }
+            end
+            if (found == nil) do
+                groups.push {=key key =who who =count 1 =stack stack}
+            else do
+                set found.count (found.count + 1)
+            end
+        end
+    end
+    return groups
+end

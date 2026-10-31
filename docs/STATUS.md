@@ -9,8 +9,8 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 |---|---|
 | Boot | `finevox_run --game-root Keystone`, no game C++ |
 | World | Generated terrain, biomes, trees, forage, boulders, water |
-| Art | Procedural 32×32 textures, box-part unit models with team colours, skeletal animation |
-| Command | Orbit camera, grab panning, box select, right-click move, build palette with ghost footprint |
+| Art | Procedural 32×32 textures, box-part unit models with faction emblems, skeletal animation |
+| Command | Orbit camera, grab panning, box select, right-click move, build palette with ghost footprint, ghosts of unbuilt work that firm up as it goes |
 | Economy | Gathering, hauling, material fetch, bottom-up construction, hunger, housing |
 | Stockpile | Physical blocks with fill stages, rows and aisles, partial-stack preference, defrag |
 | Warehouse | Yard fills, Hands build mezzanine, posts, stairs, then store upstairs |
@@ -18,7 +18,9 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout |
 | Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
 | Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
-| Steward | First-person avatar (Tab), harvests by hand |
+| Steward | First-person avatar (Tab). Harvests, digs, and places blocks from the stockpile by hand |
+| Blocks | Blocks bar: a drag overhead marks a run for Hands, which is also how roads get laid |
+| Work panel | The queue of work for anyone, or each selected unit's task stack |
 | i18n | All UI via `loc`: locale fallback, named parameters, CLDR-style plurals |
 | Saves | On exit and every 5 minutes, with resume on launch. In-flight work restarts |
 | Inspection | Cursor or crosshair names a block and what it holds, honest about the fog |
@@ -28,8 +30,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 
 Honest gaps against Stage 1:
 
-- **Road and path placement.** Engine supports `walk-speed`; there's no build tool for it.
-- **Steward combat and carrying the Keystone.** The avatar harvests only.
+- **Steward combat and carrying the Keystone.** The avatar only works with its hands.
 - **Settings and a title screen.** The game boots straight into a match, resuming if it can.
 - **Unit separation.** Units can overlap; there's no local avoidance.
 - **Audio.** No sound content yet.

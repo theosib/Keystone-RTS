@@ -7,7 +7,7 @@ fn make_soldier [f id kind] do
     return {=id id =faction f.id =kind kind =stats {UNITS.get kind}
             =state :hold =order nil =order_x 0 =order_y 0 =order_z 0
             =target nil =cooldown 0.0 =morale 1.0 =last_hp nil =moving false
-            =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil}
+            =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil =striking 0.0}
 end
 
 fn spawn_soldier [f kind] do
@@ -82,6 +82,7 @@ fn strike [s pos target_pos] do
 
     ent_look_at s.id target_pos[0] target_pos[1] target_pos[2]
     ent_anim s.id :work
+    set s.striking STRIKE_SECONDS
 
     if (s.stats.role == :ranged) do
         projectile_fire pos[0] (pos[1] + 1.4) pos[2] target_pos[0] (target_pos[1] + 1.0) target_pos[2] =speed ARROW_SPEED =damage damage =owner s.id =faction s.faction
@@ -177,6 +178,12 @@ fn think_soldier [s] do
 
     if (s.cooldown > 0.0) { set s.cooldown (s.cooldown - THINK_SECONDS) }
     update_morale s pos
+
+    # A blow is a single swing. Walking only takes over from idle, so it has to end.
+    if (s.striking > 0.0) do
+        set s.striking (s.striking - THINK_SECONDS)
+        if (s.striking <= 0.0) { ent_anim s.id :idle }
+    end
 
     if (s.state == :rout) { return think_rout s pos }
     if (s.morale < ROUT_AT) { return rout s }

@@ -57,9 +57,11 @@ resume_scenario() {
 resume_scenario
 run stranded 1000
 run inspect 100
+run tasks 9000
 run economy 9100
 run warehouse 9100
 run match 54000
 run continue 54000
+run continue_war 3100
 
 exit "$failed"

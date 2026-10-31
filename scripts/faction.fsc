@@ -9,13 +9,21 @@ fn make_faction [id x z] do
            =keystone nil =alive true =housing BASE_HOUSING
            =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []
            =army [] =muster [] =muster_timer 0.0 =capture 0
-           =commander nil =keystone_seen_by nil =tidy_site nil}
+           =commander nil =keystone_seen_by nil =tidy_site nil =hall nil}
     factions.set id f
     return f
 end
 
 fn grant_stock [f kind amount] do
     zone_deposit f.zone kind amount f.x f.z
+end
+
+# The Hall is never built, so it's not among f.buildings, but it's as much a building to look at
+fn note_hall [f hall_x y hall_z] do
+    let info {blueprint_info :core_hall}
+    set f.hall {=name :core_hall =site nil =x (hall_x + {floor (info.size_x / 2)}) =y y
+                =z (hall_z + {floor (info.size_z / 2)}) =size_x info.size_x =size_z info.size_z
+                =complete true =faction f.id}
 end
 
 fn found_settlement [f] do
@@ -30,6 +38,7 @@ fn found_settlement [f] do
     build_instantly site
     site_remove site
     set f.keystone [(hall_x + 4) (y + 1) (hall_z + 4)]
+    note_hall f hall_x y hall_z
 
     set f.zone {make_zone f.id (f.x + 7) y (f.z - 6) 7 12}
 end

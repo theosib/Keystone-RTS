@@ -1,5 +1,6 @@
 include: base/solid_cube
 texture: blocks/berry_bush
 collision: none
+hit: full
 opaque: false
 hardness: 0.3

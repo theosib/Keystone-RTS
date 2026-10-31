@@ -1,0 +1,118 @@
+# Scenario: the work panel tells the truth. Queued work shows up in order, units report what
+# they're doing, the Hall is a building, and laid blocks and the Steward's hands both build.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+set stage 0
+set laid_at nil
+set first nil
+set second nil
+set seen_build false
+set seen_step false
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+
+    if (tick == 60) do
+        let at {inspect_at f.id f.hall.x (f.hall.y + 1) f.hall.z}
+        expect "hall centre" {at.get :building} :core_hall
+        let corner {inspect_at f.id (f.keystone[0] - 4) (f.hall.y + 1) (f.keystone[2] - 4)}
+        expect "hall corner" {corner.get :building} :core_hall
+
+        let near {ent_pos f.hands[0].id}
+        set first {place_building f :shelter ({floor near[0]} + 3) {floor near[2]} 0}
+        set second {place_building f :forager_hut ({floor near[0]} + 14) {floor near[2]} 0}
+        set f.train_queue 2
+        queue_unit f :militia
+
+        let rows {work_queue f}
+        expect "rows" rows.length 4
+        expect "first in line" rows[0].building "shelter"
+        expect "second in line" rows[1].building "forager_hut"
+        expect "training" rows[2].key "train"
+        expect "training count" rows[2].count 2
+        expect "muster" rows[3].unit "militia"
+    end
+
+    # Every Hand can always say what it's doing, in a stack that reaches a step or a state
+    if ((tick > 60) and (tick < 1800) and ((tick % 7) == 0)) do
+        let ids []
+        for w in f.hands do
+            ids.push w.id
+        end
+        let groups {tasks_of ids}
+        let total 0
+        for group in groups do
+            set total (total + group.count)
+            if (group.stack.length == 0) { fail "an empty stack" }
+            if (group.stack[0].key == "build") {
+                set seen_build true
+                if (group.stack.length > 1) { set seen_step true }
+            }
+        end
+        expect "units reported" total f.hands.length
+    end
+
+    if (tick == 1800) do
+        if (not seen_build) { fail "nobody ever reported building" }
+        if (not seen_step) { fail "no stack ever got as far as a step" }
+
+        let soldier {spawn_soldier f :militia}
+        let groups {tasks_of [soldier.id]}
+        expect "soldier group" groups[0].who "militia"
+        expect "soldier stack" groups[0].stack[0].key "hold"
+        expect "gone unit" {tasks_of [999999]}.length 0
+    end
+
+    # Blocks laid overhead become a site, and Hands finish it
+    if (tick == 1810) do
+        let x (f.x + 20)
+        let z (f.z + 20)
+        set f.sites []
+        lay_blocks f :gravel_path x z (x + 4) (z + 1)
+        expect "laid site" f.sites.length 1
+        set laid_at [x z]
+        let row {work_queue f}[0]
+        expect "laid row" row.key "lay"
+    end
+
+    if ((laid_at != nil) and (tick > 1900) and (f.sites.length == 0) and (stage == 0)) do
+        set stage 1
+        let x laid_at[0]
+        let z laid_at[1]
+        let i 0
+        while (i < 5) do
+            expect "path cell" {block_at (x + i) {ground_y (x + i) z} z} :gravel_path
+            set i (i + 1)
+        end
+
+        # The Steward: a placed block costs a unit, and breaking it gives the unit back
+        let cx (f.x + 30)
+        let cz (f.z + 30)
+        let y ({ground_y cx cz} + 1)
+        let before {stock_of f :timber}
+        steward_place f cx y cz :planks
+        expect "placed" {block_at cx y cz} :planks
+        expect "paid" {stock_of f :timber} (before - 1)
+        steward_place f cx y cz :planks
+        expect "no double place" {stock_of f :timber} (before - 1)
+        steward_break f cx y cz
+        expect "broken" {block_at cx y cz} :air
+        expect "refunded" {stock_of f :timber} before
+
+        log "PASS"
+        game_exit 0
+    end
+
+    if (tick == 8900) do
+        fail "laid blocks were never finished"
+    end
+end

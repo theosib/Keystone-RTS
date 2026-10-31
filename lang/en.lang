@@ -1,10 +1,14 @@
 # Keystone: English
 ui.title: Keystone
 ui.epoch: Hearth Epoch
-ui.selected.one: 1 Hand selected
-ui.selected.other: {count} Hands selected
+ui.selected.one: 1 unit selected
+ui.selected.other: {count} units selected
 ui.hint.select: Left-drag to select, right-click to send
 ui.hint.place: Left-click to place, R to turn, right-click to cancel
+ui.hint.lay: Drag to mark blocks for Hands to build, right-click to stop
+ui.hint.embodied: Left-click to break, right-click to place, 1-6 to choose, Tab for the overview
+ui.denied: No {kind} in the stockpile
+ui.blocks: Blocks
 ui.fps: {fps} fps
 ui.stock.timber: Timber {count}
 ui.stock.stone: Stone {count}
@@ -17,7 +21,44 @@ building.forager_hut: Forager Hut
 building.sawpit: Sawpit
 building.watchtower: Watchtower
 building.palisade_wall: Log Palisade
+building.core_hall: Core Hall
+
+work.title.queue: Work
+work.title.units: Selected
+work.nothing: Nothing to do
+work.group: {count} x {name}
+work.hands.one: (1 Hand)
+work.hands.other: ({count} Hands)
+work.needs: (needs {kind})
+work.no_room: (no housing)
+work.train.one: Train a Hand
+work.train.other: Train {count} Hands
+work.muster: Muster {name}
+work.build: Build {name} {percent}%
+work.lay: Lay blocks {percent}%
+work.floor: Raise a yard floor {percent}%
+work.scaffold_down: Take down scaffolding
+work.gather: Gather {kind}
+work.fetch: Fetch {kind} from the yard
+work.haul: Carry {kind} to the yard
+work.eat: Eat
+work.tidy_yard: Tidy the yard
+work.walk: Walking there
+work.place: Placing a block
+work.clear: Clearing a block
+work.scaffold: Climbing scaffolding
+work.harvest: Working the {kind}
+work.flee: Fleeing raiders
+work.no_path: Can't get there, waiting
+work.ordered: Going where ordered
+work.idle: Idle
+work.hold: Holding position
+work.march: Marching
+work.scout: Scouting
+work.fight: Fighting
+work.rout: Routed, running for home
 ui.muster: Muster
+unit.hand: Hand
 unit.militia: Militia
 unit.shortbow: Shortbow
 unit.scout: Pathfinder

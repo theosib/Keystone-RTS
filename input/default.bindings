@@ -31,6 +31,12 @@ context: gameplay
   keypress_right_alt: begin_grab
   keyrelease_right_alt: end_grab
   key_r: turn
+  key_1: tool_1
+  key_2: tool_2
+  key_3: tool_3
+  key_4: tool_4
+  key_5: tool_5
+  key_6: tool_6
   key_tab: toggle_view
   keypress_space: begin_jump
   keyrelease_space: end_jump

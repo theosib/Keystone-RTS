@@ -1,0 +1,31 @@
+# Scenario: after a Keystone falls, the player can carry on with rivals still hostile. The
+# victor's commander goes on planning attacks against a Keystone that's gone.
+
+set ended_at nil
+
+on :tick do
+    let tick {game_tick}
+    let player factions[1]
+
+    if (tick == 60) do
+        set player.keystone_seen_by 2
+        let c factions[2].commander
+        set c.enemy_at [player.x player.y player.z]
+        conquer player
+    end
+
+    if ((ended_at == nil) and (contest.state == :over)) do
+        set ended_at tick
+        continue_open_ended false
+    end
+
+    if ((ended_at != nil) and (tick >= 3000)) do
+        if (contest.state != :open_ended) do
+            log "FAIL: not open-ended"
+            game_exit 1
+        else do
+            log "PASS"
+            game_exit 0
+        end
+    end
+end

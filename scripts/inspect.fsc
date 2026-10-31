@@ -18,6 +18,7 @@ fn in_footprint [b x y z] do
 end
 
 fn structure_at [f x y z] do
+    if ((f.hall != nil) and {in_footprint f.hall x y z}) { return f.hall }
     for b in f.sites do
         if {in_footprint b x y z} { return b }
     end

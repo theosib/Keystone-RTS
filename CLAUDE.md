@@ -43,6 +43,7 @@ finescript traps that cost real time here:
 - `random_range` is inclusive at both ends.
 - `{}` is an empty block, not an empty map.
 - Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.
+- Interpolation can't nest quotes: `"{loc "x"}"` doesn't parse. Assign it to a `let` first.
 - Script `:air` is normalised to real air by `world_set_block`/`site_add`.
 - Indented config lines are continuation data: `.emodel` keys must not be indented.
 - A new unit order must `ent_stop` first. Otherwise the old route finishes, reads as
@@ -55,7 +56,11 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2218 + 142 + 41 = 2401 passing.
+- Baseline: 2234 + 149 + 41 = 2424 passing, 4 skipped. Check exit codes, not the tail of the
+  output: a segfault mid-run prints no summary at all.
+- A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script, and
+  `do_action "toggle_view"` presses a bound action. A scratch `--game-root` with extra lines at
+  the end of `ui/main.fs` drives them without touching the real tree.
 - `tests/run_all.sh` runs the headless gameplay scenarios. Prefer these over watching the
   game: `finevox_headless --script` loads a scenario next to the real game script, and
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test

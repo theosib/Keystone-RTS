@@ -31,6 +31,10 @@ set HUNGER_EAT_AT 0.35
 set HAND_COST {=provisions 5}
 set HAND_TRAIN_SECONDS 10.0
 
+# Laid into the ground rather than set on top of it
+set SURFACE_BLOCKS [:gravel_path :flagstone]
+set LAY_MAX_CELLS 32
+
 set BUILDINGS {
     =shelter {=blueprint :shelter =housing 4}
     =forager_hut {=blueprint :forager_hut =gather_bonus :provisions}
@@ -62,6 +66,8 @@ set UNITS {
             =cost {=provisions 8}}
 }
 set TRAIN_SECONDS 8.0
+# One swing of the work animation
+set STRIKE_SECONDS 0.8
 set ARROW_SPEED 26.0
 set CHASE_REPATH_DISTANCE_SQ 16
 set CHASE_GIVE_UP_SECONDS 7.0

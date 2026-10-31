@@ -12,6 +12,7 @@ source "scripts/combat.fsc"
 source "scripts/commander.fsc"
 source "scripts/match.fsc"
 source "scripts/inspect.fsc"
+source "scripts/tasks.fsc"
 
 fn tick_hands [f tick] do
     let i 0
@@ -79,6 +80,7 @@ fn publish_state [] do
                     =provisions {zone_count f.zone :provisions}}
                 =hands {population f} =housing f.housing
                 =sites f.sites.length =home [f.x f.z]
+                =queue {work_queue f}
                 =army f.army.length
                 =match contest.state =winner contest.winner
                 =capture f.capture}
@@ -107,10 +109,20 @@ fn order_units [f cmd] do
 end
 
 # The Steward works like one strong Hand: useful early, never a hero (DESIGN 1)
-fn steward_harvest [f x y z] do
+fn steward_break [f x y z] do
     let block {block_at x y z}
     let info {HARVEST.get block}
-    if (info == nil) { return nil }
+    if (info == nil) do
+        # What was laid comes back to the stockpile, and the ground can be dug
+        let kind {BLOCK_MATERIAL.get block}
+        if (kind != nil) do
+            world_set_block x y z :air
+            zone_deposit f.zone kind 1 x z
+        elif {TERRAIN_BLOCKS.contains block} do
+            world_set_block x y z :air
+        end
+        return nil
+    end
     if (block == :timber_log) do
         fell_log [x y z]
     elif (block == :berry_bush) do
@@ -120,6 +132,16 @@ fn steward_harvest [f x y z] do
         world_set_block x y z :air
     end
     zone_deposit f.zone info.kind info.units x z
+end
+
+fn steward_place [f x y z block] do
+    let kind {BLOCK_MATERIAL.get block}
+    if ((kind == nil) or ({block_at x y z} != :air)) { return nil }
+    if ({zone_take f.zone kind 1 x z} == 0) do
+        ui_publish {=denied {sym_name kind}}
+        return nil
+    end
+    world_set_block x y z block
 end
 
 set RIVAL_LEVEL :standard
@@ -164,11 +186,20 @@ fn settle_after_resume [f] do
         set w.retry 0
         set w.timer 0.0
         set w.scaffolding false
+        set w.supplying nil
+        ent_anim w.id :idle
     end
     for s in f.army do
         set s.moving false
         set s.target nil
         set s.last_pos nil
+        set s.striking 0.0
+        ent_anim s.id :idle
+    end
+    # Saves from before the Hall was noted. One that's lost its Keystone can't say where it stood.
+    if (not {f.has :hall}) do
+        set f.hall nil
+        if (f.keystone != nil) { note_hall f (f.keystone[0] - 4) (f.keystone[1] - 1) (f.keystone[2] - 4) }
     end
 end
 
@@ -190,6 +221,7 @@ on :tick do
     end
     if ((tick % 30) == 3) { tick_match }
     if ((tick % 15) == 0) { publish_state }
+    if ((tick % 6) == 0) { publish_ghosts factions[1] }
 end
 
 on :command do
@@ -200,7 +232,10 @@ on :command do
         :train { set f.train_queue (f.train_queue + 1) }
         :muster { queue_unit f cmd.unit }
         :continue { continue_open_ended cmd.pacify }
-        :steward_harvest { steward_harvest f cmd.x cmd.y cmd.z }
+        :steward_break { steward_break f cmd.x cmd.y cmd.z }
+        :steward_place { steward_place f cmd.x cmd.y cmd.z cmd.block }
+        :lay { lay_blocks f cmd.block cmd.x0 cmd.z0 cmd.x1 cmd.z1 }
+        :tasks { ui_publish {=tasks {tasks_of cmd.units}} }
         :inspect { ui_publish {=inspect {inspect_at f.id cmd.x cmd.y cmd.z}} }
         _ { log "unknown command" cmd.name }
     end

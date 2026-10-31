@@ -24,11 +24,12 @@ Build the engine once (see [CLAUDE.md](CLAUDE.md)), then:
 | Middle-drag, or hold Option/Alt and move the mouse | Grab the ground and drag it |
 | Q / E | Rotate |
 | Scroll | Zoom |
-| Tab | Step down as the Steward, or back up (WASD, mouse, Space, left-click to work) |
+| Tab | Step down as the Steward, or back up (WASD, mouse, Space, left-click to break, right-click to place) |
 | Build palette | Pick a building, left-click to place, R to turn, right-click to cancel |
+| Blocks bar, or 1-6 | Choose a block. Overhead, drag to mark a run for Hands to build. On foot, right-click places it |
 | F12 | Screenshot |
 | Hover, or look at, a block | See what it is and what it holds |
-| Esc | Cancel placement, or close the menu |
+| Esc | Cancel placement or the block tool, or close the menu |
 | Cmd+Q / Ctrl+Q | Save and quit |
 
 Your game saves when you quit and every 5 minutes, and picks up where you left off. To start

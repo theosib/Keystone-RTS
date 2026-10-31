@@ -7,7 +7,7 @@ fn make_worker [f id] do
     return {=id id =faction f.id =state :idle =job nil =kind nil
             =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
             =target nil =site nil =cell nil =retry 0 =failures 0 =after nil =danger_check 0.0
-            =build_x 0 =build_y 0 =build_z 0 =scaffolding false}
+            =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil}
 end
 
 fn worker_pos [w] {ent_pos w.id}
@@ -97,6 +97,8 @@ fn pick_job [w] do
         start_haul w
         return nil
     end
+
+    set w.supplying nil
 
     # Roughly a third of the settlement builds; the rest keep materials coming
     let site {next_site f}
@@ -323,6 +325,7 @@ fn start_build [w site] do
         set w.site nil
         set w.cell nil
         set w.job nil
+        set w.supplying site
         return start_gather w material
     end
     set w.kind material

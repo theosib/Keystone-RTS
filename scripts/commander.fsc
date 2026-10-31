@@ -155,8 +155,8 @@ fn plan_attack [c f tick] do
     set c.last_strike tick
     let enemy {enemy_of f}
     for s in fighters do
-        # March on what we saw; if the Keystone is known, go for it
-        if (enemy.keystone_seen_by == f.id) do
+        # March on what we saw; if the Keystone is known and still stands, go for it
+        if ((enemy.keystone != nil) and (enemy.keystone_seen_by == f.id)) do
             order_soldier s enemy.keystone[0] enemy.keystone[1] enemy.keystone[2]
         else do
             order_soldier s c.enemy_at[0] c.enemy_at[1] c.enemy_at[2]
