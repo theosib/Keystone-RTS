@@ -13,6 +13,7 @@ source "scripts/commander.fsc"
 source "scripts/match.fsc"
 source "scripts/inspect.fsc"
 source "scripts/tasks.fsc"
+source "scripts/catalog.fsc"
 
 fn tick_hands [f tick] do
     let i 0
@@ -250,6 +251,7 @@ on :command do
         :steward_place { steward_place f cmd.x cmd.y cmd.z cmd.block }
         :lay { lay_blocks f cmd.block cmd.x0 cmd.z0 cmd.x1 cmd.z1 }
         :tasks { ui_publish {=tasks {tasks_of cmd.units}} }
+        :catalog { ui_publish {=catalog {catalog_of}} }
         :inspect { ui_publish {=inspect {inspect_at f.id cmd.x cmd.y cmd.z}} }
         _ { log "unknown command" cmd.name }
     end

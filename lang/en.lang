@@ -109,6 +109,18 @@ inspect.rival: Rival
 inspect.remembered: As last seen
 
 menu.open: Menu
+tip.needs: Needs
+tip.bed: A free bed ({used} of {cap} taken)
+tip.menu: Resume, start over, or save and quit.
+tip.shelter: Beds for {count} more of your people.
+tip.forager_hut: Hands gather provisions {percent}% quicker within {radius} blocks.
+tip.sawpit: Hands cut timber {percent}% quicker within {radius} blocks.
+tip.watchtower: Sees {radius} blocks in every direction.
+tip.palisade_wall: A section of log wall that blocks the way.
+tip.hand: Gathers, hauls and builds. Ready in {seconds} seconds.
+tip.militia: Fights hand to hand. Ready in {seconds} seconds.
+tip.shortbow: Shoots from up to {range} blocks away. Ready in {seconds} seconds.
+tip.scout: Goes ahead to uncover the map. Can't fight. Ready in {seconds} seconds.
 menu.resume: Resume
 menu.new: New Game
 menu.quit: Save and Quit

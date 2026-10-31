@@ -37,7 +37,7 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
 finescript traps that cost real time here:
 
 - `(...)` is infix math only. Calls need `{...}`: `(loc "x")` is a parse error.
-- `else` needs `do`: `else do ... end`.
+- `else` needs `do`: `else do ... end`. So does `while`: only `if` takes a `{ ... }` body.
 - A statement ends at the newline. Named args can't wrap to the next line.
 - `match` and `source` are keywords, so they can't be variable names.
 - `random_range` is inclusive at both ends.
@@ -58,8 +58,9 @@ finescript traps that cost real time here:
   process and fixtures share temp paths.
 - Baseline: 2239 + 149 + 41 = 2429 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
-- A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script, and
-  `do_action "toggle_view"` presses a bound action. A scratch `--game-root` with extra lines at
+- A UI change needs a real run: `gui_click x y` sends ImGui a real click from a UI script,
+  `gui_hover x y` rests the mouse to show a tooltip, and `do_action "toggle_view"` presses a
+  bound action. A scratch `--game-root` with extra lines at
   the end of `ui/main.fs` drives them without touching the real tree.
 - `tests/run_all.sh` runs the headless gameplay scenarios. Prefer these over watching the
   game: `finevox_headless --script` loads a scenario next to the real game script, and

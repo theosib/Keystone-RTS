@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """The Hearth skin: UI art for Epoch I, painted procedurally.
 
-Dark oak and wrought iron for the frames, firelight for what's alive, parchment for what
-the game tells you. Everything is drawn at 2x and read with the 9-slice borders given here,
-so corners and rivets keep their shape at any size. Grain runs along the long axis because
-centres stretch. As with the block textures, noise is low-frequency: no per-pixel speckle.
+Dark oak and wrought iron for the frames, firelight for what's alive. Everything is drawn at
+2x and read with the 9-slice borders given here, so corners and rivets keep their shape at any
+size. Grain runs along the long axis because centres stretch. As with the block textures, noise is low-frequency: no per-pixel speckle.
 
 Writes ui/skin/hearth.png and ui/skin/hearth.fgs together, so the two can't drift apart.
 Deterministic: the same script always writes the same files.
@@ -195,16 +194,6 @@ def sunken(height, width, name, tone=(26, 18, 13), rim=(90, 66, 44), lit=None):
     return rgba(rgb, rounded_alpha(height, width, 5))
 
 
-def parchment(height, width, name):
-    gen = rng(name)
-    rgb = lerp((176, 150, 106), PARCHMENT, smooth_noise(height, width, 40, 60, gen)[..., None])
-    rgb = rgb * (0.9 + 0.1 * smooth_noise(height, width, 9, 14, gen))[..., None]
-    edge = inset_distance(height, width)
-    scorch = np.clip(1 - edge / 16, 0, 1)[..., None] ** 2
-    rgb = lerp(rgb, (92, 60, 32), scorch * 0.75)
-    return rgba(rgb, rounded_alpha(height, width, 6))
-
-
 def round_knob(size, name, dark, light):
     centre = (size - 1) / 2
     y = np.arange(size)[:, None]
@@ -250,7 +239,6 @@ def tab(height, width, name, light, lit=False):
 REGIONS = {
     "panel": (panel(220, 300, "panel", OAK_DARK, OAK, 4, 9), (34, 34, 34, 34)),
     "popup": (panel(160, 240, "popup", (42, 28, 19), (72, 49, 32), 3, 7), (28, 28, 28, 28)),
-    "tooltip": (parchment(96, 160, "tooltip"), (20, 20, 20, 20)),
     "title": (panel(56, 240, "title", OAK_DARK, OAK_WARM, 1, 5, radius=6), (24, 16, 24, 16)),
     "title_lit": (panel(56, 240, "title_lit", (72, 44, 24), (156, 100, 52), 1, 5, radius=6), (24, 16, 24, 16)),
     "menubar": (panel(48, 200, "menubar", OAK_DARK, OAK, 1, 4, radius=2), (20, 12, 20, 12)),
@@ -293,7 +281,7 @@ REGIONS = {
 PARTS = {
     "window": {"normal": "panel"},
     "popup": {"normal": "popup"},
-    "tooltip": {"normal": "tooltip"},
+    "tooltip": {"normal": "popup"},
     "title_bar": {"normal": "title", "selected": "title_lit"},
     "menu_bar": {"normal": "menubar"},
     "button": {"normal": "button", "hovered": "button_hot", "active": "button_down"},

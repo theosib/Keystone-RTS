@@ -19,6 +19,15 @@ set STEWARD_REACH 6.0
 set LAY_MAX_CELLS 32
 set BLOCK_TOOLS ["planks" "palisade" "flagstone" "dressed_stone" "gravel_path" "thatch"]
 
+set PALETTE_WIDTH 176
+set PALETTE_ICON 24
+set TOOL_WIDTH 74
+set TOOL_ICON 32
+set KINDS ["timber" "stone" "provisions"]
+set TEXT_COLOR [0.95 0.88 0.74 1.0]
+set TITLE_COLOR [1.0 0.72 0.3 1.0]
+set SHORT_COLOR [1.0 0.45 0.33 1.0]
+
 set amount_timber {ui.text "" =id "a_timber"}
 set amount_stone {ui.text "" =id "a_stone"}
 set amount_food {ui.text "" =id "a_food"}
@@ -27,8 +36,12 @@ set amount_army {ui.text "" =id "a_army"}
 set hud_hint {ui.text "" =id "hud_hint"}
 set hud_fps {ui.text "" =id "hud_fps"}
 
-for name in ["timber" "stone" "provisions" "population" "army"] do
+for name in ["timber" "stone" "provisions" "population" "army" "shelter" "forager_hut" "sawpit"
+             "watchtower" "palisade_wall" "train_hand" "militia" "shortbow" "scout" "menu"] do
     ui_texture name "ui/icons/{name}.png"
+end
+for tool in BLOCK_TOOLS do
+    ui_texture "block_{tool}" "textures/blocks/{tool}.png"
 end
 
 fn stat_row [icon amount] do
@@ -242,6 +255,83 @@ fn update_work_panel [] do
     end
 end
 
+# ---- Tooltips -----------------------------------------------------------------
+# What a button does, then what it takes. The game answers with the numbers, and anything the
+# settlement can't cover right now turns red.
+
+set catalog nil
+set catalog_asked false
+set tips []
+
+# Each is a tooltip widget, filled in when the catalog arrives
+fn make_tip [key title] do
+    let detail {ui.text_wrapped ""}
+    let widget {ui.item_tooltip [{ui.text_colored TITLE_COLOR title} detail]}
+    tips.push {=key key =widget widget =detail detail =amounts [] =bed nil}
+    return widget
+end
+
+fn add_needs [tip needs] do
+    let row tip.widget.children
+    row.push {ui.text {loc "tip.needs"}}
+    for kind in KINDS do
+        let amount {needs.get {to_sym kind}}
+        if ((amount != nil) and (amount > 0)) do
+            let text {ui.text_colored TEXT_COLOR {to_str amount}}
+            row.push {ui.same_line 0}
+            row.push {ui.image kind 18 18}
+            row.push {ui.same_line 0}
+            row.push text
+            tip.amounts.push {=kind kind =amount amount =text text}
+        end
+    end
+end
+
+fn fill_tip [tip] do
+    let blocks catalog.blocks
+    let material {blocks.get {to_sym tip.key}}
+    if (material != nil) do
+        let needs {=timber 0 =stone 0 =provisions 0}
+        needs.set material 1
+        set tip.detail.visible false
+        add_needs tip needs
+        return nil
+    end
+    let entry {catalog.entries.get {to_sym tip.key}}
+    if (entry == nil) do
+        set tip.detail.text {loc "tip.{tip.key}"}
+        return nil
+    end
+    set tip.detail.text {loc "tip.{tip.key}" =count {entry.get :count} =percent {entry.get :percent}
+        =radius {entry.get :radius} =seconds {entry.get :seconds} =range {entry.get :range}}
+    add_needs tip entry.needs
+    if ({entry.get :bed} == true) do
+        set tip.bed {ui.text_colored TEXT_COLOR ""}
+        tip.widget.children.push tip.bed
+    end
+end
+
+fn stock_of_kind [kind] do
+    return {state.stock.get {to_sym kind}}
+end
+
+fn refresh_tip [tip] do
+    for need in tip.amounts do
+        if ({stock_of_kind need.kind} >= need.amount) { set need.text.color TEXT_COLOR } { set need.text.color SHORT_COLOR }
+    end
+    if (tip.bed != nil) do
+        set tip.bed.text {loc "tip.bed" =used state.hands =cap state.housing}
+        if (state.hands < state.housing) { set tip.bed.color TEXT_COLOR } { set tip.bed.color SHORT_COLOR }
+    end
+end
+
+fn refresh_tips [] do
+    if (catalog == nil) { return nil }
+    for tip in tips do
+        refresh_tip tip
+    end
+end
+
 # ---- Blocks -------------------------------------------------------------------
 # One choice of block, for two ways of using it. On foot the Steward places it by hand;
 # overhead, a drag marks a run of it for Hands to build.
@@ -259,12 +349,7 @@ fn refresh_tools [] do
     let i 0
     while (i < BLOCK_TOOLS.length) do
         let button tool_buttons[i]
-        let tool BLOCK_TOOLS[i]
-        let name {loc "block.{tool}"}
-        let shown (i + 1)
-        let label "{shown} {name}"
-        if ((i == tool_index) and (laying or (view_mode == :embodied))) { set label "[{label}]" }
-        set button.label label
+        set button.selected ((i == tool_index) and (laying or (view_mode == :embodied)))
         set i (i + 1)
     end
 end
@@ -286,7 +371,9 @@ fn stop_laying [] do
 end
 
 fn tool_button [index] do
-    let button {ui.button "" =on_click fn [] do
+    let shown (index + 1)
+    let tool BLOCK_TOOLS[index]
+    let button {ui.button "{shown}" =icon "block_{tool}" =icon_size TOOL_ICON =width TOOL_WIDTH =on_click fn [] do
         choose_tool index
     end}
     tool_buttons.push button
@@ -297,8 +384,10 @@ fn tool_children [] do
     let children [{ui.text {loc "ui.blocks"}}]
     let i 0
     while (i < BLOCK_TOOLS.length) do
+        let tool BLOCK_TOOLS[i]
         children.push {ui.same_line 0}
         children.push {tool_button i}
+        children.push {make_tip tool {loc "block.{tool}"}}
         set i (i + 1)
     end
     return children
@@ -365,41 +454,40 @@ fn start_placing [name] do
     if laying { stop_laying }
 end
 
-fn build_button [name] do
-    return {ui.button {loc "building.{name}"} =on_click fn [] do
-        start_placing name
-    end}
+fn palette_button [children label icon tip on_click] do
+    children.push {ui.button label =icon icon =icon_size PALETTE_ICON =width PALETTE_WIDTH =on_click on_click}
+    children.push {make_tip tip label}
 end
 
-fn muster_button [name] do
-    return {ui.button {loc "unit.{name}"} =on_click fn [] do
-        send_command {=name :muster =unit {to_sym name}}
-    end}
+fn palette_children [] do
+    let children []
+    palette_button children {loc "menu.open"} "menu" "menu" fn [] do
+        open_menu
+    end
+    children.push {ui.separator}
+    children.push {ui.text {loc "ui.palette"}}
+    for name in ["shelter" "forager_hut" "sawpit" "watchtower" "palisade_wall"] do
+        palette_button children {loc "building.{name}"} name name fn [] do
+            start_placing name
+        end
+    end
+    children.push {ui.separator}
+    children.push {ui.text {loc "ui.muster"}}
+    palette_button children {loc "ui.train_hand"} "train_hand" "hand" fn [] do
+        send_command {=name :train}
+    end
+    for name in ["militia" "shortbow" "scout"] do
+        palette_button children {loc "unit.{name}"} name name fn [] do
+            send_command {=name :muster =unit {to_sym name}}
+        end
+    end
+    return children
 end
 
 ui_show {ui.window "##palette"
     =window_pos_x 8 =window_pos_y 240
     =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing]
-    =children [
-        {ui.button {loc "menu.open"} =on_click fn [] do
-            open_menu
-        end}
-        {ui.text {loc "ui.palette"}}
-        {build_button "shelter"}
-        {build_button "forager_hut"}
-        {build_button "sawpit"}
-        {build_button "watchtower"}
-        {build_button "palisade_wall"}
-        {ui.separator}
-        {ui.button {loc "ui.train_hand"} =on_click fn [] do
-            send_command {=name :train}
-        end}
-        {ui.separator}
-        {ui.text {loc "ui.muster"}}
-        {muster_button "militia"}
-        {muster_button "shortbow"}
-        {muster_button "scout"}
-    ]
+    =children {palette_children}
 } =immediate true
 
 fn begin_drag [] do
@@ -543,6 +631,15 @@ fn show_end_screen [won] do
 end
 
 on :state do
+    let offered {msg.get :catalog}
+    if (offered != nil) do
+        set catalog offered
+        for tip in tips do
+            fill_tip tip
+        end
+        refresh_tips
+        return nil
+    end
     let inspected {msg.get :inspect}
     if (inspected != nil) do
         show_inspect inspected
@@ -564,6 +661,11 @@ on :state do
         show_end_screen (msg.winner == 1)
     }
     set state msg
+    refresh_tips
+    if (not catalog_asked) do
+        set catalog_asked true
+        send_command {=name :catalog}
+    end
 end
 
 on :action do

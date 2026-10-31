@@ -10,7 +10,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Boot | `finevox_run --game-root Keystone`, no game C++ |
 | World | Generated terrain, biomes, trees, forage, boulders, water |
 | Art | Procedural 32×32 textures, box-part unit models with faction emblems, skeletal animation |
-| Command | Orbit camera, grab panning, box select, right-click move, build palette with ghost footprint, ghosts of unbuilt work that firm up as it goes |
+| Command | Orbit camera, grab panning, box select, right-click move, build palette with ghost footprint and tooltips quoting live costs, ghosts of unbuilt work that firm up as it goes |
 | Economy | Gathering, hauling, material fetch, bottom-up construction, hunger, housing |
 | Stockpile | Physical blocks with fill stages, rows and aisles, partial-stack preference, defrag |
 | Warehouse | Yard fills, Hands build mezzanine, posts, stairs, then store upstairs |
@@ -42,7 +42,13 @@ Honest gaps against Stage 1:
 
 - Mesh uploads are one GPU submit per subchunk (~4ms each), so first view of a map fills
   in over several seconds. Batching belongs in FineStructureVK.
-- LOD merging is off (`lod: false`). It caused visible flicker from an overhead camera.
+- LOD merging is off (`lod: false`), and stays off until a bigger world makes it pay. Its
+  first switch is at 32 blocks but the overhead camera sits 60 out (8 to 160), so the whole
+  view is past it and flickers. Measured at the start of a game, on: 32k → 3.8k triangles
+  overhead, 20k → 7k on foot, with no change in frame rate, because 32k is nothing to a GPU.
+  If it's needed: overhead stays at full detail, since anything far enough not to show is
+  outside the frustum at normal pitch, and on foot gets a distance past what you'd notice.
+  That means a distance table per view, and a rebuild of what's in view at each switch.
   That trades away the far-view triangle savings; fine at this map size, but a much
   larger map would need a different approach.
 - `WorldReplica` doesn't copy block rotation yet. Nothing in Keystone rotates blocks so

@@ -1,0 +1,41 @@
+# What the build and muster buttons do and take. The UI runs apart from game data, so it asks for
+# this once and shows it in tooltips: from here it can't go stale when the numbers change.
+
+fn materials_of [blueprint] do
+    let needs {=timber 0 =stone 0 =provisions 0}
+    let blocks {blueprint_cost blueprint}
+    for block in blocks.keys do
+        let kind {BLOCK_MATERIAL.get block}
+        if (kind != nil) { needs.set kind ({needs.get kind} + {blocks.get block}) }
+    end
+    return needs
+end
+
+fn building_entry [name] do
+    return {=needs {materials_of {BUILDINGS.get name}.blueprint}}
+end
+
+fn unit_entry [name] do
+    let stats {UNITS.get name}
+    return {=needs stats.cost =seconds {floor TRAIN_SECONDS} =range {floor stats.range} =bed true}
+end
+
+fn catalog_of [] do
+    let quicker {floor (((1.0 - GATHER_BONUS_SPEED) * 100.0) + 0.5)}
+    let shelter {building_entry :shelter}
+    set shelter.count {BUILDINGS.get :shelter}.housing
+    let forager {building_entry :forager_hut}
+    set forager.percent quicker
+    set forager.radius GATHER_BONUS_RADIUS
+    let sawpit {building_entry :sawpit}
+    set sawpit.percent quicker
+    set sawpit.radius GATHER_BONUS_RADIUS
+    let tower {building_entry :watchtower}
+    set tower.radius {floor {BUILDINGS.get :watchtower}.vision}
+    return {=entries {=shelter shelter =forager_hut forager =sawpit sawpit =watchtower tower
+                      =palisade_wall {building_entry :palisade_wall}
+                      =hand {=needs HAND_COST =seconds {floor HAND_TRAIN_SECONDS} =bed true}
+                      =militia {unit_entry :militia} =shortbow {unit_entry :shortbow}
+                      =scout {unit_entry :scout}}
+            =blocks BLOCK_MATERIAL}
+end

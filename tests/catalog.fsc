@@ -1,0 +1,41 @@
+# Scenario: tooltips quote what things really cost. A building's needs are checked against the
+# cells of a real site, the units' against their data, and every number the text needs is there.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn site_total [blueprint kind] do
+    let f factions[1]
+    let site {site_create blueprint (f.x + 40) 200 (f.z + 40)}
+    let left {site_remaining site}
+    let total 0
+    for block in left.keys do
+        if ({BLOCK_MATERIAL.get block} == kind) { set total (total + {left.get block}) }
+    end
+    site_remove site
+    return total
+end
+
+on :tick do
+    if ({game_tick} != 5) { return nil }
+    let entries {catalog_of}.entries
+    for name in BUILDINGS.keys do
+        let needs {entries.get name}.needs
+        let def {BUILDINGS.get name}
+        for kind in [:timber :stone :provisions] do
+            let wanted {site_total def.blueprint kind}
+            if ({needs.get kind} != wanted) { fail "{name} {kind} says {needs.get kind}, its site takes {wanted}" }
+        end
+    end
+    for name in UNITS.keys do
+        if ({entries.get name}.needs != {UNITS.get name}.cost) { fail "{name} cost differs" }
+    end
+    if (entries.shelter.count != 4) { fail "shelter housing" }
+    if (entries.watchtower.radius != 44) { fail "tower radius" }
+    if (entries.sawpit.percent != 30) { fail "sawpit percent {entries.sawpit.percent}" }
+    if (entries.hand.seconds != 10) { fail "hand seconds" }
+    log "PASS"
+    game_exit 0
+end
