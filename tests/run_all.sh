@@ -92,6 +92,7 @@ run continue_war 3100
 run orders 1000
 run explore 27000
 run chase 1400
+run deliver 7100
 run blueprints 60
 
 exit "$failed"

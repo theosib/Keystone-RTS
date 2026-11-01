@@ -18,6 +18,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout |
 | Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
 | Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
+| Delivery | Hands take what they've gathered straight to a site that needs it. The yard gets the rest, and first call on food and on what a soldier with a bed is waiting for |
 | Pathfinder | Explores by itself, nearest unseen ground first, and carries on from wherever it's sent |
 | Units | Each kind puts the team colour somewhere else, to read at a distance. A killed unit topples and turns to motes in its team colour |
 | Steward | First-person avatar (Tab). Walks up one-block ledges, harvests, digs, and places blocks from the stockpile by hand, shown at once and corrected by the server |

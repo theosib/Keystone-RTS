@@ -1,0 +1,141 @@
+# Scenario: what a site needs goes straight there. With nothing in the yard, Hands used to carry
+# every load to the yard for another Hand to carry to the site. Gatherers who deliver go back to
+# gathering, the last of the food stays for eating, and nothing carried gets lost.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set site nil
+set began 0
+set finished_at nil
+set yard_most 0
+set hauls 0
+set gatherer_back false
+set delivered_by_gatherer false
+set stage 0
+set hand nil
+set leftover_hand nil
+set leftover_at nil
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 30) do
+        zone_take f.zone :timber 100000 f.x f.z
+        lay_blocks f :planks (f.x + 20) (f.z + 20) (f.x + 39) (f.z + 20)
+        set site f.sites[0].site
+        set began t
+    end
+
+    if ((site != nil) and (finished_at == nil)) do
+        # While there's plenty left to do. At the end the last cells are all claimed, and anyone
+        # still carrying a load is right to take it to the yard.
+        let p {site_progress site}
+        if ((p != nil) and ((p.done * 2) < p.total)) do
+            let timber {zone_count f.zone :timber}
+            if (timber > yard_most) { set yard_most timber }
+        end
+        for w in f.hands do
+            if ((w.job == :haul) and (w.carry_kind == :timber)) { set hauls (hauls + 1) }
+            if ((not {is_builder w}) and (w.site == site)) { set delivered_by_gatherer true }
+            if (delivered_by_gatherer and (not {is_builder w}) and (w.job == :gather)) { set gatherer_back true }
+        end
+        if ({site_progress site}.complete or (f.sites.length == 0)) do
+            set finished_at t
+            log "built in" ((t - began) / 30) "seconds, yard timber peaked at" yard_most "hand-ticks hauling" hauls
+        end
+    end
+
+    if ((t == 7000) and (finished_at == nil)) { fail "the site never got finished" }
+
+    # With the run built, the rest of the rules, one Hand at a time
+    if ((finished_at != nil) and (stage == 0)) do
+        set stage 1
+        if (yard_most > 3) { fail "it went through the yard: timber peaked at {yard_most}" }
+        if (not delivered_by_gatherer) { fail "no gatherer brought anything to the site" }
+        if (not gatherer_back) { fail "gatherers stayed on as builders" }
+
+        # Food low: it goes to the yard, thatch or no thatch
+        set hand f.hands[0]
+        drop_job hand
+        set hand.supplying nil
+        set hand.carry_kind :provisions
+        set hand.carry_n 3
+        zone_take f.zone :provisions 100000 f.x f.z
+        let roof {site_create}
+        let g {ground_y (f.x + 20) (f.z + 24)}
+        site_add roof (f.x + 20) (g + 1) (f.z + 24) :thatch
+        f.sites.push {=name :laid =site roof =x f.x =y 0 =z f.z =size_x 0 =size_z 0
+                      =complete false =faction f.id =laid true}
+        start_carry hand
+        if (hand.job != :haul) { fail "the last of the food went to a building" }
+
+        # Unless it was gathered for that site
+        drop_job hand
+        set hand.supplying roof
+        start_carry hand
+        if ((hand.job != :build) or (hand.site != roof)) { fail "a load gathered for a site didn't go there" }
+
+        # Timber is no use to a thatch site
+        drop_job hand
+        site_release roof hand.id
+        set hand.carry_kind :timber
+        start_carry hand
+        if (hand.job != :haul) { fail "it took the wrong material to a site" }
+        drop_job hand
+        set hand.carry_n 0
+        set hand.carry_kind nil
+        set hand.supplying nil
+
+        # What's left over when a site finishes goes back to the yard
+        let other f.hands[1]
+        drop_job other
+        set other.carry_kind :timber
+        set other.carry_n 3
+        set leftover_hand other
+        let last {site_create}
+        let g2 {ground_y (f.x + 22) (f.z + 24)}
+        site_add last (f.x + 22) (g2 + 1) (f.z + 24) :planks
+        f.sites.remove (f.sites.length - 1)
+        f.sites.push {=name :laid =site last =x f.x =y 0 =z f.z =size_x 0 =size_z 0
+                      =complete false =faction f.id =laid true}
+
+        # A soldier waiting on this material comes first, as long as there's a bed for it
+        zone_take f.zone :timber 100000 f.x f.z
+        let beds f.housing
+        f.muster.push :militia
+        set f.housing ({population f} + 1)
+        start_carry other
+        if (other.job != :haul) { fail "the sites took what a queued soldier was waiting for" }
+        drop_job other
+        set f.housing {population f}
+        start_carry other
+        if (other.job != :build) { fail "a soldier with no bed held up the building" }
+        drop_job other
+        f.muster.remove (f.muster.length - 1)
+        set f.housing beds
+
+        start_carry other
+        if ((other.job != :build) or (other.site != last)) { fail "it didn't take its load to the site" }
+        set leftover_at t
+    end
+
+    # Two blocks over the one the site took. The yard's own timber keeps moving, so this watches
+    # the Hand: it must end up empty-handed, and by way of the yard.
+    if ((leftover_at != nil) and (stage == 1)) do
+        if (leftover_hand.job == :haul) do
+            set stage 2
+            if (leftover_hand.carry_n != 2) { fail "it lost what it had left: {leftover_hand.carry_n}" }
+        end
+        if (t == (leftover_at + 1500)) { fail "its leftovers never went to the yard" }
+    end
+    if (stage == 2) do
+        if (leftover_hand.carry_n == 0) do
+            set stage 3
+            log "DELIVER OK"
+        end
+    end
+end

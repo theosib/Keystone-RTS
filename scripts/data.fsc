@@ -38,6 +38,8 @@ set BUSH_REGROW_SECONDS 90.0
 # Hunger: full at 1.0, falls to 0 over this many seconds
 set HUNGER_SECONDS 360.0
 set HUNGER_EAT_AT 0.35
+# Below this in the yard, gathering food comes first and none of it goes to building sites
+set FOOD_RESERVE 20
 
 set HAND_COST {=provisions 5}
 set HAND_TRAIN_SECONDS 10.0

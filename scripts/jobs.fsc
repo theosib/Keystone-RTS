@@ -76,7 +76,7 @@ fn wanted_kind [f] do
     let stone {stock_of f :stone}
     let food {stock_of f :provisions}
     # Food first when low: nobody builds on an empty stomach
-    if (food < 20) { return :provisions }
+    if (food < FOOD_RESERVE) { return :provisions }
     if (timber <= stone) {
         if (timber <= (food * 1)) { return :timber }
         return :provisions
@@ -84,6 +84,9 @@ fn wanted_kind [f] do
     if (stone <= food) { return :stone }
     return :provisions
 end
+
+# Roughly two thirds of the settlement builds; the rest keep materials coming
+fn is_builder [w] { return ((w.id % 3) != 0) }
 
 fn pick_job [w] do
     let f factions[w.faction]
@@ -94,15 +97,14 @@ fn pick_job [w] do
     end
 
     if (w.carry_n > 0) do
-        start_haul w
+        start_carry w
         return nil
     end
 
     set w.supplying nil
 
-    # Roughly a third of the settlement builds; the rest keep materials coming
     let site {next_site f}
-    if ((site != nil) and ((w.id % 3) != 0)) do
+    if ((site != nil) and {is_builder w}) do
         start_build w site
         return nil
     end
@@ -143,6 +145,9 @@ fn start_gather [w kind] do
             end
         end
     end
+
+    # Gathering something else would drop what's in hand
+    if (w.carry_n > 0) { return start_carry w }
 
     # Nothing nearby of what we wanted; try the other materials before idling
     set w.retry (w.retry + 1)
@@ -263,12 +268,57 @@ fn finish_harvest [w] do
     set w.target nil
 
     if (w.carry_n >= CARRY_CAP) {
-        return start_haul w
+        return start_carry w
     }
     start_gather w info.kind
 end
 
 # ---- Hauling ----------------------------------------------------------------
+
+# Take this load to wherever it's wanted. A site that needs it is nearer than the yard and back.
+fn start_carry [w] do
+    if {start_delivery w} { return nil }
+    start_haul w
+end
+
+fn start_delivery [w] do
+    let f factions[w.faction]
+    # What was gathered for a site goes to it
+    if ((w.supplying != nil) and {try_deliver w w.supplying}) { return true }
+    if {yard_short_of f w.carry_kind} { return false }
+    if ((f.zone.expanding != nil) and {try_deliver w f.zone.expanding}) { return true }
+    for b in f.sites do
+        if {try_deliver w b.site} { return true }
+    end
+    return false
+end
+
+# Eating and mustering can only draw on the yard, so sites mustn't take all that's coming in. A
+# unit with no bed to go to can wait: it may be the site that's building the bed.
+fn yard_short_of [f kind] do
+    let stock {stock_of f kind}
+    if ((kind == :provisions) and (stock < FOOD_RESERVE)) { return true }
+    if ((f.muster.length == 0) or ({population f} >= f.housing)) { return false }
+    let cost {UNITS.get f.muster[0]}.cost
+    return ({cost.has kind} and (stock < {cost.get kind}))
+end
+
+fn try_deliver [w site] do
+    let pos {worker_pos w}
+    if (pos == nil) { return false }
+    let cell {site_claim site w.id pos[0] pos[1] pos[2]}
+    if (cell == nil) { return false }
+    if ({BLOCK_MATERIAL.get cell.block} != w.carry_kind) do
+        site_release site w.id
+        return false
+    end
+    set w.job :build
+    set w.site site
+    set w.cell cell
+    set w.supplying nil
+    go_build_near w cell.x cell.y cell.z :place_block
+    return true
+end
 
 fn start_haul [w] do
     let pos {worker_pos w}
@@ -328,6 +378,7 @@ fn start_build [w site] do
     let cell {site_claim site w.id pos[0] pos[1] pos[2]}
     if (cell == nil) do
         # Everything's claimed by others. Do something useful meanwhile.
+        if (w.carry_n > 0) { return start_carry w }
         return start_gather w {wanted_kind factions[w.faction]}
     end
 
@@ -347,7 +398,7 @@ fn start_build [w site] do
         set w.site nil
         set w.cell nil
         set w.job nil
-        return start_haul w
+        return start_carry w
     end
 
     let slot {find_take_slot {zone_of w} material pos[0] pos[2]}
@@ -395,6 +446,13 @@ fn finish_place [w] do
     let site w.site
     set w.cell nil
     set w.site nil
+    # A gatherer who brought a load goes back for more, or nobody's keeping materials coming
+    if ((w.carry_n == 0) and (not {is_builder w})) do
+        site_release site w.id
+        set w.job nil
+        set w.state :idle
+        return nil
+    end
     start_build w site
 end
 
