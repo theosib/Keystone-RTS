@@ -51,6 +51,12 @@ Honest gaps against Stage 1:
 - **Balance.** Numbers in `scripts/data.fsc` are first guesses.
 - **CJK fonts.** Strings and plurals are ready; finegui has no font fallback yet.
 
+## Known flaky tests
+
+- `explore` fails about one run in six, under load, with "it left over a sixth of the map": a scout
+  sometimes gets stuck with ground still to see. It did before multiplayer too (3 of 20 runs then,
+  2 of 20 now, ten at a time on 12 cores), so it's the Pathfinder, not the network.
+
 ## Known engine limits hit along the way
 
 - Mesh uploads are one GPU submit per subchunk (~4ms each), so first view of a map fills

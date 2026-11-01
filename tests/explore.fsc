@@ -46,7 +46,8 @@ on :tick do
     end
 
     if (scout != nil) do
-        if (scout.order != :move) { set gap (gap + 1) } { set gap 0 }
+        # With nothing left to see, waiting for news is what it's meant to do
+        if ((scout.order != :move) and ({unseen_grid_cells f} > 0)) { set gap (gap + 1) } { set gap 0 }
         if (gap > worst_gap) { set worst_gap gap }
     end
 
