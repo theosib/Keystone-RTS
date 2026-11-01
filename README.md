@@ -10,7 +10,8 @@ for the game design and [docs/STATUS.md](docs/STATUS.md) for what's built.
 
 ## Running
 
-Build the engine once (see [CLAUDE.md](CLAUDE.md)), then:
+Build the engine once (see [CLAUDE.md](CLAUDE.md), or [docs/PLATFORMS.md](docs/PLATFORMS.md) on a
+new machine), then:
 
 ```sh
 ./run.sh
@@ -31,11 +32,16 @@ Build the engine once (see [CLAUDE.md](CLAUDE.md)), then:
 | F12 | Screenshot |
 | Hover, or look at, a block | See what it is and what it holds |
 | Esc | Cancel placement or the block tool, or close the menu |
+| Enter | Say something to the other players |
 | Cmd+Q / Ctrl+Q | Save and quit |
 
-Your game saves when you quit and every 5 minutes, and picks up where you left off. To start
-over, use New Game in the Menu, or `./run.sh --new`. Saves live in `saves/`, with the one before
-kept as `autosave.bak`.
+The game opens on its title screen. Your game saves when you quit and every 5 minutes, and Continue
+picks up where you left off. `./run.sh --new` and `./run.sh --continue` skip the title screen. Saves
+live in `saves/`, with the one before kept as `autosave.bak`.
+
+To play with others, Host a Game and they'll find it under Join a Game, or Menu, Invite Players in a
+game you've already started. `./run.sh --server` runs a game with no window, and
+`./run.sh --join ADDRESS` joins one directly.
 
 ## Layout
 

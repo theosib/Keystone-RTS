@@ -44,12 +44,30 @@ Honest gaps against Stage 1:
   have nowhere to live yet.
 - **A multiplayer rematch.** A match is one match: after it a server needs restarting. See the
   engine's `docs/systems/multiplayer.md` for what else isn't done.
+- **Continuing a hosted game.** It's saved to `saves/hosted`, but Host a Game always starts a new one,
+  so nothing in the menu reaches that save.
+- **Passwords show as you type them,** and travel unencrypted. Fine on a LAN, and not past one.
+- **A player who drops leaves their side idle.** There's no `on :player_leave`, so nothing takes over
+  until they're back, and their units stand and take it.
+- **The end of a match is anyone's.** Any player can press Continue for everybody once it's over.
+- **No kick button, and no team chat.** `lobby_kick` and `chat_send =team` exist, with no UI on them.
+- **The lobby's French.** None of the menu, lobby or network strings are in `lang/fr.lang`, so they
+  fall back to English.
+- **The new lands are unbalanced.** Desert is thin on timber and dense forest on room to build, with
+  numbers that are first guesses. Nobody's played a full game on either.
 - **Unit separation.** Units can overlap; there's no local avoidance.
 - **Day and night.** Nights had no part in the game and only made it harder to see, so the sun is
   held at `TIME_OF_DAY`. Bringing them back wants a rule that makes them matter.
 - **Audio.** No sound content yet.
 - **Balance.** Numbers in `scripts/data.fsc` are first guesses.
 - **CJK fonts.** Strings and plurals are ready; finegui has no font fallback yet.
+
+## Not tested
+
+- **Anything but one Mac.** See [PLATFORMS.md](PLATFORMS.md), which has the two-machine test to run.
+- **A whole match in multiplayer.** Runs so far are a minute or so. Conquest, the end screen and
+  Continue have only run with one player.
+- **More than four sides,** or a large map with players on it.
 
 ## Known flaky tests
 
