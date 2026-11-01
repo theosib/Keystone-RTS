@@ -507,23 +507,58 @@ fn start_placing [name] do
     if laying { stop_laying }
 end
 
-fn palette_button [children label icon tip on_click] do
+# How many a click or key queues: a whole batch with Shift held. The game stops at its own limit.
+set QUEUE_BATCH 8
+
+fn train_hands [count] do
+    send_command {=name :train =count count}
+end
+
+fn muster_units [unit count] do
+    send_command {=name :muster =unit {to_sym unit} =count count}
+end
+
+fn click_count [] do
+    if ({key_held "left_shift"} or {key_held "right_shift"}) { return QUEUE_BATCH }
+    return 1
+end
+
+# What's named on a palette button is under a key. Keys are for commanding, not for the body or a menu.
+fn at_the_palette [] { return ((view_mode != :embodied) and (menu_panel == nil) and (chat_typing == nil)) }
+
+fn titled_button [children label title icon tip on_click] do
     let button {ui.button label =icon icon =icon_size PALETTE_ICON =width PALETTE_WIDTH =on_click on_click}
     children.push button
-    children.push {make_tip tip label}
+    children.push {make_tip tip title}
+    return button
+end
+
+fn palette_button [children label icon tip on_click] do
+    return {titled_button children label label icon tip on_click}
+end
+
+fn keyed_button [children label icon tip on_click] do
+    let title {loc "tip.hotkey" =name label =key {loc "hotkey.{tip}"}}
+    return {titled_button children label title icon tip on_click}
+end
+
+fn unit_button [children label icon tip on_click] do
+    let button {keyed_button children label icon tip on_click}
+    let widget children[children.length - 1]
+    widget.children.push {ui.text {loc "tip.batch" =count QUEUE_BATCH}}
     return button
 end
 
 # Each its own function, for its own name: a closure made in a loop shares the loop's variable
 fn building_button [children name] do
-    palette_button children {loc "building.{name}"} name name fn [] do
+    keyed_button children {loc "building.{name}"} name name fn [] do
         start_placing name
     end
 end
 
 fn muster_button [children name] do
-    palette_button children {loc "unit.{name}"} name name fn [] do
-        send_command {=name :muster =unit {to_sym name}}
+    unit_button children {loc "unit.{name}"} name name fn [] do
+        muster_units name {click_count}
     end
 end
 
@@ -537,13 +572,13 @@ fn palette_children [] do
     for name in ["shelter" "forager_hut" "sawpit" "watchtower"] do
         building_button children name
     end
-    set fence_button {palette_button children {loc "building.palisade_wall"} "palisade_wall" "palisade_wall" fn [] do
+    set fence_button {keyed_button children {loc "building.palisade_wall"} "palisade_wall" "palisade_wall" fn [] do
         start_fence
     end}
     children.push {ui.separator}
     children.push {ui.text {loc "ui.muster"}}
-    palette_button children {loc "ui.train_hand"} "train_hand" "hand" fn [] do
-        send_command {=name :train}
+    unit_button children {loc "ui.train_hand"} "train_hand" "hand" fn [] do
+        train_hands {click_count}
     end
     for name in ["militia" "shortbow" "scout"] do
         muster_button children name
@@ -895,7 +930,27 @@ on :state do
     end
 end
 
+fn palette_action [] do
+    match action
+        :place_shelter { start_placing "shelter" }
+        :place_forager_hut { start_placing "forager_hut" }
+        :place_sawpit { start_placing "sawpit" }
+        :place_watchtower { start_placing "watchtower" }
+        :place_palisade_wall { start_fence }
+        :train_hand { train_hands 1 }
+        :train_hand_batch { train_hands QUEUE_BATCH }
+        :muster_militia { muster_units "militia" 1 }
+        :muster_militia_batch { muster_units "militia" QUEUE_BATCH }
+        :muster_shortbow { muster_units "shortbow" 1 }
+        :muster_shortbow_batch { muster_units "shortbow" QUEUE_BATCH }
+        :muster_scout { muster_units "scout" 1 }
+        :muster_scout_batch { muster_units "scout" QUEUE_BATCH }
+        _ { nil }
+    end
+end
+
 on :action do
+    if {at_the_palette} { palette_action }
     match action
         :screenshot { request_screenshot "screenshots/keystone.png" }
         :turn { set place_turns ((place_turns + 1) % 4) }

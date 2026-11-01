@@ -125,6 +125,17 @@ inspect.remembered: As last seen
 
 menu.open: Menu
 tip.needs: Needs
+tip.hotkey: {name} ({key})
+tip.batch: Hold Shift for {count}
+hotkey.shelter: Z
+hotkey.forager_hut: F
+hotkey.sawpit: X
+hotkey.watchtower: T
+hotkey.palisade_wall: L
+hotkey.hand: H
+hotkey.militia: M
+hotkey.shortbow: B
+hotkey.scout: P
 tip.bed: A free bed ({used} of {cap} taken)
 tip.menu: Resume, start over, or save and quit.
 tip.shelter: Beds for {count} more of your people.

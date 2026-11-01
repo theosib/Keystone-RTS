@@ -15,7 +15,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Stockpile | Physical blocks with fill stages, rows and aisles, partial-stack preference, defrag |
 | Warehouse | Yard fills, Hands build mezzanine, posts, stairs, then store upstairs |
 | Vision | Per-faction 3D line of sight, terrain replica (remembered terrain), filtered units |
-| Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout |
+| Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout. Soldiers guard where they were sent, answer whoever hits them, and go to an alarm in proportion to the raid, then back |
 | Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
 | Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
 | Delivery | Hands take what they've gathered straight to a site that needs it. The yard gets the rest, and first call on food and on what a soldier with a bed is waiting for |

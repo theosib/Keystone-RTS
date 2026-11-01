@@ -534,8 +534,9 @@ fn check_danger [w] do
         if (w.state == :fleeing) { set w.state :idle }
         return false
     end
+    let f factions[w.faction]
+    raise_alarm f pos
     if (w.state != :fleeing) do
-        let f factions[w.faction]
         drop_job w
         set w.state :fleeing
         ent_goto w.id f.x f.y (f.z + 1) =range 3.0 =partial true =max_nodes 6000

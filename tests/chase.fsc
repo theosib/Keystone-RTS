@@ -55,7 +55,8 @@ on :tick do
             if (s.target == enemy) { fail "it set off after what it just gave up on" }
         end
 
-        # Not for good, though
+        # It's walked back to its post by now, so this has to come to it. It's not for good, though.
+        if (since == (forget_ticks - 20)) { put_enemy 9 }
         if (since == forget_ticks) do
             if (s.target != enemy) { fail "it never took the enemy up again" }
         end

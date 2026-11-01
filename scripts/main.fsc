@@ -249,6 +249,10 @@ fn settle_after_resume [f] do
             set s.explore_wait 0.0
             set s.explore_from nil
         end
+        if (not {s.has :post}) do
+            set s.post nil
+            set s.errand nil
+        end
         ent_anim s.id :idle
     end
     # Saves from before the Hall was noted. One that's lost its Keystone can't say where it stood.
@@ -336,8 +340,8 @@ on :command do
     match cmd.name
         :move { order_units f cmd }
         :build { place_building f cmd.building cmd.x cmd.z cmd.turns }
-        :train { set f.train_queue (f.train_queue + 1) }
-        :muster { queue_unit f cmd.unit }
+        :train { set f.train_queue (f.train_queue + {batch_size cmd}) }
+        :muster { queue_many f cmd.unit {batch_size cmd} }
         :continue { if (contest.state == :over) { continue_open_ended cmd.pacify } }
         :steward_break { steward_break f cmd.x cmd.y cmd.z }
         :steward_place { steward_place f cmd.x cmd.y cmd.z cmd.block }

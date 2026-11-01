@@ -1,0 +1,178 @@
+# Scenario: soldiers on guard. One shot from beyond how far it looks has to answer. One led off by
+# a quick decoy has to come back. Help for someone under attack has to come, but only as much as
+# it takes, and go home after, or a lone raider could empty the walls. And a death just after a
+# muster mustn't stop the army: that threw on every tick, so the dead were never cleared.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn spot [p dx dz] do
+    let x {floor (p[0] + dx)}
+    let z {floor (p[2] + dz)}
+    return [(x + 0.5) ({ground_y x z} + 1) (z + 0.5)]
+end
+
+fn place [s p] do
+    ent_stop s.id
+    ent_set_pos s.id p[0] p[1] p[2]
+    set s.post p
+    set s.last_pos p
+end
+
+fn raise [f kind p] do
+    let s {spawn_soldier f kind}
+    place s p
+    return s
+end
+
+fn from [a b] { return {sqrt {dist2 a[0] a[2] b[0] b[2]}} }
+
+fn clear_field [] do
+    for s in factions[1].army do
+        ent_damage s.id 1000 0
+    end
+    for s in factions[2].army do
+        ent_damage s.id 1000 0
+    end
+end
+
+set guard nil
+set answered_at nil
+set archer nil
+set decoy nil
+set post nil
+set furthest 0
+set hand nil
+set raider nil
+set line []
+set line_posts []
+set helpers 0
+set finished false
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+    let e factions[2]
+    let yard [f.x 0 (f.z + 12)]
+
+    # Nothing here but what's put here: a Rival's own Pathfinders draw soldiers out of line
+    if (t == 1) { set e.commander.next_think 1000000 }
+    if (t == 29) do
+        set e.muster []
+        clear_field
+    end
+
+    # A militia looks 16 out, and a bow reaches 18
+    if (t == 30) do
+        if ({batch_size {=count 99}} != QUEUE_BATCH) { fail "a command got past the batch limit" }
+        if ({batch_size {=count 0}} != 1) { fail "a command queued nothing" }
+        if ({batch_size {=name :train}} != 1) { fail "a command with no count isn't for one" }
+        set guard {raise f :militia {spot yard (0 - 8) 0}}
+        set archer {raise e :shortbow {spot yard 9.5 0}}
+    end
+    if ((answered_at == nil) and (guard != nil) and (guard.target == archer.id)) {
+        set answered_at t
+    }
+    if (t == 300) do
+        log "answered at" answered_at "archer alive" {ent_alive archer.id} "guard hp" {ent_health guard.id}
+        if (answered_at == nil) { fail "shot from out of its sight, it never answered" }
+        if {ent_alive archer.id} {
+            if ({from {ent_pos guard.id} {ent_pos archer.id}} > 6) { fail "it answered, but it didn't close in" }
+        }
+        clear_field
+    end
+
+    # A Pathfinder runs past and keeps going
+    if (t == 360) do
+        set guard {raise f :militia {spot yard 0 0}}
+        set post guard.post
+        set decoy {raise e :scout {spot post 8 0}}
+        set furthest 0
+        order_soldier decoy (post[0] + 70) post[1] post[2]
+    end
+    if ((t > 360) and (t < 1000)) do
+        let away {from {ent_pos guard.id} post}
+        if (away > furthest) { set furthest away }
+    end
+    # Before the 20 seconds it leaves the decoy alone are up
+    if (t == 1000) do
+        log "led off by" furthest
+        if (furthest < 3) { fail "it never went after the decoy" }
+        if (furthest > (POST_LEASH + 4)) { fail "a decoy led it past its leash" }
+        if ({from {ent_pos guard.id} post} > ORDER_GIVE_UP_RANGE) { fail "it didn't go back to its post" }
+        if ({from guard.post post} > 0.01) { fail "going back moved its post" }
+        clear_field
+    end
+
+    # A Pathfinder is no threat, so nobody's sent for
+    if (t == 1160) do
+        set hand f.hands[0]
+        let p {ent_pos hand.id}
+        set line []
+        set line_posts []
+        for i in (0..6) do
+            let s {raise f :militia {spot p 25 (i * 2)}}
+            line.push s
+            line_posts.push s.post
+        end
+        set decoy {raise e :scout {spot p 2 0}}
+    end
+    if (t == 1230) do
+        for s in line do
+            if (s.errand != nil) { fail "a Pathfinder had soldiers called out" }
+        end
+        ent_damage decoy.id 1000 0
+    end
+
+    # One raider, and six soldiers who could go. Two do.
+    if (t == 1260) do
+        let p {ent_pos hand.id}
+        set raider {raise e :militia {spot p 2 0}}
+    end
+    if (t == 1320) do
+        set helpers 0
+        for s in line do
+            if (s.errand == :help) { set helpers (helpers + 1) }
+        end
+        log "answered by" helpers
+        if (helpers != ALARM_ANSWER) { fail "the wrong number answered the alarm" }
+    end
+    if (t == 1500) do
+        let stayed 0
+        for i in (0..6) do
+            let s line[i]
+            if ((s.errand == nil) and ({from {ent_pos s.id} line_posts[i]} < 4)) { set stayed (stayed + 1) }
+        end
+        if (stayed < (6 - ALARM_ANSWER)) { fail "those not needed left their posts" }
+    end
+    # A chase after one that broke and ran can take them a long way before they turn for home
+    if (t == 2800) do
+        # Driven off is as good as killed: it can break first, and rally at its own home
+        if {ent_alive raider.id} do
+            if ({from {ent_pos raider.id} [f.x 0 f.z]} < ALARM_REACH) { fail "help came and the raider's still there" }
+        end
+        for i in (0..6) do
+            let s line[i]
+            if {ent_alive s.id} do
+                if (s.errand != nil) { fail "a soldier never came back from helping" }
+                if ({from {ent_pos s.id} line_posts[i]} > ORDER_GIVE_UP_RANGE) { fail "a soldier stayed where it helped" }
+            end
+        end
+        clear_field
+    end
+
+    # A death on the tick after a muster
+    if (t == 2900) do
+        set guard {spawn_soldier f :militia}
+        spawn_soldier f :militia
+        ent_damage guard.id 1000 0
+    end
+    if (t == 2940) do
+        if (f.army.length != 1) { fail "the dead were never cleared" }
+        set finished true
+    end
+
+    if ((t == 3190) and (not finished)) { fail "it didn't get to the end" }
+end

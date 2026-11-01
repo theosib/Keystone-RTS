@@ -97,6 +97,8 @@ finescript traps that cost real time here:
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
   once passed while the whole economy was frozen at 32ms a tick.
 - Enemies spawned near home for a look at them count as raiders: Hands drop their work and flee.
+- A soldier guards `s.post`, and walks back if it's more than 6 blocks off with nothing to do. A
+  scenario that moves one with `ent_set_pos` has to set `s.post` too. See `place` in `tests/guard.fsc`.
 - A client only knows what the protocol tells it, even in single player: see the engine's
   `docs/systems/multiplayer.md`. Its world comes from a `WorldReplica` that sweeps for changes and can
   lag by a second, so a player's own action needs `predict_block` or `expect_change` beside its

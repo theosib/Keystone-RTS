@@ -85,6 +85,8 @@ set UNITS {
             =cost {=provisions 8}}
 }
 set TRAIN_SECONDS 8.0
+# The most one order can queue
+set QUEUE_BATCH 8
 # One swing of the work animation
 set STRIKE_SECONDS 0.8
 set ARROW_SPEED 26.0
@@ -92,6 +94,18 @@ set CHASE_REPATH_DISTANCE_SQ 16
 set CHASE_GIVE_UP_SECONDS 7.0
 # How long before a unit will run after what it gave up on. It'll still hit it in reach.
 set CHASE_FORGET_SECONDS 20.0
+
+# A soldier guards the spot it was last sent to, and goes this far from it after an enemy
+set POST_LEASH 24
+# How long a blow counts as just now. Longer than a bow takes to draw.
+set STRUCK_SECONDS 2.5
+
+# Someone under attack calls for help: how often, how far around them counts the enemies and
+# friends there, how far off a soldier can hear, and how many soldiers go for each armed enemy
+set ALARM_SECONDS 1.0
+set ALARM_RADIUS 14
+set ALARM_REACH 40
+set ALARM_ANSWER 2
 
 # A Pathfinder left to itself: how fine a grid of the map it looks over for ground nobody's seen,
 # how far in from the edge that stops, and how long it waits for news once it's all been seen

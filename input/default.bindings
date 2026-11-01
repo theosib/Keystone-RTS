@@ -31,6 +31,19 @@ context: gameplay
   keypress_right_alt: begin_grab
   keyrelease_right_alt: end_grab
   key_r: turn
+  key_z: place_shelter
+  key_f: place_forager_hut
+  key_x: place_sawpit
+  key_t: place_watchtower
+  key_l: place_palisade_wall
+  mod_shift+key_h: train_hand_batch
+  key_h: train_hand
+  mod_shift+key_m: muster_militia_batch
+  key_m: muster_militia
+  mod_shift+key_b: muster_shortbow_batch
+  key_b: muster_shortbow
+  mod_shift+key_p: muster_scout_batch
+  key_p: muster_scout
   key_1: tool_1
   key_2: tool_2
   key_3: tool_3

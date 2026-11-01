@@ -27,6 +27,33 @@ fn t_near [id] do
     return ({abs p[0]} < 20)
 end
 
+fn t_tap [key] do
+    input_key key true
+    input_key key false
+end
+
+fn t_tap_shifted [key] do
+    input_key "left_shift" true
+    t_tap key
+    input_key "left_shift" false
+end
+
+# Only neighbours fold into one row, so a kind can be on several
+fn t_queued [unit] do
+    let total 0
+    for row in state.queue do
+        if ((row.key == "muster") and (row.unit == unit)) { set total (total + row.times) }
+    end
+    return total
+end
+
+fn t_train [] do
+    for row in state.queue do
+        if (row.key == "train") { return row.count }
+    end
+    return 0
+end
+
 on :mouse do
     if ((view_mode == :embodied) and (mouse_event == :down)) { set t_clicks (t_clicks + 1) }
 end
@@ -170,6 +197,55 @@ on :frame do
         let near {picked.filter fn [id] {t_near id}}
         print "picked {near.length} nearby"
         t_check "only the Hand can be selected, not the Steward" (near.length == 1)
+    end
+
+    # Keys and palette clicks, one or a batch. There's no room to house anyone, so the queue stays.
+    if (t_frame == 470) { t_tap "m" }
+    if (t_frame == 474) { t_tap_shifted "b" }
+    if (t_frame == 478) { t_tap "h" }
+    if (t_frame == 482) { t_tap_shifted "h" }
+    if (t_frame == 484) { t_to 100 637 }
+    if (t_frame == 486) { input_button 0 true 100 637 }
+    if (t_frame == 488) { input_button 0 false 100 637 }
+    if (t_frame == 490) { input_key "left_shift" true }
+    if (t_frame == 492) { input_button 0 true 100 637 }
+    if (t_frame == 494) { input_button 0 false 100 637 }
+    if (t_frame == 496) { input_key "left_shift" false }
+    if (t_frame == 498) { t_tap "p" }
+    if (t_frame == 502) { t_tap "z" }
+    if (t_frame == 504) { t_check "a key picks up a building" (placing == :shelter) }
+    if (t_frame == 506) { t_tap "escape" }
+    if (t_frame == 508) { t_check "and Escape puts it down" (placing == nil) }
+    if (t_frame == 510) { t_tap "l" }
+    if (t_frame == 512) do
+        t_check "the wall has a key too" laying_fence
+        t_tap "escape"
+    end
+    if (t_frame == 545) do
+        print "queue {state.queue}"
+        t_check "M, a click and a Shift-click queue 10 Militia, got {t_queued "militia"}" ({t_queued "militia"} == 10)
+        t_check "Shift-B queues 8 Shortbows" ({t_queued "shortbow"} == 8)
+        t_check "P queues a Pathfinder" ({t_queued "scout"} == 1)
+        t_check "H and Shift-H train 9 Hands" ({t_train} == 9)
+    end
+
+    # None of it where the keys mean something else
+    if (t_frame == 546) { do_action "toggle_view" }
+    if (t_frame == 550) { t_tap "m" }
+    if (t_frame == 552) { t_tap "z" }
+    if (t_frame == 554) do
+        t_check "on foot a key picks up nothing" (placing == nil)
+        do_action "toggle_view"
+    end
+    if (t_frame == 558) { open_menu }
+    if (t_frame == 560) { t_tap "m" }
+    if (t_frame == 564) { close_menu }
+    if (t_frame == 566) { do_action "chat" }
+    if (t_frame == 570) { t_tap "m" }
+    if (t_frame == 574) { do_action "cancel" }
+    if (t_frame == 576) { stop_typing }
+    if (t_frame == 610) do
+        t_check "keys queue nothing on foot, in the menu or in chat" ({t_queued "militia"} == 10)
         print "UI TEST DONE"
     end
 end

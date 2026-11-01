@@ -28,6 +28,8 @@ new machine), then:
 | Tab | Step down as the Steward, or back up (WASD, mouse, Space, left-click to break, right-click to place) |
 | Build palette | Pick a building, left-click to place, R to turn, right-click to cancel. Hover any button for what it does and what it needs |
 | Log Palisade | Drag out a wall. It joins up straight and on the diagonal. Right-click to finish |
+| Z F X T L | Shelter, Forager Hut, Sawpit, Watchtower, Log Palisade |
+| H M B P | Train a Hand, or muster Militia, a Shortbow, a Pathfinder. Hold Shift, or Shift-click the button, for 8 |
 | Blocks bar, or 1-6 | Choose a block. Overhead, drag to mark a run for Hands to build. On foot, right-click places it |
 | F12 | Screenshot |
 | Hover, or look at, a block | See what it is and what it holds |
