@@ -26,9 +26,12 @@ git clone https://github.com/theosib/Keystone-RTS.git Keystone
 git clone https://github.com/theosib/FineStructureVoxel.git
 git clone https://github.com/theosib/FineStructureScript.git game-language
 git clone https://github.com/theosib/FineStructureVulkan.git FineStructureVK
-git clone https://github.com/theosib/finegui.git
+git clone --recurse-submodules https://github.com/theosib/finegui.git
 git clone https://github.com/theosib/finenet.git
 ```
+
+`--recurse-submodules` matters: ImGui is a submodule of finegui, which won't configure without it.
+In a clone that's missing it, `git submodule update --init` in `finegui/` fixes that.
 
 **Set the commit identity in every clone**, before committing anything. These repos are public, and
 a machine's global git config may hold an address that shouldn't be in them:
@@ -70,8 +73,9 @@ cmake -S FineStructureVoxel -B fv-keystone -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build fv-keystone
 ```
 
-**With a window**, add the graphics libraries first, and turn the render module on. `finevox_run`
-is quietly left out if `finegui` hasn't been built, so check that it exists afterwards.
+Both of these recipes have been run from clean clones of GitHub, on macOS only. **With a window**,
+add the graphics libraries first, and turn the render module on. `finevox_run` is quietly left out
+if `finegui` hasn't been built, so check that it exists afterwards.
 
 ```sh
 for dep in FineStructureVK finegui; do
