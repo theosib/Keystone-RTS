@@ -88,6 +88,8 @@ set STRIKE_SECONDS 0.8
 set ARROW_SPEED 26.0
 set CHASE_REPATH_DISTANCE_SQ 16
 set CHASE_GIVE_UP_SECONDS 7.0
+# How long before a unit will run after what it gave up on. It'll still hit it in reach.
+set CHASE_FORGET_SECONDS 20.0
 
 # A Pathfinder left to itself: how fine a grid of the map it looks over for ground nobody's seen,
 # how far in from the edge that stops, and how long it waits for news once it's all been seen

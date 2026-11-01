@@ -43,12 +43,15 @@ finescript traps that cost real time here:
 - `random_range` is inclusive at both ends.
 - Maths is plain functions: `{sqrt x}`, `{max a b}`, `{abs x}`. There's no `math.` map.
 - `{}` is an empty block, not an empty map.
+- `set a[i] v` doesn't assign: it silently replaces `a` with the array `[i]`. Use `a.set i v`.
 - A closure made in a `for` loop shares the loop's variable: every button built that way acts
   on the last value. Make the closure in a function that takes the value as a parameter.
 - Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.
 - Interpolation can't nest quotes: `"{loc "x"}"` doesn't parse. Assign it to a `let` first.
 - Script `:air` is normalised to real air by `world_set_block`/`site_add`.
 - Indented config lines are continuation data: `.emodel` keys must not be indented.
+- Every layer of a `.blueprint` starts at the same corner, so a narrower layer is centred with
+  blank rows and leading spaces, and one row too many is a whole row out of line.
 - `.geom` UVs are image coordinates: `v = 0` is the top row, so a side face's top edge has the
   lower `v`. `finevox_render_tests` goldens can't see this; `MeshTest.*SideFaces*` covers cubes.
 - A new unit order must `ent_stop` first. Otherwise the old route finishes, reads as

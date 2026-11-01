@@ -206,6 +206,8 @@ fn settle_after_resume [f] do
         set s.target nil
         set s.last_pos nil
         set s.striking 0.0
+        set s.ignore nil
+        set s.ignore_until 0
         if (not {s.has :dead_ends}) do
             set s.dead_ends []
             set s.explore_wait 0.0
@@ -219,6 +221,34 @@ fn settle_after_resume [f] do
         if (f.keystone != nil) { note_hall f (f.keystone[0] - 4) (f.keystone[1] - 1) (f.keystone[2] - 4) }
     end
     repair_canopy f
+    repair_huts f
+end
+
+# Saves from before the Forager Hut's far posts were moved in. They stood a row past its floor and
+# roof, touching neither. The hut is long that way, so that's the way back onto the floor.
+fn repair_huts [f] do
+    for b in f.buildings do
+        if (b.name == :forager_hut) do
+            let x0 (b.x - (b.size_x / 2))
+            let z0 (b.z - (b.size_z / 2))
+            for x in (x0..(x0 + b.size_x)) do
+                for z in (z0..(z0 + b.size_z)) do
+                    let to_x x
+                    let to_z z
+                    if (b.size_x > b.size_z) { set to_x (x + {clamp (b.x - x) -1 1}) }
+                    if (b.size_z > b.size_x) { set to_z (z + {clamp (b.z - z) -1 1}) }
+                    if (({block_at x b.y z} != :planks) and ({block_at to_x b.y to_z} == :planks)) do
+                        for y in ((b.y + 1)..=(b.y + 2)) do
+                            if ({block_at x y z} == :palisade) do
+                                world_set_block x y z :air
+                                world_set_block to_x y to_z :palisade
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
 end
 
 # Saves from before every cut cleaned up after itself. Once, over everywhere Hands work:

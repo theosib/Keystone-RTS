@@ -1,0 +1,105 @@
+# Scenario: every building holds together. Each is put up in empty air, and every block has to
+# connect to its bottom layer. The Forager Hut once had two posts standing a row beyond its floor
+# and roof, touching nothing. Saves with one of those get it put right.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set KINDS [:shelter :forager_hut :sawpit :watchtower :palisade_wall :core_hall]
+set HIGH 150
+
+fn solid_at [x y z] { return ({block_at x y z} != :air) }
+
+fn cell_index [c dx dy dz] { return (dx + (c.size_x * (dz + (c.size_z * dy)))) }
+
+fn reach [c dx dy dz] do
+    if ((dx < 0) or (dz < 0) or (dy < 0)) { return nil }
+    if ((dx >= c.size_x) or (dz >= c.size_z) or (dy >= c.size_y)) { return nil }
+    let i {cell_index c dx dy dz}
+    if c.seen[i] { return nil }
+    if (not {solid_at (c.x0 + dx) (HIGH + dy) (c.z0 + dz)}) { return nil }
+    c.seen.set i true
+    c.open.push [dx dy dz]
+end
+
+# Spreads up from the bottom layer, through every block that touches one already reached
+fn check_connected [name x0 z0 info] do
+    let c {=size_x info.size_x =size_y info.size_y =size_z info.size_z =x0 x0 =z0 z0 =seen [] =open []}
+    for i in (0..((c.size_x * c.size_y) * c.size_z)) do
+        c.seen.push false
+    end
+
+    for dx in (0..c.size_x) do
+        for dz in (0..c.size_z) do
+            reach c dx 0 dz
+        end
+    end
+    while (c.open.length > 0) do
+        let at c.open[c.open.length - 1]
+        c.open.remove (c.open.length - 1)
+        reach c (at[0] + 1) at[1] at[2]
+        reach c (at[0] - 1) at[1] at[2]
+        reach c at[0] at[1] (at[2] + 1)
+        reach c at[0] at[1] (at[2] - 1)
+        reach c at[0] (at[1] + 1) at[2]
+        reach c at[0] (at[1] - 1) at[2]
+    end
+
+    for dy in (0..c.size_y) do
+        for dz in (0..c.size_z) do
+            for dx in (0..c.size_x) do
+                if ({solid_at (x0 + dx) (HIGH + dy) (z0 + dz)} and (not c.seen[{cell_index c dx dy dz}])) {
+                    fail "{name} has a block hanging at {dx} {dy} {dz}"
+                }
+            end
+        end
+    end
+end
+
+fn check_repair [f] do
+    # A hut as built from the old plan: five rows of floor, and posts in the sixth
+    let x (f.x + 40)
+    let z (f.z + 40)
+    for dx in (0..5) do
+        for dz in (0..5) do
+            world_set_block (x + dx) HIGH (z + dz) :planks
+        end
+    end
+    for dx in [0 4] do
+        for dz in [0 5] do
+            world_set_block (x + dx) (HIGH + 1) (z + dz) :palisade
+            world_set_block (x + dx) (HIGH + 2) (z + dz) :palisade
+        end
+    end
+    f.buildings.push {=name :forager_hut =x (x + 2) =y HIGH =z (z + 3) =size_x 5 =size_z 6}
+
+    repair_huts f
+    repair_huts f
+    for dx in [0 4] do
+        if ({block_at (x + dx) (HIGH + 1) (z + 5)} != :air) { fail "a stray post stayed put" }
+        if ({block_at (x + dx) (HIGH + 2) (z + 4)} != :palisade) { fail "a post didn't reach the floor" }
+        if ({block_at (x + dx) (HIGH + 1) z} != :palisade) { fail "a good post moved" }
+    end
+end
+
+on :tick do
+    if ({game_tick} == 10) do
+        let f factions[1]
+        let spot 0
+        for name in KINDS do
+            let info {blueprint_info name}
+            if (info == nil) { fail "no blueprint for {name}" }
+            let x0 (f.x + (spot * 16))
+            let z0 (f.z - 40)
+            build_instantly {site_create name x0 HIGH z0 0}
+            check_connected name x0 z0 info
+            set spot (spot + 1)
+        end
+        let hut {blueprint_info :forager_hut}
+        if ((hut.size_x != 5) or (hut.size_z != 5)) { fail "the hut isn't square" }
+        check_repair f
+        log "BLUEPRINTS OK"
+    end
+end

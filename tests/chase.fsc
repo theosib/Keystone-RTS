@@ -1,0 +1,73 @@
+# Scenario: giving up a chase means not running after it for a while, not that it's stopped being
+# an enemy. A Pathfinder outran a whole militia once, and then walked past them all for the rest
+# of the game.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set s nil
+set enemy nil
+set gave_up_at nil
+set first_hp 0
+set finished false
+set forget_ticks {to_int ((CHASE_FORGET_SECONDS * 30) + 40)}
+
+fn put_enemy [dx] do
+    let p {ent_pos s.id}
+    ent_stop enemy
+    ent_set_pos enemy (p[0] + dx) p[1] p[2]
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 30) do
+        set s {spawn_soldier f :militia}
+        let p {ent_pos s.id}
+        set enemy {ent_spawn :scout (p[0] + 6) p[1] p[2] =faction 2}
+        set first_hp {ent_health enemy}
+    end
+
+    # It runs, and it's quicker
+    if (t == 40) { ent_goto enemy (f.x + 90) f.y f.z =range 4.0 =partial true =max_nodes 12000 }
+
+    if ((gave_up_at == nil) and (s != nil) and (s.ignore == enemy)) do
+        set gave_up_at t
+        log "gave up the chase at" t
+        put_enemy 1.5
+    end
+    if ((t == 500) and (gave_up_at == nil)) { fail "it never gave up a chase it couldn't win" }
+
+    if (gave_up_at != nil) do
+        let since (t - gave_up_at)
+
+        # Right beside it: a blow costs nothing, whatever happened before
+        if (since == 75) do
+            if ({ent_health enemy} >= first_hp) { fail "it stood by while an enemy walked past" }
+            put_enemy 9
+        end
+
+        # Out of reach, and a chase it's already lost. It stays where it is.
+        if (since == 125) do
+            if (s.target == enemy) { fail "it set off after what it just gave up on" }
+        end
+
+        # Not for good, though
+        if (since == forget_ticks) do
+            if (s.target != enemy) { fail "it never took the enemy up again" }
+        end
+
+        # A grudge in an old save would never wear off, so loading clears it
+        if (since == (forget_ticks + 10)) do
+            set s.ignore enemy
+            settle_after_resume f
+            if (s.ignore != nil) { fail "resuming kept what it was ignoring" }
+            set finished true
+        end
+    end
+
+    if ((t == 1390) and (not finished)) { fail "it didn't get to the end" }
+end
