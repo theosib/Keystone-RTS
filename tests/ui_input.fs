@@ -38,6 +38,36 @@ on :frame do
     if (t_frame == 58) { t_to 40 126 }
     if (t_frame == 60) { input_key "w" true }
     if (t_frame == 62) { t_check "the panel is under the cursor" {gui_has_mouse} }
+
+    # One or many, each line of the queue is a sentence
+    if (t_frame == 64) do
+        fn says [row wanted] do
+            let got {queue_row_text row}
+            t_check "the queue says \"{wanted}\", got \"{got}\"" (got == wanted)
+        end
+        fn building [times percent] do
+            return {=key "build" =building "shelter" =percent percent =times times =hands 0 =needs nil}
+        end
+        fn unit [name times] do
+            return {=key "muster" =unit name =housed true =times times}
+        end
+        says {building 1 24} "Build Shelter 24%"
+        says {building 3 24} "Build 3 Shelters 24%"
+        says {unit "militia" 1} "Muster Militia"
+        says {unit "militia" 8} "Muster 8 Militia"
+        says {unit "shortbow" 2} "Muster 2 Shortbows"
+        says {unit "scout" 2} "Muster 2 Pathfinders"
+        says {=key "train" =count 1 =housed true =times 1} "Train Hand"
+        says {=key "train" =count 8 =housed false =times 1} "Train 8 Hands (no housing)"
+        says {=key "lay" =percent 40 =times 2 =hands 0 =needs nil} "Lay 2 runs of blocks 40%"
+        says {=key "floor" =percent 5 =times 1 =hands 0 =needs nil} "Raise a yard floor 5%"
+        says {=key "build" =building "sawpit" =percent 0 =times 2 =hands 3 =needs nil} "Build 2 Sawpits 0% (3 Hands)"
+
+        let groups [{=who "hand" =count 3 =stack [{=key "build" =building "shelter" =percent 24}]}
+                     {=who "militia" =count 2 =stack []} {=who "scout" =count 1 =stack []}]
+        let got {tasks_text groups}
+        t_check "the Selected panel reads, got \"{got}\"" (got == "3 Hands\n  Build Shelter 24%\n2 Militia\nPathfinder")
+    end
     if (t_frame == 66) { input_button 0 true 40 126 }
     if (t_frame == 70) { input_key "w" false }
     if (t_frame == 74) { input_button 0 false 40 126 }

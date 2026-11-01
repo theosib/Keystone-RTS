@@ -20,25 +20,33 @@ ui.housed: {count} / {cap}
 ui.palette: Build
 ui.train_hand: Train Hand
 building.shelter: Shelter
+building.shelter.other: Shelters
 building.forager_hut: Forager Hut
+building.forager_hut.other: Forager Huts
 building.sawpit: Sawpit
+building.sawpit.other: Sawpits
 building.watchtower: Watchtower
+building.watchtower.other: Watchtowers
 building.palisade_wall: Log Palisade
+building.palisade_wall.other: Log Palisades
 building.core_hall: Core Hall
 
 work.title.queue: Work
 work.title.units: Selected
 work.nothing: Nothing to do
-work.group: {count} x {name}
+work.group: {count} {name}
 work.hands.one: (1 Hand)
 work.hands.other: ({count} Hands)
 work.needs: (needs {kind})
 work.no_room: (no housing)
-work.train.one: Train a Hand
+work.train.one: Train Hand
 work.train.other: Train {count} Hands
-work.muster: Muster {name}
-work.build: Build {name} {percent}%
-work.lay: Lay blocks {percent}%
+work.muster.one: Muster {name}
+work.muster.other: Muster {count} {name}
+work.build.one: Build {name} {percent}%
+work.build.other: Build {count} {name} {percent}%
+work.lay.one: Lay blocks {percent}%
+work.lay.other: Lay {count} runs of blocks {percent}%
 work.floor: Raise a yard floor {percent}%
 work.scaffold_down: Take down scaffolding
 work.gather: Gather {kind}
@@ -62,9 +70,13 @@ work.fight: Fighting
 work.rout: Routed, running for home
 ui.muster: Muster
 unit.hand: Hand
+unit.hand.other: Hands
 unit.militia: Militia
+unit.militia.other: Militia
 unit.shortbow: Shortbow
+unit.shortbow.other: Shortbows
 unit.scout: Pathfinder
+unit.scout.other: Pathfinders
 match.victory: Victory
 match.defeat: Your Keystone has fallen
 match.victory.detail: The rival Keystone is yours.

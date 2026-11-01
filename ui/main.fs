@@ -177,26 +177,35 @@ ui_show work_window =immediate true
 set unit_tasks nil
 set tasks_wait 0
 
-fn frame_text [frame] do
+# What it's called, however many there are. The plain key is the singular one.
+fn noun [group name count] do
+    if (count == 1) { return {loc "{group}.{name}"} }
+    return {loc "{group}.{name}" =count count}
+end
+
+fn frame_text [frame count] do
     let name ""
     let kind ""
     let building {frame.get :building}
-    if (building != nil) { set name {loc "building.{building}"} }
+    if (building != nil) { set name {noun "building" building count} }
     let material {frame.get :kind}
     if (material != nil) { set kind {loc "kind.{material}"} }
-    return {loc "work.{frame.key}" =name name =kind kind =percent {frame.get :percent}}
+    return {loc "work.{frame.key}" =count count =name name =kind kind =percent {frame.get :percent}}
 end
 
 fn queue_row_text [row] do
     if ((row.key == "train") or (row.key == "muster")) do
-        let line {loc "work.muster" =name ""}
-        if (row.key == "train") { set line {loc "work.train" =count row.count} }
-        if (row.key == "muster") { set line {loc "work.muster" =name {loc "unit.{row.unit}"}} }
+        let line ""
+        if (row.key == "train") do
+            set line {loc "work.train" =count row.count}
+        else do
+            set line {loc "work.muster" =count row.times =name {noun "unit" row.unit row.times}}
+        end
         if row.housed { return line }
         let no_room {loc "work.no_room"}
         return "{line} {no_room}"
     end
-    let line {frame_text row}
+    let line {frame_text row row.times}
     let needs {row.get :needs}
     if (needs != nil) do
         let kind {loc "kind.{needs}"}
@@ -215,9 +224,7 @@ fn queue_text [rows] do
     let text ""
     let number 1
     for row in rows do
-        let work {queue_row_text row}
-        if (row.times > 1) { set work {loc "work.group" =count row.times =name work} }
-        let line "{number}. {work}"
+        let line "{number}. {queue_row_text row}"
         if (text == "") { set text line } { set text "{text}\n{line}" }
         set number (number + 1)
     end
@@ -228,12 +235,12 @@ fn tasks_text [groups] do
     if (groups.length == 0) { return {loc "work.nothing"} }
     let text ""
     for group in groups do
-        let head {loc "unit.{group.who}"}
+        let head {noun "unit" group.who group.count}
         if (group.count > 1) { set head {loc "work.group" =count group.count =name head} }
         if (text == "") { set text head } { set text "{text}\n{head}" }
         let indent "  "
         for frame in group.stack do
-            set text "{text}\n{indent}{frame_text frame}"
+            set text "{text}\n{indent}{frame_text frame 1}"
             set indent "{indent}  "
         end
     end
