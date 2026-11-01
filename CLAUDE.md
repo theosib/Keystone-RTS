@@ -23,7 +23,8 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
 ## Layout
 
 - Engine repo and deps are siblings: `../FineStructureVoxel`, `../game-language` (finescript),
-  `../finegui`, `../finenet`, `../FineStructureVK`.
+  `../finegui`, `../finenet`, `../FineStructureVK`. The engine links their prebuilt libraries, so a
+  change to `finenet` or `finegui` needs `make` in that repo's `build/` before `ninja` sees it.
 - Build dir: `../fv-keystone` (Ninja, Release with symbols). A fresh configure needs
   `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (lz4's CMake is too old for CMake 4), and
   `-DCMAKE_CXX_FLAGS_RELEASE="-O3 -g -DNDEBUG"` so core dumps have line numbers.
@@ -42,6 +43,9 @@ finescript traps that cost real time here:
 - `match` and `source` are keywords, so they can't be variable names.
 - `random_range` is inclusive at both ends.
 - Maths is plain functions: `{sqrt x}`, `{max a b}`, `{abs x}`. There's no `math.` map.
+- `on` is a keyword, so it can't name a parameter.
+- `if (x) { ... }` takes one statement. For more, or for `a.push b`, use `do ... end`, and the same
+  goes for a `match` arm.
 - `{}` is an empty block, not an empty map.
 - `set a[i] v` doesn't assign: it silently replaces `a` with the array `[i]`. Use `a.set i v`.
 - A closure made in a `for` loop shares the loop's variable: every button built that way acts
@@ -79,14 +83,22 @@ finescript traps that cost real time here:
   `tests/run_ui.sh` does. That run opens a window, so it's separate from `run_all.sh`.
 - `assert` compiles away in Release, so the `test_phase*` binaries in finevk and finegui
   check little there. Rebuild with `-UNDEBUG`, or use a check that always runs.
+- `tests/run_net.sh` runs a server and bots over real sockets, through a proxy that cuts and slows
+  them. `tests/run_windows.sh` drives real windows over MCP, for typing, opening a game live and
+  saving. Both are separate from `run_all.sh`. Set `KEYSTONE_BUILD=../fv-tsan` to run them for races.
+- Run the bots with `--cache` pointed at a temp directory, or they use the real content cache.
 - `tests/run_all.sh` runs the headless gameplay scenarios. Prefer these over watching the
   game: `finevox_headless --script` loads a scenario next to the real game script, and
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
   once passed while the whole economy was frozen at 32ms a tick.
 - Enemies spawned near home for a look at them count as raiders: Hands drop their work and flee.
-- The client's world is `WorldReplica`, which sweeps for changes and can lag by a second. A
-  player's own action needs `predict_block` or `expect_change` beside its `send_command`. The
-  server's word overrides a prediction after 3 ticks.
+- A client only knows what the protocol tells it, even in single player: see the engine's
+  `docs/systems/multiplayer.md`. Its world comes from a `WorldReplica` that sweeps for changes and can
+  lag by a second, so a player's own action needs `predict_block` or `expect_change` beside its
+  `send_command`. A prediction stands for 150ms plus two round trips.
+- `factions[1]` is not "the player": there can be several, and `my_faction` says which in the UI.
+  In game scripts, `faction_of sender` is who a command is from.
+- `ui_publish` with no audience goes to everyone. Anything about one side needs `=faction f.id`.
 - `ent_goto =partial` fails as soon as a hop gains no ground, so a lake reads as `:failed` even
   when there's a way round from elsewhere. Failed means from here, not ever.
 - Light doesn't lag with it: the client draws old blocks with the server's current light. A
@@ -95,6 +107,15 @@ finescript traps that cost real time here:
   reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
   `--validation` turns on Vulkan validation, `--stats` prints render counts each second.
+
+## Multiplayer
+
+- `./run.sh` opens on the menu. `--new` and `--continue` skip it, `--join ADDR --name N` joins, and
+  `--server [--config FILE] [--port N]` serves with no window. For two windows on one machine, give
+  each its own `--mcp-port`.
+- `scripts/lobby.fsc` declares the pre-game: settings, who can launch. A `=manifest` on a setting
+  or a choice reaches into `game.conf`, which is how a map type changes generation.
+- Keep `world_biomes` in `game.conf`, or the new biomes join a default world and every seed changes.
 
 ## Live inspection (MCP)
 

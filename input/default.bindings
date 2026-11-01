@@ -38,6 +38,7 @@ context: gameplay
   key_5: tool_5
   key_6: tool_6
   key_tab: toggle_view
+  key_enter: chat
   keypress_space: begin_jump
   keyrelease_space: end_jump
   key_escape: cancel

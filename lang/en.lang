@@ -142,3 +142,87 @@ menu.quit: Save and Quit
 menu.cancel: Cancel
 menu.new_yes: Start a New Game
 menu.new_confirm: Start over? This game will be replaced.
+
+title.name: Keystone
+title.tagline: Raise a settlement. Hold the Keystone.
+title.continue: Continue
+title.new: New Game
+title.host: Host a Game
+title.join: Join a Game
+title.quit: Quit
+
+host.title: Host a Game
+host.name: Your name
+host.game_title: Game title
+host.port: Port
+host.password: Password (optional)
+host.start: Open the Lobby
+
+join.title: Games on this network
+join.looking: Looking...
+join.blocked: This computer is refusing to look at the local network. On a Mac, allow it in System Settings under Privacy & Security, Local Network.
+join.row: {title}: {players} of {max}, {phase}
+join.address: Address
+join.go: Join
+join.recent: Recent
+
+phase.lobby: gathering
+phase.loading: starting
+phase.running: under way
+phase.ended: over
+
+lobby.settings: This Game
+lobby.chat: Talk
+lobby.players.one: {count} of {max} player
+lobby.players.other: {count} of {max} players
+lobby.host_mark: {name} (host)
+lobby.gone_mark: {name} (gone)
+lobby.fetching_mark: {name} (fetching files)
+lobby.address: Friends can join at
+lobby.start: Start
+lobby.vote: Ready to Start
+lobby.ready: I'm ready
+lobby.leave: Leave
+lobby.setting.title: Title
+lobby.setting.map: Land
+lobby.setting.size: Size
+lobby.setting.rivals: Rivals
+lobby.setting.rival_level: Rivals' skill
+lobby.setting.fog: Fog of war
+lobby.setting.seed: Map number (0 for a surprise)
+lobby.map.mixed: Mixed country
+lobby.map.meadow: Open meadow
+lobby.map.woodland: Woodland
+lobby.map.deepwood: Dense forest
+lobby.map.highland: Highland
+lobby.map.desert: Desert
+lobby.size.small: Small
+lobby.size.standard: Standard
+lobby.size.large: Large
+lobby.level.apprentice: Apprentice
+lobby.level.standard: Standard
+lobby.level.veteran: Veteran
+
+ui.yes: Yes
+ui.no: No
+
+net.connecting: Reaching the game...
+net.joining: Joining...
+net.content: Fetching this game's files...
+net.loading: Preparing the world...
+net.reconnecting: Lost the connection. Trying to get back...
+net.failed: {why}
+net.ended: The game has ended.
+net.host_failed: Couldn't host: {why}
+
+menu.open_game: Invite Players
+menu.open_as: Friends can join this game at
+menu.open_failed: Couldn't open the game: {why}
+menu.to_title: Back to the Title
+menu.leave: Leave the Game
+
+side.title: Sides
+side.you: You
+side.rival: Rival {id}
+side.player: Player {id}
+side.fallen: Side {id} (fallen)

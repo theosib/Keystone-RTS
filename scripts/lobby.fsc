@@ -1,0 +1,37 @@
+# What a game of Keystone asks for before it starts. Read by the host, which sends it to clients, so
+# a player's lobby can show a game it has never seen.
+#
+# `manifest` reaches into game.conf, for what must be known before there's a world: a setting's
+# value goes to that key, and a choice can set several of its own.
+
+return {
+    =start :lobby
+    =launch :host
+    =late_join :never
+    =min_players 1
+    =max_players 8
+    =settings [
+        {=key :title =type :text =label "lobby.setting.title" =default ""}
+        {=key :map =type :choice =label "lobby.setting.map" =default :mixed =choices [
+            {=value :mixed =label "lobby.map.mixed" =manifest {=world_biomes "highland meadow woodland"}}
+            {=value :meadow =label "lobby.map.meadow" =manifest {=world_biomes "meadow"}}
+            {=value :woodland =label "lobby.map.woodland" =manifest {=world_biomes "woodland"}}
+            {=value :deepwood =label "lobby.map.deepwood" =manifest {=world_biomes "deepwood"}}
+            {=value :highland =label "lobby.map.highland" =manifest {=world_biomes "highland meadow"}}
+            {=value :desert =label "lobby.map.desert" =manifest {=world_biomes "desert"}}
+        ]}
+        {=key :size =type :choice =label "lobby.setting.size" =default :standard =choices [
+            {=value :small =label "lobby.size.small" =manifest {=world_radius 9}}
+            {=value :standard =label "lobby.size.standard" =manifest {=world_radius 12}}
+            {=value :large =label "lobby.size.large" =manifest {=world_radius 18}}
+        ]}
+        {=key :rivals =type :int =label "lobby.setting.rivals" =default 1 =min 0 =max 7}
+        {=key :rival_level =type :choice =label "lobby.setting.rival_level" =default :standard =choices [
+            {=value :apprentice =label "lobby.level.apprentice"}
+            {=value :standard =label "lobby.level.standard"}
+            {=value :veteran =label "lobby.level.veteran"}
+        ]}
+        {=key :fog =type :bool =label "lobby.setting.fog" =default true =manifest "fog_of_war"}
+        {=key :seed =type :int =label "lobby.setting.seed" =default 0 =min 0 =manifest "world_seed"}
+    ]
+}

@@ -192,7 +192,7 @@ fn publish_ghosts [f] do
     for b in f.sites do
         ids.push b.site
     end
-    site_show_ghosts ids
+    site_show_ghosts ids =faction f.id
 end
 
 # The most urgent thing to build. Floors count: without room the economy stalls.

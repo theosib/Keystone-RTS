@@ -16,9 +16,20 @@ fn make_commander [f level] do
             =passive false =last_strike 0}
 end
 
+# The nearest faction still standing
 fn enemy_of [f] do
-    if (f.id == 1) { return factions[2] }
-    return factions[1]
+    let best nil
+    let best_d nil
+    for other in factions do
+        if ((other != nil) and (other.id != f.id) and other.alive) do
+            let d (((other.x - f.x) * (other.x - f.x)) + ((other.z - f.z) * (other.z - f.z)))
+            if ((best == nil) or (d < best_d)) do
+                set best other
+                set best_d d
+            end
+        end
+    end
+    return best
 end
 
 # A loop of waypoints around the map, furthest first, as a player would scout
@@ -114,7 +125,7 @@ fn next_scout_point [c f] do
     let enemy {enemy_of f}
     let count c.next_waypoint
     set c.next_waypoint (count + 1)
-    if ((c.enemy_at != nil) and (enemy.keystone_seen_by != f.id)) do
+    if ((enemy != nil) and (c.enemy_at != nil) and (enemy.keystone_seen_by != f.id)) do
         let angle (count * 1.7)
         let radius (16 + ((count % 5) * 10))
         return [{to_int (c.enemy_at[0] + (radius * {cos angle}))}
@@ -154,6 +165,7 @@ fn plan_attack [c f tick] do
     set c.attacking true
     set c.last_strike tick
     let enemy {enemy_of f}
+    if (enemy == nil) { return nil }
     for s in fighters do
         # March on what we saw; if the Keystone is known and still stands, go for it
         if ((enemy.keystone != nil) and (enemy.keystone_seen_by == f.id)) do

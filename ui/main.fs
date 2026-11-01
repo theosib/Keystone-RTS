@@ -2,6 +2,8 @@
 #
 # Reaches the game only through send_command. Hears from it only through on :state.
 
+source "ui/chat"
+
 set selection []
 set drag_start nil
 set placing nil
@@ -10,6 +12,7 @@ set state nil
 
 ui_skin "ui/skin/hearth.fgs"
 
+# Until the game says who's who, which is the first thing it does
 set_faction_color 1 0.08 0.26 1.0
 set_faction_color 2 0.95 0.1 0.08
 set_ghost_style 0.35 0.75 1.0 0.15 0.45
@@ -127,7 +130,7 @@ fn inspect_lines [info] do
     if (gives != nil) { add {loc "inspect.gives" =count gives =kind {loc "kind.{info.gives_kind}"}} }
     let owner {info.get :owner}
     if (owner != nil) {
-        if (owner == 1) { add {loc "inspect.yours"} } { add {loc "inspect.rival"} }
+        if (owner == my_faction) { add {loc "inspect.yours"} } { add {loc "inspect.rival"} }
     }
     return lines
 end
@@ -561,7 +564,7 @@ end
 fn finish_drag [] do
     if (drag_start == nil) { return nil }
     let picked {pick_entities drag_start[0] drag_start[1] mouse_x mouse_y}
-    set selection {picked.filter fn [id] ({entity_faction id} == 1)}
+    set selection {picked.filter fn [id] ({entity_faction id} == my_faction)}
     set drag_start nil
 end
 
@@ -653,16 +656,156 @@ fn open_new_game_confirm [] do
     ]
 end
 
+fn open_network_panel [problem] do
+    let children []
+    let port {net_port}
+    if (port != nil) do
+        children.push {ui.text {loc "menu.open_as"}}
+        for address in {net_addresses} do
+            children.push {ui.text "{address}:{port}"}
+        end
+    else do
+        children.push {ui.text {loc "menu.open_failed" =why problem}}
+    end
+    children.push {ui.button {loc "menu.cancel"} =on_click fn [] do
+        open_menu
+    end}
+    show_menu_window children
+end
+
 fn open_menu [] do
-    show_menu_window [
-        {ui.button {loc "menu.resume"} =on_click fn [] do
-            close_menu
+    let children [{ui.button {loc "menu.resume"} =on_click fn [] do
+        close_menu
+    end}]
+    if {net_is_host} do
+        children.push {ui.button {loc "menu.open_game"} =on_click fn [] do
+            let problem nil
+            if ({net_port} == nil) { set problem {net_open} }
+            open_network_panel problem
         end}
-        {ui.button {loc "menu.new"} =on_click fn [] do
+        children.push {ui.button {loc "menu.new"} =on_click fn [] do
             open_new_game_confirm
         end}
-        {ui.button {loc "menu.quit"} =on_click fn [] do
+        children.push {ui.button {loc "menu.to_title"} =on_click fn [] do
+            to_menu
+        end}
+        children.push {ui.button {loc "menu.quit"} =on_click fn [] do
             quit_game
+        end}
+    else do
+        children.push {ui.button {loc "menu.leave"} =on_click fn [] do
+            to_menu
+        end}
+    end
+    show_menu_window children
+end
+
+# ---- Who else is here, and what they're saying
+
+set sides_rows []
+set sides_shown ""
+
+set sides_group {ui.group []}
+set sides_window {ui.window "##sides"
+    =window_pos_x 0 =window_pos_y 8 =window_pivot_x 1.0
+    =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing :no_inputs]
+    =children [sides_group]
+}
+ui_show sides_window =immediate true
+
+fn side_label [side] do
+    if (side.id == my_faction) { return {loc "side.you"} }
+    if side.alive do
+        if side.rival { return {loc "side.rival" =id side.id} }
+        return {loc "side.player" =id side.id}
+    end
+    return {loc "side.fallen" =id side.id}
+end
+
+fn hear_sides [sides] do
+    let key ""
+    for side in sides do
+        set_faction_color side.id side.color[0] side.color[1] side.color[2]
+        let label {side_label side}
+        set key "{key}{label}"
+    end
+    if (key == sides_shown) { return nil }
+    set sides_shown key
+
+    let rows [{ui.text {loc "side.title"}}]
+    for side in sides do
+        rows.push {ui.text_colored [side.color[0] side.color[1] side.color[2] 1.0] {side_label side}}
+    end
+    set sides_group.children rows
+end
+
+set CHAT_SHOWN 6
+set chat_seen 0
+set chat_log {ui.text_wrapped "" =id "chat_log" =wrap_width 340}
+set chat_draft ""
+set chat_typing nil
+set chat_input nil
+
+set chat_window {ui.window "##chat_log"
+    =window_pos_x 190 =window_pos_y 0 =window_pivot_y 1.0
+    =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing :no_inputs]
+    =children [chat_log]
+}
+set chat_panel nil
+
+fn stop_typing [] do
+    if (chat_typing != nil) do
+        ui_hide chat_typing
+        set chat_typing nil
+    end
+end
+
+fn start_typing [] do
+    if (chat_typing != nil) { return nil }
+    let size {window_size}
+    set chat_draft ""
+    set chat_typing {ui_show {ui.window "##chat_say"
+        =window_pos_x 190 =window_pos_y (size[1] - 8) =window_pivot_y 1.0
+        =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings]
+        =children [{ui.input "##say" "" fn [text] do
+            set chat_draft text
+        end fn [text] do
+            if (text != "") { chat_send text }
+            stop_typing
+        end =auto_focus true}]
+    } =immediate true}
+end
+
+fn update_chat [] do
+    if (chat_lines.length == chat_seen) { return nil }
+    set chat_seen chat_lines.length
+    if (chat_panel == nil) { set chat_panel {ui_show chat_window =immediate true} }
+    set chat_log.text {chat_tail CHAT_SHOWN}
+end
+
+on :chat do
+    chat_hear msg
+end
+
+# The connection comes and goes without the game stopping
+set net_trouble nil
+
+on :net do
+    match msg.phase
+        :reconnecting { set net_trouble {loc "net.reconnecting"} }
+        :running { set net_trouble nil }
+        :failed { show_lost_game {loc "net.failed" =why msg.failure} }
+        :ended { show_lost_game {loc "net.ended"} }
+        _ {}
+    end
+end
+
+fn show_lost_game [text] do
+    set net_trouble nil
+    show_menu_window [
+        {ui.text text}
+        {ui.button {loc "menu.to_title"} =on_click fn [] do
+            to_menu
         end}
     ]
 end
@@ -670,6 +813,14 @@ end
 # DESIGN 7.2: when a match ends, the world is still yours
 set end_screen nil
 set pacify_rivals false
+
+fn leave_or_quit [] do
+    if {net_is_host} do
+        quit_game
+    else do
+        to_menu
+    end
+end
 
 fn show_end_screen [won] do
     let size {window_size}
@@ -695,13 +846,18 @@ fn show_end_screen [won] do
                 ui_hide end_screen
             end}
             {ui.button {loc "match.exit"} =on_click fn [] do
-                quit_game
+                leave_or_quit
             end}
         ]
     }}
 end
 
 on :state do
+    let sides {msg.get :sides}
+    if (sides != nil) do
+        hear_sides sides
+        return nil
+    end
     let offered {msg.get :catalog}
     if (offered != nil) do
         set catalog offered
@@ -729,7 +885,7 @@ on :state do
     end
     if ((state == nil) and (not resumed)) {cam_focus msg.home[0] msg.home[1]}
     if ((msg.match == :over) and (end_screen == nil)) {
-        show_end_screen (msg.winner == 1)
+        show_end_screen (msg.winner == my_faction)
     }
     set state msg
     refresh_tips
@@ -755,6 +911,9 @@ on :action do
         :tool_5 { choose_tool 4 }
         :tool_6 { choose_tool 5 }
         :quit { quit_game }
+        :chat {
+            if (chat_typing == nil) { start_typing }
+        }
         _ { nil }
     end
 end
@@ -792,7 +951,15 @@ on :frame do
 
     if (denied_frames > 0) { set denied_frames (denied_frames - 1) }
 
-    if ((state != nil) and (state.capture > 0)) do
+    update_chat
+    if (chat_panel != nil) do
+        let screen {window_size}
+        set chat_window.window_pos_y (screen[1] - 44)
+    end
+
+    if (net_trouble != nil) do
+        set hud_hint.text net_trouble
+    elif ((state != nil) and (state.capture > 0)) do
         set hud_hint.text {loc "ui.keystone_danger"}
     elif (denied_frames > 0) do
         set hud_hint.text {loc "ui.denied" =kind {loc "kind.{denied}"}}
@@ -813,6 +980,7 @@ on :frame do
 
     let size {window_size}
     set work_window.window_pos_x (size[0] - 8)
+    set sides_window.window_pos_x (size[0] - 180)
     set hint_window.window_pos_x (size[0] / 2)
     set tool_window.window_pos_x (size[0] / 2)
     set tool_window.window_pos_y (size[1] - 8)

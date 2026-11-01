@@ -1,0 +1,12 @@
+name: Desert
+temperature_min: 0.8
+temperature_max: 1.0
+humidity_min: 0.0
+humidity_max: 0.2
+base_height: 66.0
+height_variation: 16.0
+height_scale: 0.8
+surface: sand
+filler: sand
+filler_depth: 4
+stone: stone

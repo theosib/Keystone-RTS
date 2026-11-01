@@ -1,6 +1,13 @@
 # Civilizations: their state and setup.
 
-set factions [nil nil nil]
+set factions [nil]
+
+# Colours a player can tell apart at a glance, in the order factions take them. The first two are
+# what they've always been.
+set FACTION_COLORS [
+    [0.08 0.26 1.0] [0.95 0.1 0.08] [0.1 0.75 0.2] [0.95 0.75 0.1]
+    [0.65 0.2 0.9] [0.95 0.45 0.05] [0.1 0.8 0.85] [0.95 0.4 0.7]
+]
 
 fn make_faction [id x z] do
     let spot {find_settlement_site x z}
@@ -9,8 +16,73 @@ fn make_faction [id x z] do
            =keystone nil =alive true =housing BASE_HOUSING
            =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []
            =army [] =muster [] =muster_timer 0.0 =capture 0
-           =commander nil =keystone_seen_by nil =tidy_site nil =hall nil =canopy_repaired true}
+           =commander nil =keystone_seen_by nil =tidy_site nil =hall nil =canopy_repaired true
+           =owner nil}
+    while (factions.length <= id) do
+        factions.push nil
+    end
     factions.set id f
+    return f
+end
+
+# The faction whose orders this player gives. Nobody in particular means the first: that's a
+# scenario, or a tool, with no seat to speak of.
+fn faction_of [player] do
+    let id {player_faction player}
+    if (id == nil) { return factions[1] }
+    return factions[id]
+end
+
+fn alive_factions [] do
+    let out []
+    for f in factions do
+        if ((f != nil) and f.alive) { out.push f }
+    end
+    return out
+end
+
+# A ring, so that everyone starts as far from each other as the map allows. Two sides face each
+# other across the middle.
+fn settlement_spot [index count] do
+    let r (WORLD_RADIUS * 8)
+    let turn (3.14159265 + ((6.2831853 * index) / count))
+    return [{round (r * {cos turn})} {round (r * {sin turn})}]
+end
+
+fn endow_new [f] do
+    found_settlement f
+    endow f 60 30 60
+    for i in (0..8) do
+        spawn_hand f
+    end
+end
+
+fn steward_home [f] do
+    return {spawn_point f.x (f.z + 6) 6 f.y}
+end
+
+# A commander's faction goes to a player, who takes over where it left off. It's the only fair way
+# into a game that's been going for a while.
+fn seat_player [player] do
+    for f in factions do
+        if ((f != nil) and f.alive and (f.commander != nil)) do
+            set f.commander nil
+            set f.owner player.id
+            player_bind player.id f.id =at {steward_home f}
+            log player.name "takes over faction" f.id
+            return f
+        end
+    end
+
+    # Nobody to replace, so a new settlement on the ring, wherever it's clearest
+    let id factions.length
+    let spot {settlement_spot id (id + 1)}
+    let f {make_faction id spot[0] spot[1]}
+    vision_add_faction id
+    endow_new f
+    set f.owner player.id
+    player_bind player.id id =at {steward_home f}
+    log player.name "founds faction" id
     return f
 end
 

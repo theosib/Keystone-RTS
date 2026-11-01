@@ -43,7 +43,9 @@ on :tick do
             if ((not {is_builder w}) and (w.site == site)) { set delivered_by_gatherer true }
             if (delivered_by_gatherer and (not {is_builder w}) and (w.job == :gather)) { set gatherer_back true }
         end
-        if ({site_progress site}.complete or (f.sites.length == 0)) do
+        # A site finished on the tick its faction tidies up has gone by the time this looks
+        let now {site_progress site}
+        if ((now == nil) or now.complete or (f.sites.length == 0)) do
             set finished_at t
             log "built in" ((t - began) / 30) "seconds, yard timber peaked at" yard_most "hand-ticks hauling" hauls
         end
