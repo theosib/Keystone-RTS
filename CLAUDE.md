@@ -58,6 +58,9 @@ finescript traps that cost real time here:
 - Indented config lines are continuation data: `.emodel` keys must not be indented.
 - Every layer of a `.blueprint` starts at the same corner, so a narrower layer is centred with
   blank rows and leading spaces, and one row too many is a whole row out of line.
+- `.emodel` parts are boxes drawn with no culling. Where same-facing faces of two parts that look
+  different overlap, keep them 2cm apart: level ones fight at every distance, and 1cm speckles at
+  range. `tools/check_models.py` checks this, and `tests/run_all.sh` runs it.
 - `.geom` UVs are image coordinates: `v = 0` is the top row, so a side face's top edge has the
   lower `v`. `finevox_render_tests` goldens can't see this; `MeshTest.*SideFaces*` covers cubes.
 - A new unit order must `ent_stop` first. Otherwise the old route finishes, reads as

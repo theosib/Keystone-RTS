@@ -24,15 +24,15 @@ color: 0.82 0.66 0.52
 
 part: hood
 bone: head
-offset: 0 0.29 -0.03
-size: 0.42 0.24 0.4
+offset: 0 0.29 -0.02
+size: 0.42 0.24 0.42
 color: 1 1 1
 team: 1.0
 
 part: hood_back
 bone: head
 offset: 0 0.1 -0.19
-size: 0.36 0.28 0.06
+size: 0.4 0.28 0.06
 color: 1 1 1
 team: 1.0
 
@@ -63,82 +63,82 @@ color: 0.2 0.16 0.12
 # The faction's mark, the Keystone's diamond, on chest and back
 part: badge_front_patch
 bone: torso
-offset: 0 0.3 0.162
-size: 0.25 0.25 0.012
+offset: 0 0.3 0.158
+size: 0.25 0.25 0.024
 color: 0.2 0.15 0.11
 
 part: badge_front_0
 bone: torso
-offset: 0 0.38 0.172
-size: 0.05 0.04 0.012
+offset: 0 0.38 0.178
+size: 0.05 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_front_1
 bone: torso
-offset: 0 0.34 0.172
-size: 0.12 0.04 0.012
+offset: 0 0.34 0.178
+size: 0.12 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_front_2
 bone: torso
-offset: 0 0.3 0.172
-size: 0.19 0.04 0.012
+offset: 0 0.3 0.178
+size: 0.19 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_front_3
 bone: torso
-offset: 0 0.26 0.172
-size: 0.12 0.04 0.012
+offset: 0 0.26 0.178
+size: 0.12 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_front_4
 bone: torso
-offset: 0 0.22 0.172
-size: 0.05 0.04 0.012
+offset: 0 0.22 0.178
+size: 0.05 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_back_patch
 bone: torso
-offset: 0 0.3 -0.162
-size: 0.25 0.25 0.012
+offset: 0 0.3 -0.158
+size: 0.25 0.25 0.024
 color: 0.2 0.15 0.11
 
 part: badge_back_0
 bone: torso
-offset: 0 0.38 -0.172
-size: 0.05 0.04 0.012
+offset: 0 0.38 -0.178
+size: 0.05 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_back_1
 bone: torso
-offset: 0 0.34 -0.172
-size: 0.12 0.04 0.012
+offset: 0 0.34 -0.178
+size: 0.12 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_back_2
 bone: torso
-offset: 0 0.3 -0.172
-size: 0.19 0.04 0.012
+offset: 0 0.3 -0.178
+size: 0.19 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_back_3
 bone: torso
-offset: 0 0.26 -0.172
-size: 0.12 0.04 0.012
+offset: 0 0.26 -0.178
+size: 0.12 0.04 0.024
 color: 1 1 1
 team: 1.0
 
 part: badge_back_4
 bone: torso
-offset: 0 0.22 -0.172
-size: 0.05 0.04 0.012
+offset: 0 0.22 -0.178
+size: 0.05 0.04 0.024
 color: 1 1 1
 team: 1.0

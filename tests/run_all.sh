@@ -95,4 +95,11 @@ run chase 1400
 run deliver 7100
 run blueprints 60
 
+if python3 "$here/tools/check_models.py"; then
+    echo "PASS  check_models"
+else
+    echo "FAIL  check_models"
+    failed=1
+fi
+
 exit "$failed"
