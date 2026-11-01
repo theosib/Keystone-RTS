@@ -18,6 +18,8 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout |
 | Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
 | Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
+| Pathfinder | Explores by itself, nearest unseen ground first, and carries on from wherever it's sent |
+| Units | Each kind puts the team colour somewhere else, to read at a distance. A killed unit topples and turns to motes in its team colour |
 | Steward | First-person avatar (Tab). Walks up one-block ledges, harvests, digs, and places blocks from the stockpile by hand, shown at once and corrected by the server |
 | Blocks | Blocks bar: a drag overhead marks a run for Hands, which is also how roads get laid |
 | Work panel | The queue of work for anyone, or each selected unit's task stack |
@@ -34,6 +36,8 @@ Honest gaps against Stage 1:
 - **Steward combat and carrying the Keystone.** The avatar only works with its hands.
 - **Settings and a title screen.** The game boots straight into a match, resuming if it can.
 - **Unit separation.** Units can overlap; there's no local avoidance.
+- **Day and night.** Nights had no part in the game and only made it harder to see, so the sun is
+  held at `TIME_OF_DAY`. Bringing them back wants a rule that makes them matter.
 - **Audio.** No sound content yet.
 - **Balance.** Numbers in `scripts/data.fsc` are first guesses.
 - **CJK fonts.** Strings and plurals are ready; finegui has no font fallback yet.

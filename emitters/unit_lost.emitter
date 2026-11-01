@@ -1,0 +1,7 @@
+# A fallen unit turning to motes, spread along the body as it lies
+name: keystone:unit_lost
+shape: box
+shape_size: 0.6 0.2 0.6
+burst: 26
+duration: 0.0
+particle: keystone:mote

@@ -1,14 +1,22 @@
+# Levy with spear and shield: a team colour coat under grey steel, so the reverse of a Hand
 skeleton: humanoid
 anim:idle: humanoid_idle
 anim:walk: humanoid_walk
 anim:work: humanoid_work
 
-part: tabard
+part: coat
 bone: torso
 offset: 0 0.28 0
-size: 0.48 0.56 0.32
-color: 0.7 0.7 0.7
-team: 0.5
+size: 0.52 0.58 0.34
+color: 1 1 1
+team: 1.0
+
+part: coat_skirt
+bone: hips
+offset: 0 -0.1 0
+size: 0.54 0.4 0.36
+color: 1 1 1
+team: 1.0
 
 part: head
 bone: head
@@ -16,184 +24,158 @@ offset: 0 0.19 0
 size: 0.36 0.36 0.34
 color: 0.82 0.66 0.52
 
+part: helm
+bone: head
+offset: 0 0.32 0
+size: 0.42 0.2 0.4
+color: 0.62 0.65 0.7
+
+part: helm_crown
+bone: head
+offset: 0 0.46 0
+size: 0.24 0.1 0.24
+color: 0.62 0.65 0.7
+
 part: arm_left
 bone: arm_l
 offset: 0 -0.22 0
-size: 0.13 0.46 0.14
-color: 0.45 0.4 0.34
+size: 0.14 0.46 0.15
+color: 0.34 0.35 0.38
 
 part: arm_right
 bone: arm_r
 offset: 0 -0.22 0
-size: 0.13 0.46 0.14
-color: 0.45 0.4 0.34
+size: 0.14 0.46 0.15
+color: 0.34 0.35 0.38
+
+part: pauldron_left
+bone: arm_l
+offset: 0 -0.02 0
+size: 0.22 0.12 0.24
+color: 0.62 0.65 0.7
+
+part: pauldron_right
+bone: arm_r
+offset: 0 -0.02 0
+size: 0.22 0.12 0.24
+color: 0.62 0.65 0.7
 
 part: leg_left
 bone: leg_l
 offset: 0 -0.38 0
 size: 0.16 0.56 0.18
-color: 0.28 0.26 0.24
+color: 0.18 0.17 0.17
 
 part: leg_right
 bone: leg_r
 offset: 0 -0.38 0
 size: 0.16 0.56 0.18
-color: 0.28 0.26 0.24
-
-part: helm
-bone: head
-offset: 0 0.33 0
-size: 0.4 0.14 0.38
-color: 0.5 0.52 0.56
+color: 0.18 0.17 0.17
 
 part: shield
 bone: arm_l
-offset: -0.1 -0.28 0.12
-size: 0.06 0.6 0.42
-color: 0.7 0.7 0.7
-team: 0.7
+offset: -0.12 -0.28 0.12
+size: 0.07 0.82 0.62
+color: 0.62 0.65 0.7
+
+part: shield_face
+bone: arm_l
+offset: -0.165 -0.28 0.12
+size: 0.03 0.66 0.46
+color: 1 1 1
+team: 1.0
 
 part: spear
 bone: arm_r
-offset: 0.02 -0.3 0.1
-size: 0.05 1.7 0.05
+offset: 0.02 0.28 0.1
+size: 0.05 2.5 0.05
 color: 0.42 0.3 0.18
 
-# The faction's mark, the Keystone's diamond: on chest and back, and on the crown for the
-# overhead view. In the full team colour, so it stands out from the paler clothes.
+part: spear_tip
+bone: arm_r
+offset: 0.02 1.62 0.1
+size: 0.1 0.26 0.1
+color: 0.62 0.65 0.7
+
+# The faction's mark, the Keystone's diamond, on chest and back
 part: badge_front_patch
 bone: torso
-offset: 0 0.3 0.17
+offset: 0 0.3 0.182
 size: 0.25 0.25 0.012
 color: 0.2 0.15 0.11
 
 part: badge_front_0
 bone: torso
-offset: 0 0.38 0.18
+offset: 0 0.38 0.192
 size: 0.05 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_1
 bone: torso
-offset: 0 0.34 0.18
+offset: 0 0.34 0.192
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_2
 bone: torso
-offset: 0 0.3 0.18
+offset: 0 0.3 0.192
 size: 0.19 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_3
 bone: torso
-offset: 0 0.26 0.18
+offset: 0 0.26 0.192
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_4
 bone: torso
-offset: 0 0.22 0.18
+offset: 0 0.22 0.192
 size: 0.05 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_patch
 bone: torso
-offset: 0 0.3 -0.17
+offset: 0 0.3 -0.182
 size: 0.25 0.25 0.012
 color: 0.2 0.15 0.11
 
 part: badge_back_0
 bone: torso
-offset: 0 0.38 -0.18
+offset: 0 0.38 -0.192
 size: 0.05 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_1
 bone: torso
-offset: 0 0.34 -0.18
+offset: 0 0.34 -0.192
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_2
 bone: torso
-offset: 0 0.3 -0.18
+offset: 0 0.3 -0.192
 size: 0.19 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_3
 bone: torso
-offset: 0 0.26 -0.18
+offset: 0 0.26 -0.192
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_4
 bone: torso
-offset: 0 0.22 -0.18
+offset: 0 0.22 -0.192
 size: 0.05 0.04 0.012
-color: 1 1 1
-team: 1.0
-
-part: crest_patch
-bone: head
-offset: 0 0.405 0
-size: 0.25 0.012 0.25
-color: 0.2 0.15 0.11
-
-part: crest_0
-bone: head
-offset: 0 0.415 0.08
-size: 0.05 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_1
-bone: head
-offset: 0 0.415 0.04
-size: 0.12 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_2
-bone: head
-offset: 0 0.415 0
-size: 0.19 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_3
-bone: head
-offset: 0 0.415 -0.04
-size: 0.12 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_4
-bone: head
-offset: 0 0.415 -0.08
-size: 0.05 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: shoulder_left
-bone: arm_l
-offset: 0 -0.02 0
-size: 0.16 0.08 0.17
-color: 1 1 1
-team: 1.0
-
-part: shoulder_right
-bone: arm_r
-offset: 0 -0.02 0
-size: 0.16 0.08 0.17
 color: 1 1 1
 team: 1.0

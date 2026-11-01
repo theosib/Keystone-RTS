@@ -160,7 +160,7 @@ set RIVAL_LEVEL :standard
 
 on :start do
     log "Keystone starting, seed" WORLD_SEED
-    set_time_of_day 0.1
+    hold_time_of_day TIME_OF_DAY
 
     let player {make_faction 1 -96 0}
     found_settlement player
@@ -206,6 +206,11 @@ fn settle_after_resume [f] do
         set s.target nil
         set s.last_pos nil
         set s.striking 0.0
+        if (not {s.has :dead_ends}) do
+            set s.dead_ends []
+            set s.explore_wait 0.0
+            set s.explore_from nil
+        end
         ent_anim s.id :idle
     end
     # Saves from before the Hall was noted. One that's lost its Keystone can't say where it stood.
@@ -230,6 +235,7 @@ fn repair_canopy [f] do
 end
 
 on :resume do
+    hold_time_of_day TIME_OF_DAY
     let saved {game_state_load}
     set factions saved.factions
     set unit_index saved.unit_index

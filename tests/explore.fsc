@@ -1,0 +1,84 @@
+# Scenario: a Pathfinder needs no telling. It sets off by itself, keeps going without stalling,
+# does what it's told, then carries on from there.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set scout nil
+set start nil
+set seen_at_start 0
+set sent_to nil
+set picks 0
+set last_x nil
+set worst_gap 0
+set gap 0
+
+fn unseen_grid_cells [f] do
+    let edge ((WORLD_RADIUS * 16) - EXPLORE_MARGIN)
+    let across {floor ((edge * 2) / EXPLORE_GRID)}
+    let left 0
+    for i in (0..=across) do
+        for j in (0..=across) do
+            if ({vision_state f.id ((i * EXPLORE_GRID) - edge) ((j * EXPLORE_GRID) - edge)} == :unknown) { set left (left + 1) }
+        end
+    end
+    return left
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 30) do
+        # No rival to meet: this is about the walking, and it isn't to be killed half way
+        if (factions[2].commander != nil) { commander_pacify factions[2].commander }
+        set scout {spawn_soldier f :scout}
+        set start {ent_pos scout.id}
+        set seen_at_start {unseen_grid_cells f}
+    end
+
+    if (t == 300) do
+        let p {ent_pos scout.id}
+        if ({dist2 p[0] p[2] start[0] start[2]} < 400) { fail "it just stood there" }
+        if (scout.order != :move) { fail "it isn't on its way anywhere" }
+    end
+
+    if (scout != nil) do
+        if (scout.order != :move) { set gap (gap + 1) } { set gap 0 }
+        if (gap > worst_gap) { set worst_gap gap }
+    end
+
+    # Told where to go, it goes there
+    if (t == 900) do
+        let g {ground_y f.x (f.z - 30)}
+        set sent_to [f.x (f.z - 30)]
+        order_units f {=units [scout.id] =x sent_to[0] =y (g + 1) =z sent_to[1]}
+    end
+    if ((t > 900) and (sent_to != nil) and (not {ent_alive scout.id})) { fail "it died on the way" }
+    if ((t > 900) and (t < 2400) and (sent_to != nil)) do
+        let p {ent_pos scout.id}
+        if ({dist2 p[0] p[2] sent_to[0] sent_to[1]} < 100) do
+            log "got to where it was sent at" t
+            set sent_to nil
+        end
+    end
+    if ((t == 2400) and (sent_to != nil)) { fail "it never got where it was sent" }
+
+    if (t == 3000) do
+        if (not {ent_alive scout.id}) { fail "it died" }
+        if (scout.order != :move) { fail "it stopped after its orders" }
+    end
+
+    if ((t % 3000) == 0) do
+        log "t" (t / 30) "unseen" {unseen_grid_cells f} "of" seen_at_start "at" {ent_pos scout.id}
+    end
+
+    if (t == 27000) do
+        let left {unseen_grid_cells f}
+        log "unseen" seen_at_start "to" left "dead ends" scout.dead_ends.length "longest wait" worst_gap
+        if ((left * 6) > seen_at_start) { fail "it left over a sixth of the map" }
+        if (worst_gap > 400) { fail "it stalled while there was ground to see" }
+    end
+end

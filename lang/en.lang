@@ -123,7 +123,7 @@ tip.palisade_wall: Drag out a log wall. It joins up straight or on the diagonal.
 tip.hand: Gathers, hauls and builds. Ready in {seconds} seconds.
 tip.militia: Fights hand to hand. Ready in {seconds} seconds.
 tip.shortbow: Shoots from up to {range} blocks away. Ready in {seconds} seconds.
-tip.scout: Goes ahead to uncover the map. Can't fight. Ready in {seconds} seconds.
+tip.scout: Uncovers the map on its own, and carries on from wherever you send it. Can't fight. Ready in {seconds} seconds.
 menu.resume: Resume
 menu.new: New Game
 menu.quit: Save and Quit

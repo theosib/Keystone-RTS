@@ -7,7 +7,8 @@ fn make_soldier [f id kind] do
     return {=id id =faction f.id =kind kind =stats {UNITS.get kind}
             =state :hold =order nil =order_x 0 =order_y 0 =order_z 0
             =target nil =cooldown 0.0 =morale 1.0 =last_hp nil =moving false
-            =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil =striking 0.0}
+            =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil =striking 0.0
+            =dead_ends [] =explore_wait 0.0 =explore_from nil}
 end
 
 fn spawn_soldier [f kind] do
@@ -242,6 +243,8 @@ fn think_soldier [s] do
 end
 
 fn think_scout [s pos] do
+    # The commander hands out a Rival's waypoints. The player's Pathfinders see to their own.
+    let own_way (factions[s.faction].commander == nil)
     if (s.order == :move) do
         let nav {ent_nav s.id}
         if (nav == :idle) do
@@ -249,9 +252,69 @@ fn think_scout [s pos] do
         elif ((nav == :arrived) or (nav == :failed)) do
             # Unreachable waypoints are skipped: the commander hands out the next one
             ent_nav_ack s.id
+            if own_way { note_dead_end s pos }
             set s.order nil
         end
     end
+    if (own_way and (s.order == nil)) { explore s pos }
+end
+
+# Off to the nearest ground nobody's seen. It looks when there's a decision to make, not all
+# the time, so the search over the map costs little.
+fn explore [s pos] do
+    if (s.explore_wait > 0.0) do
+        set s.explore_wait (s.explore_wait - THINK_SECONDS)
+        return nil
+    end
+    let spot {nearest_unseen s pos}
+    if (spot == nil) do
+        # A dead end is only one from where it stood: a lake can be walked around from elsewhere
+        set s.dead_ends []
+        set s.explore_wait EXPLORE_RECHECK_SECONDS
+        return nil
+    end
+    let y {ground_y spot[0] spot[1]}
+    if (y == nil) { set y pos[1] }
+    order_soldier s spot[0] (y + 1) spot[1]
+    set s.explore_from pos
+end
+
+# A long way off, a search can stop part of the way there, and the next one goes on from that. It's
+# only a dead end if it's near and still hidden, or the way there got nowhere. Try elsewhere first.
+fn note_dead_end [s pos] do
+    if ({vision_state s.faction s.order_x s.order_z} != :unknown) { return nil }
+    let near ({dist2 pos[0] pos[2] s.order_x s.order_z} < EXPLORE_NEAR_SQ)
+    let from s.explore_from
+    let stuck ((from != nil) and ({dist2 pos[0] pos[2] from[0] from[2]} < EXPLORE_STUCK_SQ))
+    if (near or stuck) { s.dead_ends.push [s.order_x s.order_z] }
+end
+
+fn nearest_unseen [s pos] do
+    let edge ((WORLD_RADIUS * 16) - EXPLORE_MARGIN)
+    let across {floor ((edge * 2) / EXPLORE_GRID)}
+    let best nil
+    let best_dist 0
+    for i in (0..=across) do
+        let x ((i * EXPLORE_GRID) - edge)
+        for j in (0..=across) do
+            let z ((j * EXPLORE_GRID) - edge)
+            if ({vision_state s.faction x z} == :unknown) do
+                let d {dist2 pos[0] pos[2] x z}
+                if (((best == nil) or (d < best_dist)) and (not {was_dead_end s x z})) do
+                    set best [x z]
+                    set best_dist d
+                end
+            end
+        end
+    end
+    return best
+end
+
+fn was_dead_end [s x z] do
+    for spot in s.dead_ends do
+        if ((spot[0] == x) and (spot[1] == z)) { return true }
+    end
+    return false
 end
 
 # A unit going down shakes those nearby

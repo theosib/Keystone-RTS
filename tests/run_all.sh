@@ -90,5 +90,6 @@ run match 54000
 run continue 54000
 run continue_war 3100
 run orders 1000
+run explore 27000
 
 exit "$failed"

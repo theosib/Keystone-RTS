@@ -2,6 +2,9 @@
 
 set KIND_NAMES [:timber :stone :provisions]
 
+# Nights have no part in the game yet, so the sun stays here: 0 dawn, 0.25 noon, 0.5 dusk
+set TIME_OF_DAY 0.18
+
 # How near a unit has to get to where it was sent, and how near will do if it can't get closer
 set ORDER_RANGE 1.5
 set ORDER_GIVE_UP_RANGE 6.0
@@ -85,6 +88,15 @@ set STRIKE_SECONDS 0.8
 set ARROW_SPEED 26.0
 set CHASE_REPATH_DISTANCE_SQ 16
 set CHASE_GIVE_UP_SECONDS 7.0
+
+# A Pathfinder left to itself: how fine a grid of the map it looks over for ground nobody's seen,
+# how far in from the edge that stops, and how long it waits for news once it's all been seen
+set EXPLORE_GRID 16
+set EXPLORE_MARGIN 8
+set EXPLORE_RECHECK_SECONDS 10.0
+# Squared distances: this near and it should be able to see it, and this little ground gained
+set EXPLORE_NEAR_SQ 400
+set EXPLORE_STUCK_SQ 16
 
 # Actual height wins fights (DESIGN 6.2)
 set HIGH_GROUND_RANGE_PER_BLOCKS 2.0

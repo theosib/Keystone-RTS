@@ -1,0 +1,13 @@
+# What's left of a fallen unit: drifts up and fades, tinted with its faction's colour
+name: keystone:mote
+lifetime: 0.7-1.4
+initial_speed: 0.3-1.2
+velocity_bias: 0 1.4 0
+gravity: -0.8
+drag: 0.9
+size: 0.1-0.2
+size_end_scale: 0.3
+start_tint: 1 1 1 1
+end_tint: 1 1 1 0
+billboard: camera
+collides: false

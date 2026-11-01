@@ -1,4 +1,4 @@
-# Settlement worker: rounded proportions, with a hood in the team colour
+# Settlement worker: earth brown all over, with the team colour on the head and nowhere else
 skeleton: humanoid
 anim:idle: humanoid_idle
 anim:walk: humanoid_walk
@@ -8,13 +8,13 @@ part: skirt
 bone: hips
 offset: 0 -0.02 0
 size: 0.5 0.3 0.34
-color: 0.45 0.36 0.26
+color: 0.27 0.21 0.15
 
 part: tunic
 bone: torso
 offset: 0 0.28 0
 size: 0.46 0.52 0.3
-color: 0.55 0.45 0.32
+color: 0.34 0.26 0.17
 
 part: head
 bone: head
@@ -24,170 +24,121 @@ color: 0.82 0.66 0.52
 
 part: hood
 bone: head
-offset: 0 0.3 -0.03
-size: 0.4 0.2 0.38
-color: 0.8 0.8 0.8
-team: 0.85
+offset: 0 0.29 -0.03
+size: 0.42 0.24 0.4
+color: 1 1 1
+team: 1.0
+
+part: hood_back
+bone: head
+offset: 0 0.1 -0.19
+size: 0.36 0.28 0.06
+color: 1 1 1
+team: 1.0
 
 part: arm_left
 bone: arm_l
 offset: 0 -0.22 0
 size: 0.13 0.46 0.14
-color: 0.5 0.4 0.28
+color: 0.3 0.23 0.15
 
 part: arm_right
 bone: arm_r
 offset: 0 -0.22 0
 size: 0.13 0.46 0.14
-color: 0.5 0.4 0.28
+color: 0.3 0.23 0.15
 
 part: leg_left
 bone: leg_l
 offset: 0 -0.38 0
 size: 0.16 0.56 0.18
-color: 0.3 0.24 0.18
+color: 0.2 0.16 0.12
 
 part: leg_right
 bone: leg_r
 offset: 0 -0.38 0
 size: 0.16 0.56 0.18
-color: 0.3 0.24 0.18
+color: 0.2 0.16 0.12
 
-# The faction's mark, the Keystone's diamond: on chest and back, and on the crown for the
-# overhead view. In the full team colour, so it stands out from the paler clothes.
+# The faction's mark, the Keystone's diamond, on chest and back
 part: badge_front_patch
 bone: torso
-offset: 0 0.3 0.16
+offset: 0 0.3 0.162
 size: 0.25 0.25 0.012
 color: 0.2 0.15 0.11
 
 part: badge_front_0
 bone: torso
-offset: 0 0.38 0.17
+offset: 0 0.38 0.172
 size: 0.05 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_1
 bone: torso
-offset: 0 0.34 0.17
+offset: 0 0.34 0.172
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_2
 bone: torso
-offset: 0 0.3 0.17
+offset: 0 0.3 0.172
 size: 0.19 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_3
 bone: torso
-offset: 0 0.26 0.17
+offset: 0 0.26 0.172
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_front_4
 bone: torso
-offset: 0 0.22 0.17
+offset: 0 0.22 0.172
 size: 0.05 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_patch
 bone: torso
-offset: 0 0.3 -0.16
+offset: 0 0.3 -0.162
 size: 0.25 0.25 0.012
 color: 0.2 0.15 0.11
 
 part: badge_back_0
 bone: torso
-offset: 0 0.38 -0.17
+offset: 0 0.38 -0.172
 size: 0.05 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_1
 bone: torso
-offset: 0 0.34 -0.17
+offset: 0 0.34 -0.172
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_2
 bone: torso
-offset: 0 0.3 -0.17
+offset: 0 0.3 -0.172
 size: 0.19 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_3
 bone: torso
-offset: 0 0.26 -0.17
+offset: 0 0.26 -0.172
 size: 0.12 0.04 0.012
 color: 1 1 1
 team: 1.0
 
 part: badge_back_4
 bone: torso
-offset: 0 0.22 -0.17
+offset: 0 0.22 -0.172
 size: 0.05 0.04 0.012
-color: 1 1 1
-team: 1.0
-
-part: crest_patch
-bone: head
-offset: 0 0.405 0
-size: 0.25 0.012 0.25
-color: 0.2 0.15 0.11
-
-part: crest_0
-bone: head
-offset: 0 0.415 0.08
-size: 0.05 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_1
-bone: head
-offset: 0 0.415 0.04
-size: 0.12 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_2
-bone: head
-offset: 0 0.415 0
-size: 0.19 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_3
-bone: head
-offset: 0 0.415 -0.04
-size: 0.12 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: crest_4
-bone: head
-offset: 0 0.415 -0.08
-size: 0.05 0.012 0.04
-color: 1 1 1
-team: 1.0
-
-part: shoulder_left
-bone: arm_l
-offset: 0 -0.02 0
-size: 0.16 0.08 0.17
-color: 1 1 1
-team: 1.0
-
-part: shoulder_right
-bone: arm_r
-offset: 0 -0.02 0
-size: 0.16 0.08 0.17
 color: 1 1 1
 team: 1.0
