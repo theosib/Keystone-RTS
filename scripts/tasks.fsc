@@ -45,7 +45,42 @@ fn queue_row [f site] do
     if (row == nil) { return nil }
     set row.hands {hands_on f site}
     set row.needs {short_of f site}
+    let p {site_progress site}
+    if ((p != nil) and {row.has :percent}) do
+        set row.done p.done
+        set row.total p.total
+    end
     return row
+end
+
+fn same_work [a b] do
+    for field in [:key :building :unit :needs :housed] do
+        if ({a.get field} != {b.get field}) { return false }
+    end
+    return true
+end
+
+# Work of the same kind in a row reads as one line with a number on it. Only neighbours fold, or
+# the order next_site works through would stop being the order shown.
+fn fold_rows [rows] do
+    let folded []
+    for row in rows do
+        let last nil
+        if (folded.length > 0) { set last folded[folded.length - 1] }
+        if ((last != nil) and {same_work last row}) do
+            set last.times (last.times + 1)
+            if {row.has :hands} { set last.hands (last.hands + row.hands) }
+            if ({row.has :total} and {last.has :total}) do
+                set last.done (last.done + row.done)
+                set last.total (last.total + row.total)
+                if (last.total > 0) { set last.percent {floor ((last.done * 100) / last.total)} }
+            end
+        else do
+            set row.times 1
+            folded.push row
+        end
+    end
+    return folded
 end
 
 # Everything waiting to be done, most urgent first: the order next_site takes it in
@@ -67,7 +102,7 @@ fn work_queue [f] do
     for kind in f.muster do
         rows.push {=key "muster" =unit {sym_name kind} =housed ({population f} < f.housing)}
     end
-    return rows
+    return {fold_rows rows}
 end
 
 fn hand_step [w] do

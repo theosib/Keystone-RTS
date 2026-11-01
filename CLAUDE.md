@@ -101,6 +101,8 @@ finescript traps that cost real time here:
   Prefer these to scratch scripts and screenshots when looking at a live problem.
 - The bridge in `.mcp.json` stays connected with no game running. A second game on the same
   port fails to bind and carries on without a server: use `--mcp-port N` and `FINEVOX_MCP_PORT`.
+  So the `keystone` tools may be talking to the player's own game: `lsof -iTCP:7801` before
+  changing anything through them, and test on another port.
 - With no MCP client to hand, tools are a plain POST: JSON-RPC `tools/call` to
   `http://127.0.0.1:7801/mcp`.
 - `--mcp-player` offers only what a player could use, for LLM players.

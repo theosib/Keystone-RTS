@@ -40,6 +40,30 @@ on :tick do
         expect "training" rows[2].key "train"
         expect "training count" rows[2].count 2
         expect "muster" rows[3].unit "militia"
+
+        # The same work in a row is one line, and only in a row
+        queue_unit f :militia
+        queue_unit f :militia
+        queue_unit f :shortbow
+        queue_unit f :militia
+        let folded {work_queue f}
+        expect "folded rows" folded.length 6
+        expect "three in a row" folded[3].times 3
+        expect "what breaks the run" folded[4].unit "shortbow"
+        expect "not the ones after it" folded[5].times 1
+        set f.muster [:militia]
+
+        let sites {fold_rows [
+            {=key "build" =building "shelter" =percent 90 =done 9 =total 10 =hands 6 =needs nil}
+            {=key "build" =building "shelter" =percent 2 =done 1 =total 50 =hands 1 =needs nil}
+            {=key "build" =building "shelter" =percent 0 =done 0 =total 40 =hands 0 =needs "timber"}
+            {=key "build" =building "sawpit" =percent 0 =done 0 =total 40 =hands 0 =needs "timber"}
+        ]}
+        expect "sites folded" sites.length 3
+        expect "two shelters" sites[0].times 2
+        expect "hands added up" sites[0].hands 7
+        expect "progress over both" sites[0].percent 16
+        expect "held up by something else" sites[1].needs "timber"
     end
 
     # Every Hand can always say what it's doing, in a stack that reaches a step or a state

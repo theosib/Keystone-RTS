@@ -215,7 +215,9 @@ fn queue_text [rows] do
     let text ""
     let number 1
     for row in rows do
-        let line "{number}. {queue_row_text row}"
+        let work {queue_row_text row}
+        if (row.times > 1) { set work {loc "work.group" =count row.times =name work} }
+        let line "{number}. {work}"
         if (text == "") { set text line } { set text "{text}\n{line}" }
         set number (number + 1)
     end
