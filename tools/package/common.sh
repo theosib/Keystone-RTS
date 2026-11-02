@@ -41,7 +41,6 @@ stage_licenses() {
     cp "$build/_deps/lz4-src/LICENSE" "$dest/lz4-LICENSE"
     cp "$build/_deps/glm-src/copying.txt" "$dest/glm-LICENSE.txt"
     cp "$build/_deps/nlohmann_json-src/LICENSE.MIT" "$dest/nlohmann_json-LICENSE"
-    cp "$build/_deps/miniaudio-src/LICENSE" "$dest/miniaudio-LICENSE"
     while [ $# -gt 0 ]; do
         cp "$2" "$dest/$1"
         shift 2

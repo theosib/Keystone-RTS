@@ -131,7 +131,7 @@ Build-Project 'finegui' 'finegui\build' (Off 'FINEGUI_BUILD_TESTS', 'FINEGUI_BUI
 
 $windowed = if ($Gui) { 'ON' } else { 'OFF' }
 Build-Project 'FineStructureVoxel' $BuildDir (@('-DFINEVOX_BUILD_RENDER=ON', "-DFINEVOX_WINDOWS_GUI=$windowed") +
-    (Off 'FINEVOX_BUILD_TESTS', 'FINEVOX_BUILD_EXAMPLES'))
+    (Off 'FINEVOX_BUILD_TESTS'))
 
 $run = Join-Path $Root "$BuildDir\finevox_run.exe"
 if (-not (Test-Path $run)) { throw "finevox_run.exe wasn't built: check finegui's build" }
