@@ -1,0 +1,101 @@
+# Builds Keystone's Windows installer and zip, and attaches them to a GitHub release.
+#
+# Push a tag such as v0.3.0 to make a release of it, or run it by hand from the Actions tab to try
+# a build: that leaves the files as the run's artifacts and makes no release.
+name: Windows release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to call the build
+        default: dev
+
+permissions:
+  contents: write
+
+env:
+  VULKAN_SDK_VERSION: 1.4.363.0
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    steps:
+      # Side by side under exactly these names: docs/PLATFORMS.md
+      - uses: actions/checkout@v4
+        with: { path: Keystone }
+      - uses: actions/checkout@v4
+        with: { repository: theosib/FineStructureVoxel, path: FineStructureVoxel }
+      - uses: actions/checkout@v4
+        with: { repository: theosib/FineStructureScript, path: game-language }
+      - uses: actions/checkout@v4
+        with: { repository: theosib/FineStructureVulkan, path: FineStructureVK }
+      - uses: actions/checkout@v4
+        with: { repository: theosib/finegui, path: finegui, submodules: true }
+      - uses: actions/checkout@v4
+        with: { repository: theosib/finenet, path: finenet }
+
+      - name: Cache the Vulkan SDK
+        id: vulkan-cache
+        uses: actions/cache@v4
+        with:
+          path: C:\VulkanSDK\${{ env.VULKAN_SDK_VERSION }}
+          key: vulkan-sdk-${{ env.VULKAN_SDK_VERSION }}
+
+      - name: Install the Vulkan SDK
+        if: steps.vulkan-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $installer = "$env:RUNNER_TEMP\vulkansdk.exe"
+          Invoke-WebRequest "https://sdk.lunarg.com/sdk/download/$env:VULKAN_SDK_VERSION/windows/vulkansdk-windows-X64-$env:VULKAN_SDK_VERSION.exe" -OutFile $installer
+          & $installer --root "C:\VulkanSDK\$env:VULKAN_SDK_VERSION" --accept-licenses --default-answer --confirm-command install
+          if ($LASTEXITCODE -ne 0) { throw "Vulkan SDK install failed: $LASTEXITCODE" }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Build
+        shell: pwsh
+        env:
+          VULKAN_SDK: C:\VulkanSDK\${{ env.VULKAN_SDK_VERSION }}
+        run: Keystone\tools\windows\build.ps1 -Root $env:GITHUB_WORKSPACE -BuildDir fv-release -Gui -NoTests
+
+      - name: Package
+        id: package
+        shell: pwsh
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '${{ inputs.version }}' }
+          Keystone\tools\windows\package.ps1 -Root $env:GITHUB_WORKSPACE -BuildDir fv-release -Version $version
+          $notes = "Built from:`n"
+          foreach ($repo in 'Keystone', 'FineStructureVoxel', 'game-language', 'finenet', 'FineStructureVK', 'finegui') {
+            $notes += "- $repo $(git -C $repo rev-parse --short HEAD)`n"
+          }
+          Set-Content -Path dist\NOTES.md -Value $notes
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: keystone-windows
+          path: |
+            dist/*.exe
+            dist/*.zip
+
+      - name: Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem dist -File | Where-Object { $_.Extension -in '.exe', '.zip' } | ForEach-Object FullName
+          gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:GITHUB_REF_NAME @files --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+            gh release create $env:GITHUB_REF_NAME @files --title "Keystone $env:GITHUB_REF_NAME" --notes-file dist\NOTES.md --repo $env:GITHUB_REPOSITORY
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'gh release failed' }

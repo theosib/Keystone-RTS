@@ -2,10 +2,11 @@
 
 For anyone, agent or person, working on this somewhere other than the Mac it was written on.
 
-**macOS and Linux both build and run all of this.** macOS is where it's written: Apple Silicon,
-Xcode's clang, the LunarG Vulkan SDK, and Homebrew for the rest. Linux has been run on one machine:
-Ubuntu 22.04, x86-64, GCC 11.4, CMake 3.22, and an Intel N100 with Mesa 23.2. What's here about
-Windows comes from reading the code, not from trying it, so correct this file as you find out.
+**macOS, Linux and Windows all build and run all of this.** macOS is where it's written: Apple
+Silicon, Xcode's clang, the LunarG Vulkan SDK, and Homebrew for the rest. Linux has been run on one
+machine: Ubuntu 22.04, x86-64, GCC 11.4, CMake 3.22, and an Intel N100 with Mesa 23.2. Windows has
+too: Windows 11, MSVC 19.50 from Visual Studio 2026, CMake 4.2, and an RTX 4060 Ti. See
+[Windows](#windows) for how it differs.
 
 ## Getting the code
 
@@ -226,21 +227,53 @@ Put what you find in `finenet/docs/STATUS.md`, under "Not tested".
 
 ## Windows
 
-Expect this one to need real work before anything links.
+It needs Visual Studio 2022 or later with "Desktop development with C++", the Vulkan SDK
+(`winget install KhronosGroup.VulkanSDK`), Git for Windows, CMake and Python. Windows has no package
+for GLFW or GLM, so one script builds those into `deps\` beside the clones, then everything else in
+order, Release, with Ninja, from PowerShell:
 
-| Where | What has to change |
+```powershell
+Keystone\tools\windows\build.ps1
+```
+
+That's the development build in `fv-keystone`, tests included. The scripts in `tests/` and `run.sh`
+work as they are from Git Bash, where `../fv-keystone/finevox_run` finds the `.exe`.
+
+Results on the machine above:
+
+| Test | Result |
 |---|---|
-| `finenet/src/{stream_transport,listener,discovery}.cpp` | All POSIX sockets: see `finenet/docs/STATUS.md` |
-| `FineStructureVoxel/CMakeLists.txt` | Looks for finescript and finenet as `.dylib`, `.so` or `.a` only, and finegui as `.a` only, so an MSVC `.lib` isn't found. It carries on without them and fails later, or leaves out `finevox_run` |
-| `FineStructureVoxel/src/game/mcp_server.cpp` | Its own POSIX sockets, for the MCP server, plus `tests/test_mcp_server.cpp` |
-| `FineStructureVoxel/apps/finevox_run.cpp` | `execv` to restart, which `new_game` and `to_menu` rely on. `_spawnv` then exit, or relaunch |
-| `FineStructureVoxel/src/net/content.cpp` | `getpid` and `<unistd.h>`. Symlinks need a privilege, but it already falls back to copying |
-| `FineStructureVoxel/src/game/game_host.cpp` | `SIGTERM` barely exists there, so a server can't be asked to stop and save except by console control events |
-| Paths | The cache uses `$XDG_CACHE_HOME` or `$HOME`, so it needs `%LOCALAPPDATA%` |
-| `Keystone/run.sh`, `tests/*.sh` | bash. Git Bash should do, with `finevox_run.exe` |
+| `finevox_tests` | All 2309 pass, `FactionVisionTest.ManyUnitsStayCheap` included |
+| `finevox_script_tests`, `finevox_render_tests` | All pass, goldens included |
+| `finenet_tests`, `finescript_tests` | All 118 and all 488 pass |
+| `tests/run_all.sh` | All 29 pass. `guard` failed once with a build running beside it, then passed 10 runs of 10 alone |
+| `tests/run_net.sh` | All pass, LAN discovery included |
+| `tests/run_ui.sh`, `tests/run_mcp.sh`, `tests/run_windows.sh` | Not run yet |
 
-`module.cpp`, `resource_locator.cpp` and `frame_capture.cpp` already have Windows branches, untested.
-`FineStructureVK` has Windows paths in its CMake, also untested.
+A game draws at about 60fps at 1280x720 with `--validation` on, which reports finevk reusing a
+swapchain semaphore that may still be in use for presenting, and a screenshot transitioning a
+swapchain image it hasn't acquired. Neither is Windows' own: Linux's run, clean, had an older SDK.
+
+What Windows turned up, which applies to anything added from here on:
+
+- **Nothing is exported from a DLL**, so on Windows every library here is static: the engine's own,
+  finescript, finevk and finegui. Their CMake does that by itself, and the engine finds `name.lib`
+  as well as `libname.a`. A shared library can hide a breach of the one-definition rule that a
+  static link won't: two classes or functions of one name in one namespace, even in separate files.
+- **`windows.h` is full of macros.** `min` and `max`, and `near` and `far` as nothing, and wingdi's
+  `DeviceCapabilities`, which renamed finevk's class in the files that saw it and not the rest.
+  Everything is built with `NOMINMAX NOGDI WIN32_LEAN_AND_MEAN`, and finevk doesn't define
+  `VK_USE_PLATFORM_WIN32_KHR`, since GLFW makes the surface and that define brings `windows.h` in.
+- **Sockets.** finenet's `src/socket_compat.hpp` is where POSIX and Winsock differ. `WSAPoll` doesn't
+  sleep with nothing to poll, `SO_REUSEADDR` lets a second server take a port in use (so a listener
+  uses `SO_EXCLUSIVEADDRUSE`), and UDP needs `SIO_UDP_CONNRESET` off or one ICMP "port unreachable"
+  fails the next receive. Sockets are made uninheritable, so a restarted game doesn't hold the port.
+- **No exec, no SIGTERM.** `finevox_run` restarts with `CreateProcessW` and exits. A server stops and
+  saves on Ctrl+C, Ctrl+Break, its console closing, logoff and shutdown.
+- **Paths.** The content cache is `%LOCALAPPDATA%\finevox\cache`. A path written into a script string
+  needs forward slashes, or `\U` and the like read as escapes.
+- **Python is `python`**, not `python3`. The test scripts take either.
+- **No `__builtin_clz`**: use `<bit>`.
 
 `Window::toggleFullscreen` (F11) is the Linux path there, also untested. It leaves GLFW's minimizing
 on losing focus switched on for Windows alone: GLFW keeps a full-screen window `HWND_TOPMOST`, so a
@@ -248,7 +281,7 @@ window that stayed put would cover whatever you switched to. The check is in `te
 
 ## Releases
 
-Nothing is packaged yet. Before any of this works anywhere:
+Windows is packaged: see the end of this section. Before macOS and Linux are:
 
 - **Licence.** None of the six repos has one, so nobody may redistribute a build yet, and a package
   has to carry the notices of what it bundles (GLFW, MoltenVK, the fonts).
@@ -268,6 +301,20 @@ Linux: an AppImage for each architecture, built on the oldest Ubuntu meant to wo
 glibc it needs. Bundle GLFW 3.4 (Ubuntu 22.04's 3.3.6 is the X11 build), never libc, the Vulkan loader
 or GPU drivers. GitHub's `ubuntu-22.04-arm` and `macos-latest` runners can do the building, but they
 can only build: a release still needs a run on real GPUs.
+
+Windows: `tools/windows/package.ps1` makes an installer and a portable zip from a windowed build
+(`build.ps1 -BuildDir fv-release -Gui -NoTests`). The game goes in as `Keystone.exe`, with its shaders
+in `shaders\`, this repo's committed content in `game\`, the C++ runtime beside it, each repo's
+`LICENSE` and the notices of what's linked in. There, and only there so far, a `finevox_run` with no
+`--game-root` looks for `game\` beside itself, and for its shaders beside itself before the build
+directory, so a shortcut needs no arguments. The installer is Inno Setup, per user, in
+`%LOCALAPPDATA%\Programs\Keystone`, which needs no administrator and is writable, so saves, `imgui.ini`
+and `screenshots\` can stay where they are. An update clears the old content and keeps `game\saves`.
+Pushing a tag such as `v0.3.0` makes a GitHub release of both through
+`.github/workflows/windows-release.yml`, built from each repo's `main`. Nothing is code-signed, so a
+download's first run brings up SmartScreen's "Windows protected your PC": "More info", then "Run
+anyway". That fades as a release is downloaded more. The SignPath Foundation signs open-source
+projects for free, which is the way to remove it.
 
 ## Where problems are recorded
 

@@ -10,7 +10,10 @@ for the game design and [docs/STATUS.md](docs/STATUS.md) for what's built.
 
 ## Running
 
-Build the engine once (see [CLAUDE.md](CLAUDE.md), or [docs/PLATFORMS.md](docs/PLATFORMS.md) on a
+On Windows, the installer on the [Releases](https://github.com/theosib/Keystone-RTS/releases) page
+has everything. It isn't signed, so Windows asks first: "More info", then "Run anyway".
+
+Otherwise, build the engine once (see [CLAUDE.md](CLAUDE.md), or [docs/PLATFORMS.md](docs/PLATFORMS.md) on a
 new machine), then:
 
 ```sh
