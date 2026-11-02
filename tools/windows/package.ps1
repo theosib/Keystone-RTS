@@ -76,7 +76,8 @@ if (-not (Test-Path (Join-Path $stage 'shaders\chunk.vert.spv'))) { throw 'No sh
 
 # The content as committed, so nothing local (saves, screenshots, a .venv) comes along. What's
 # for working on the game rather than playing it stays behind.
-$devOnly = @('.gitignore', '.mcp.json', 'CLAUDE.md', 'run.sh', 'docs', 'tests', 'tools')
+$devOnly = @('.gitattributes', '.github', '.gitignore', '.mcp.json', 'CLAUDE.md', 'README.md', 'run.sh',
+    'docs', 'tests', 'tools')  # As tools/package/common.sh's stage_game
 $files = Invoke-Native git @('-C', $keystone, 'ls-files')
 $game = Join-Path $stage 'game'
 foreach ($file in $files) {

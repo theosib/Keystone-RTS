@@ -12,7 +12,8 @@ stage_game() {
     mkdir -p "$dest"
     git -C "$keystone" archive HEAD | tar -x -C "$dest" \
         --exclude tests --exclude tools --exclude docs --exclude .github --exclude run.sh \
-        --exclude CLAUDE.md --exclude README.md --exclude .gitignore --exclude .mcp.json
+        --exclude CLAUDE.md --exclude README.md --exclude .gitignore --exclude .gitattributes \
+        --exclude .mcp.json
 }
 
 # Compiled shaders, from the build or from SHADERS if CI made them elsewhere: SPIR-V is the same on

@@ -8,89 +8,58 @@ Nothing has been released yet: there are no tags and no releases on GitHub.
 
 ## Where it stands
 
-The last run of the release workflow, on `main`, by hand, with no release attached:
+Run 41543868197 of the release workflow, by hand on `main`, had every job green but `release`, which
+only runs for a tag. Its packages were tried away from the machines that built them:
 
-```sh
-gh run watch 41539151175 --repo theosib/Keystone-RTS --exit-status
-```
-
-https://github.com/theosib/Keystone-RTS/actions/runs/41539151175
-
-The run before it was cancelled. These are the furthest each job had got:
-
-| Job | Last known | Not seen yet |
+| Package | Where | Result |
 |---|---|---|
-| `windows` | Passed: installer and zip built | Has never been run from a package, see below |
-| `linux` (x86-64, Arm) | Compiled. Packaging failed on the icon's size, fixed in this run | linuxdeploy's own packaging, and the smoke run on Mesa's software renderer in Xvfb |
-| `macos` | Compiled. Packaging was still running when cancelled | CI's DMG, its smoke run as a server, and the oldest macOS it claims |
-| `release` | Skipped on purpose: it only runs for a tag | Has never run |
+| Windows installer | Windows 11, RTX 4060 Ti | `installed_check.py` passes, about 300fps. Nothing is written beside the program. An install over the last one keeps the save |
+| x86-64 AppImage | Ubuntu 22.04, Intel N100, a Wayland desktop | `installed_check.py` passes, about 60fps, natively on Wayland. F11 fills 1920x1080 and comes back, at a window size that isn't the default |
+| Arm AppImage | Ubuntu 22.04, an Arm machine with a real GPU, an X desktop with no monitor | `installed_check.py` passes, about 2500fps |
+| macOS DMG | | Not tried: it needs a Mac |
 
-Expect more small failures in `linux` and `macos`: each run so far has got a step further. To see a
-job's log while the run is going, as `gh run view --log` won't until it ends:
+Both AppImages use the machine's Vulkan loader and drivers, and bundle only the engine's libraries
+and GLFW. What those runs turned up, all fixed:
+
+- **On an X desktop with no monitor the Arm AppImage hung** in `glfwCreateWindow`, spinning. GLFW
+  3.4's wait for a window to be visible never times out while other events are queued: the release
+  build patches it, see PLATFORMS.md's Releases section.
+- **On Wayland the picture was 800x600** whatever the window's size, until it was resized. finevk
+  now gives the swap chain the window's size.
+- **The AppImage bundled libvulkan**, which is now left out.
+- **The Windows package had `.github` and `README.md` in `game\`**, which the others leave out.
+
+finevk's per-image render-finished semaphores, from after that run, are in no CI build yet: the next
+run has them.
+
+## What to do next
+
+1. Run the workflow once more and check it's green: `gh workflow run Release --repo theosib/Keystone-RTS --ref main`.
+2. `git tag v0.1.0 && git push origin v0.1.0` builds it all again and leaves a **draft** release.
+3. Check that the draft has all the files and that its notes read well. The notes are
+   `tools/package/release-notes.md`, plus the commits it was built from.
+4. Ask the user before publishing: `gh release edit v0.1.0 --draft=false`.
+
+To see a job's log while a run is going, as `gh run view --log` won't until it ends:
 
 ```sh
 gh api --allow-escape-sequences repos/theosib/Keystone-RTS/actions/jobs/<job id>/logs
 ```
 
-Packaging scripts are in `tools/package/`, and Windows' in `tools/windows/`. Fix on `main`, push,
-then `gh workflow run Release --repo theosib/Keystone-RTS --ref main`. A push by itself runs nothing.
+## What's still untested
 
-## What to do next
+- **macOS:** CI's DMG, downloaded in a browser so that it's quarantined for real, following the two
+  sets of steps in the release notes. Check too what `LSMinimumSystemVersion` it reports.
+- **By hand, at a keyboard:** on Wayland, losing focus and mouse look on foot (Tab). On Windows,
+  alt-tab from full screen, which should minimize.
+- `tests/installed_check.py` plays a game from an installed copy, quits, reopens, and checks where the
+  files went. Point `HOME`, or `APPDATA` on Windows, at an empty temporary directory first. An
+  AppImage needs libfuse2, or `APPIMAGE_EXTRACT_AND_RUN=1` where there's none.
 
-1. Get a run where every job but `release` is green.
-2. `gh run download <run> --repo theosib/Keystone-RTS` gets the packages.
-3. Test them, as below. A package has to be tried on a machine that didn't build it.
-4. `git tag v0.1.0 && git push origin v0.1.0` builds it all again and leaves a **draft** release.
-5. Check that the draft has all the files and that its notes read well. The notes are
-   `tools/package/release-notes.md`, plus the commits it was built from.
-6. Ask the user before publishing: `gh release edit v0.1.0 --draft=false`.
-
-## What to test
-
-`tests/installed_check.py` plays a game from an installed copy, quits, reopens, and checks where the
-files went. Point `HOME`, or `APPDATA` on Windows, at an empty temporary directory first. It uses MCP,
-so the machine needs an unlocked desktop. CLAUDE.md's "Testing" and "Live inspection" sections have the
-rest.
-
-**Windows** is the priority, since the changes below went in without ever running there:
-
-- **Saves moved.** An installed copy now keeps saves, screenshots and `imgui.ini` in
-  `%APPDATA%\.keystone`, not in `game\saves` beside the program. The user asked for that on every
-  platform, as Minecraft does. Check that a save survives an update, and that nothing writes beside
-  the program. `keystone.iss` still spares `game\saves` when it clears old content, which is harmless
-  but can go.
-- **Finding the game.** `finevox_run.cpp`'s Windows-only search was replaced by
-  `ResourceLocator::findEngineRoot` and `executableDir` in the engine. Its Windows branch has been
-  compiled by CI and has never run.
-- **GUI shaders.** They used to load from finegui's build directory, a path compiled in, which only
-  works where the game was built. They now go in `shaders\` with the others. Run a package with the
-  build tree hidden, or on another machine.
-- **F11.** `Window::toggleFullscreen` has never run on Windows. It should give no title bar at the
-  desktop's resolution, and on alt-tab should minimize, since GLFW keeps a full-screen window
-  `HWND_TOPMOST`. `tests/mcp_check.py` presses it for real.
-- `tests/run_ui.sh`, `tests/run_mcp.sh` and `tests/run_windows.sh` haven't been run on Windows.
-
-**Linux x86-64**, on a desktop. The user will say which machine:
-
-- The AppImage has GLFW 3.4, built with Wayland, so on a Wayland desktop it'll run natively. All
-  testing so far went through Xwayland, because Ubuntu's own GLFW is the X11 build. So this path is
-  new: try the window, F11, losing focus, mouse look on foot (Tab), and a window size that isn't the
-  default. If Wayland is trouble, add `-DGLFW_BUILD_WAYLAND=OFF` to the GLFW step in `release.yml`
-  rather than fix it for the first release.
-- `~/.keystone` should get the saves. The bundled libraries shouldn't include libc, libvulkan, GPU
-  drivers or libstdc++. linux.sh prints the list, and `installed_check.py` prints what really loaded.
-
-**Linux Arm**, on a machine with a real GPU. The user will say which one. It may have no monitor
-attached, in which case X runs a small empty screen, and Vulkan still works there. F11 does nothing
-with no monitor, and that's deliberate. Tell the user if a test really needs a monitor, because
-connecting one means moving the machine. No test of the Arm build on a real GPU has happened yet.
-
-**macOS** can only be tested on a Mac, by the user or a session there. A DMG built locally passed
-`installed_check.py` from the read-only image, with the build tree hidden, and with MoltenVK loading
-from inside the app. CI's DMG hasn't been tried. Worth doing before publishing: download it in a
-browser, so that it's quarantined for real, and follow the two sets of steps in the release notes.
-`xattr -cr` is the command the notes offer. Check too what `LSMinimumSystemVersion` it reports:
-Homebrew's libraries on CI set it.
+On Windows, from a source build, `run_windows.sh` passes. `run_mcp.sh` passes all 77 checks, F11
+included, but fails its window run on a validation error every platform has: a screenshot is read
+back after its image was presented. `run_ui.sh` passed 4 runs in 8, see PLATFORMS.md's Windows
+section. Neither is in the packages.
 
 ## Not to be confused with a problem
 

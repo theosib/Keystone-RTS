@@ -243,16 +243,22 @@ Results on the machine above:
 
 | Test | Result |
 |---|---|
-| `finevox_tests` | All 2309 pass, `FactionVisionTest.ManyUnitsStayCheap` included |
+| `finevox_tests` | All 2313 pass, `FactionVisionTest.ManyUnitsStayCheap` included |
 | `finevox_script_tests`, `finevox_render_tests` | All pass, goldens included |
 | `finenet_tests`, `finescript_tests` | All 118 and all 488 pass |
 | `tests/run_all.sh` | All 29 pass. `guard` failed once with a build running beside it, then passed 10 runs of 10 alone |
 | `tests/run_net.sh` | All pass, LAN discovery included |
-| `tests/run_ui.sh`, `tests/run_mcp.sh`, `tests/run_windows.sh` | Not run yet |
+| `tests/run_windows.sh` | All pass |
+| `tests/run_mcp.sh` | All 77 checks pass, F11 included, but the window run fails on what validation reports, below |
+| `tests/run_ui.sh` | 4 runs in 8 pass. In 2, from the walk up the steps on, keys never reached the game, on a desktop in use. In the others the Steward climbed 2.01 blocks against 2 within 0.01, or 3, over the wall |
+| `tests/installed_check.py` | Passes, from CI's installer, with nothing written beside the program |
 
-A game draws at about 60fps at 1280x720 with `--validation` on, which reports finevk reusing a
-swapchain semaphore that may still be in use for presenting, and a screenshot transitioning a
-swapchain image it hasn't acquired. Neither is Windows' own: Linux's run, clean, had an older SDK.
+A game draws at about 60fps at 1280x720 with `--validation` on. The SDK's validation layers report
+a screenshot transitioning a swapchain image it hasn't acquired: `GameClient` reads the image back
+in `onPostRender`, after it has been presented. That's every platform's, not Windows' own, and
+Linux's run was clean only because its SDK was older. The fix is a hook between the renderer's
+submit and its present. finevk reusing a render-finished semaphore still in use by a present was
+reported too, and is fixed: there's one per swapchain image now.
 
 What Windows turned up, which applies to anything added from here on:
 
@@ -276,7 +282,7 @@ What Windows turned up, which applies to anything added from here on:
 - **Python is `python`**, not `python3`. The test scripts take either.
 - **No `__builtin_clz`**: use `<bit>`.
 
-`Window::toggleFullscreen` (F11) is the Linux path there, also untested. It leaves GLFW's minimizing
+`Window::toggleFullscreen` (F11) fills the screen and puts the window back. It leaves GLFW's minimizing
 on losing focus switched on for Windows alone: GLFW keeps a full-screen window `HWND_TOPMOST`, so a
 window that stayed put would cover whatever you switched to. The check is in `tests/mcp_check.py`.
 
@@ -311,7 +317,15 @@ out of reach.
   libraries set the oldest macOS it runs on, and that's written into `Info.plist`.
 - **Linux:** `tools/package/linux.sh` makes an AppImage per architecture, on Ubuntu 22.04, which sets
   the glibc it needs. It has its own GLFW 3.4, and leaves out libc, the Vulkan loader, GPU drivers and
-  libstdc++: a driver loaded into the process wants the machine's own.
+  libstdc++: a driver loaded into the process wants the machine's own. linuxdeploy would bundle the
+  loader, so `linux.sh` excludes it by name.
+- **GLFW's X11 wait** is patched, by `tools/package/glfw-x11-wait.patch`. GLFW 3.4, and its master
+  branch, wait up to 0.1s for a new window to be reported visible, but count any event already
+  queued as having waited, so the time never runs down. On an X desktop with no monitor the report
+  never comes, and `glfwCreateWindow` never returned. Ubuntu's GLFW 3.3 doesn't do this, so a source
+  build there never showed it.
+- **Wayland** leaves a swap chain's size to the program. finevk used 800x600 for that until the
+  window was resized, so it now takes the window's framebuffer size.
 - **Shaders:** SPIR-V is the same on every machine, and 22.04 has no `glslc` for Arm, so CI compiles
   them once and shares them. A build with no `glslc` leaves them out and still links.
 - GitHub's Linux machines have no GPU, so CI runs the AppImage on Mesa's software renderer. Its Mac
