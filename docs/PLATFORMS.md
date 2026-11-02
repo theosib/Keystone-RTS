@@ -132,8 +132,13 @@ A game takes this four-core machine about 3.9ms a tick, of the 33 it has.
 - **Crashes.** `run.sh` skips its core dump handling on anything but macOS, so a crash needs
   `ulimit -c` by hand, and Ubuntu sends cores to apport. The notes on crashes in
   [../CLAUDE.md](../CLAUDE.md) are macOS-specific: `lldb -c`, `.ips` reports.
-- ThreadSanitizer should work better than it does on macOS, and is worth running: a build with
-  `-fsanitize=thread` in the compile and link flags, then `KEYSTONE_BUILD=<dir> tests/run_net.sh`.
+- **ThreadSanitizer needs Clang here.** `tests/run_net.sh` passes under it with nothing reported.
+  GCC 11's TSan can't see `pthread_cond_clockwait`, which every timed wait goes through, so it never
+  sees the mutex released. That gave 64 false reports of double locks, lock inversions and races, and
+  failed 6 checks. Build with `-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++`, and
+  `-fsanitize=thread` in the compile and link flags. Newer kernels then stop TSan with "unexpected
+  memory mapping", so run `KEYSTONE_BUILD=<dir> setarch $(uname -m) -R tests/run_net.sh`. Set
+  `TSAN_OPTIONS=log_path=<file>` too: `run_net.sh` deletes its logs, and reports with them.
 
 What Linux turned up, which applies to anything added from here on:
 
@@ -180,7 +185,8 @@ telling about **TCP 7810** (game) and **UDP 7811** (discovery).
 
 This says whether LAN discovery really works. It's passed both ways round, between a Mac and a
 Linux box on the same Wi-Fi, with both firewalls off: each found the other within a second or two
-and joined. A window on Linux has joined a Mac's lobby. Repeat it on any new network.
+and joined. A window on a Mac has played on a Linux server, at 57fps with the N100 at 17% CPU, and a
+window on Linux has joined a Mac's lobby. Repeat it on any new network.
 
 ```sh
 # On one, in Keystone/
@@ -195,7 +201,9 @@ cat tests/net/watcher.fs >> /tmp/find.fs
 ```
 
 It should print `[bot] found <address>`, and then `END faction 1`. Then, if either machine has a
-window, try the menus: Host a Game on one, and Join a Game on the other.
+window, try the menus: Host a Game on one, and Join a Game on the other. That hasn't been tried
+between two machines. `--join lan` is for bots: a window takes it as a hostname, and needs an address
+or the menu.
 
 If it isn't found, try each route alone before changing anything:
 
