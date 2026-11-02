@@ -24,7 +24,7 @@ LD_LIBRARY_PATH="$build:$root/game-language/build" LINUXDEPLOY_OUTPUT_VERSION="$
     "$LINUXDEPLOY" --appdir "$appdir" \
     --executable "$appdir/usr/bin/keystone" \
     --desktop-file "$keystone/tools/package/keystone.desktop" \
-    --icon-file "$keystone/tools/package/keystone.png" \
+    --icon-file "$keystone/tools/package/icon-512/keystone.png" \
     --exclude-library 'libstdc++*' --exclude-library 'libgcc_s*' \
     --output appimage
 
