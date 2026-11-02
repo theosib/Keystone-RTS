@@ -7,8 +7,12 @@ build="${KEYSTONE_BUILD:-$here/../fv-keystone}"
 
 root="$(mktemp -d)"
 trap 'rm -rf "$root"' EXIT
-rsync -a --exclude .git --exclude .venv --exclude saves --exclude screenshots --exclude imgui.ini \
-    "$here/" "$root/"
+skip=(.git .venv saves screenshots imgui.ini)
+if command -v rsync >/dev/null; then
+    rsync -a "${skip[@]/#/--exclude=}" "$here/" "$root/"
+else  # Git for Windows has no rsync
+    tar -C "$here" "${skip[@]/#/--exclude=./}" -cf - . | tar -C "$root" -xf -
+fi
 cat "$here/tests/ui_input.fs" >> "$root/ui/main.fs"
 
 output="$(cd "$root" && "$build/finevox_run" --game-root "$root" --new --no-save --seed 7 \

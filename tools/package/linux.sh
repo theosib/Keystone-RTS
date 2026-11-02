@@ -18,14 +18,15 @@ stage_shaders "$appdir/usr/share/finevox/shaders"
 stage_licenses "$appdir/usr/share/finevox/licenses" glfw-LICENSE.md "$GLFW_LICENSE"
 
 # libstdc++ and libgcc stay out too. A GPU driver loaded into this process wants the machine's own,
-# which may be newer than ours, and anything new enough for our glibc has new enough ones.
+# which may be newer than ours, and anything new enough for our glibc has new enough ones. So does
+# the Vulkan loader, which any machine with a Vulkan driver has.
 cd "$out"
 LD_LIBRARY_PATH="$build:$root/game-language/build" LINUXDEPLOY_OUTPUT_VERSION="$version" \
     "$LINUXDEPLOY" --appdir "$appdir" \
     --executable "$appdir/usr/bin/keystone" \
     --desktop-file "$keystone/tools/package/keystone.desktop" \
     --icon-file "$keystone/tools/package/icon-512/keystone.png" \
-    --exclude-library 'libstdc++*' --exclude-library 'libgcc_s*' \
+    --exclude-library 'libstdc++*' --exclude-library 'libgcc_s*' --exclude-library 'libvulkan*' \
     --output appimage
 
 echo "bundled libraries:"

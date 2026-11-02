@@ -64,6 +64,8 @@ jobs:
       - name: GLFW 3.4
         run: |
           git clone --quiet --depth 1 --branch 3.4 https://github.com/glfw/glfw.git
+          # Without it, opening a window on an X desktop with no monitor never returns
+          git -C glfw apply "$GITHUB_WORKSPACE/Keystone/tools/package/glfw-x11-wait.patch"
           cmake -S glfw -B glfw/build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
               -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
           sudo cmake --build glfw/build --target install -j 4

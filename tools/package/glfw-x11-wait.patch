@@ -1,0 +1,16 @@
+--- a/src/x11_window.c
++++ b/src/x11_window.c
+@@ -64,6 +64,13 @@
+ {
+     struct pollfd fd = { ConnectionNumber(_glfw.x11.display), POLLIN };
+ 
++    // Keystone's: with a timeout, wait for something new to arrive. Otherwise a queued event the
++    // caller isn't looking for counts as one, the timeout never runs down, and a wait for an event
++    // that never comes spins forever. glfwCreateWindow did, waiting for a VisibilityNotify, on an
++    // X desktop with no monitor connected.
++    if (timeout)
++        return _glfwPollPOSIX(&fd, 1, timeout);
++
+     while (!XPending(_glfw.x11.display))
+     {
+         if (!_glfwPollPOSIX(&fd, 1, timeout))

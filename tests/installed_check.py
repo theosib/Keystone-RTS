@@ -50,6 +50,34 @@ def wait_for(ok, seconds=90):
     return None
 
 
+def family(pid):
+    """pid and every process under it. An AppImage's runtime starts the game as its child."""
+    if not sys.platform.startswith("linux"):
+        return [pid]
+    parents = {}
+    for entry in os.listdir("/proc"):
+        try:
+            with open(f"/proc/{entry}/stat") as stat:
+                parents[int(entry)] = int(stat.read().rsplit(")", 1)[1].split()[1])
+        except (ValueError, OSError):
+            pass
+    found = [pid]
+    for parent in found:
+        found += [child for child, p in parents.items() if p == parent]
+    return found
+
+
+def stop(game):
+    under = family(game.pid)[1:]
+    game.terminate()
+    for pid in under:
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
+    game.wait(timeout=20)
+
+
 def report(label, ok, detail=""):
     global failures
     print(("PASS " if ok else "FAIL ") + label, detail)
@@ -69,8 +97,14 @@ if state:
         report("nothing loaded from outside the app", not outside, outside[:5])
         report("MoltenVK came from the app", any("Keystone.app" in p and "MoltenVK" in p for p in paths))
     elif sys.platform.startswith("linux"):
-        with open(f"/proc/{game.pid}/maps") as maps:
-            paths = sorted({l.split()[-1] for l in maps if ".so" in l})
+        paths = set()
+        for pid in family(game.pid):
+            try:
+                with open(f"/proc/{pid}/maps") as maps:
+                    paths |= {l.split()[-1] for l in maps if ".so" in l}
+            except OSError:
+                pass
+        paths = sorted(paths)
         print("from the image:", [os.path.basename(p) for p in paths if ".mount_" in p or "appimage" in p.lower()])
         print("drivers:", [p for p in paths if "vulkan" in p.lower() or "lvp" in p or "radeon" in p or "intel" in p])
     call("client_eval", code='request_screenshot "screenshots/keystone.png"')
@@ -95,6 +129,5 @@ state = wait_for(lambda s: "phase" in s, 40)
 report("reopens on the menu", bool(state), state)
 has = call("client_eval", code="has_save").get("value") if state else None
 report("and knows there's a game to continue", has in (True, "true"), has)
-game.terminate()
-game.wait(timeout=20)
+stop(game)
 sys.exit(1 if failures else 0)
