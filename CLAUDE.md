@@ -4,6 +4,8 @@ RTS × voxel sandbox built on FineStructureVoxel. It is both a playable game and
 drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](docs/PLAN.md),
 [docs/STATUS.md](docs/STATUS.md).
 
+**A first release is in progress: start with [docs/RELEASE_HANDOFF.md](docs/RELEASE_HANDOFF.md).**
+
 ## Rules
 
 - **Keystone is content + finescript + config.** No C++ unless a measured bottleneck doesn't
