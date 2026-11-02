@@ -2,6 +2,7 @@
 # Multiplayer over real sockets: a server and bots, each its own process. A bot is a client with
 # no window, so this asserts on what a client really holds. Exit nonzero if anything fails.
 set -uo pipefail
+command -v python3 >/dev/null || python3() { python "$@"; }  # Windows calls it python
 here="$(cd "$(dirname "$0")/.." && pwd)"
 build="${KEYSTONE_BUILD:-$here/../fv-keystone}"
 net="$here/tests/net"

@@ -2,6 +2,7 @@
 # Multiplayer in real windows, for what's in the UI: typing, opening a game up, saving. It opens
 # several windows for about a minute, so this is separate from run_all.sh. Exit nonzero if any fails.
 set -uo pipefail
+command -v python3 >/dev/null || python3() { python "$@"; }  # Windows calls it python
 here="$(cd "$(dirname "$0")/.." && pwd)"
 build="${KEYSTONE_BUILD:-$here/../fv-keystone}"
 work="$(mktemp -d)"

@@ -2,6 +2,7 @@
 # Check the MCP tools end to end: through the stdio bridge, against a real game. It opens a
 # window for a few seconds, so this is separate from run_all.sh. Exit nonzero if any fails.
 set -uo pipefail
+command -v python3 >/dev/null || python3() { python "$@"; }  # Windows calls it python
 here="$(cd "$(dirname "$0")/.." && pwd)"
 build="${KEYSTONE_BUILD:-$here/../fv-keystone}"
 bridge="$here/../FineStructureVoxel/tools/mcp_bridge.py"

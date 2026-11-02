@@ -4,6 +4,7 @@
 # Each scenario is a real game with a script that asserts on it, so a pass means
 # the game logic works end to end, not that a unit passed in isolation.
 set -uo pipefail
+command -v python3 >/dev/null || python3() { python "$@"; }  # Windows calls it python
 here="$(cd "$(dirname "$0")/.." && pwd)"
 build="${KEYSTONE_BUILD:-$here/../fv-keystone}"
 failed=0
