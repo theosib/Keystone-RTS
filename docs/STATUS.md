@@ -11,13 +11,14 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | World | Generated terrain, biomes, trees, forage, boulders, water |
 | Art | Procedural 32×32 textures, box-part unit models with faction emblems, skeletal animation |
 | Command | Orbit camera, grab panning, box select, right-click to move or to hunt an enemy down, build palette with a ghost footprint that turns red on taken ground, and tooltips quoting live costs, drag to run a palisade that joins up straight and on the diagonal, ghosts of unbuilt work that firm up as it goes |
-| Economy | Gathering, hauling, material fetch, bottom-up construction, hunger, housing |
+| Economy | Gathering, hauling, material fetch, bottom-up construction, hunger, housing. Sites finish in queue order, and with units waiting on a bed, Shelters go first and gatherers help build them |
 | Stockpile | Physical blocks with fill stages, rows and aisles, partial-stack preference, defrag |
 | Warehouse | Yard fills, Hands build mezzanine, posts, stairs, then store upstairs |
 | Vision | Per-faction 3D line of sight, terrain replica (remembered terrain), filtered units |
+| Pause | Space or the Pause button, overhead, in a game of your own. Time stops and orders still land. It ends when anyone joins, and the Steward can't work through it |
 | Combat | Melee, ballistic arrows blocked by real cover, high-ground bonuses, morale and rout. Soldiers guard where they were sent, answer whoever hits them, and go to an alarm in proportion to the raid, then back |
 | Rival | Fair-play commander: develops, scouts, reacts only to what its units saw |
-| Match | Keystone capture, win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
+| Match | Soldiers break a Keystone by standing in its Hall with no defender there, 40 soldier-seconds. They go for one by themselves once it's in sight, or when sent onto the Hall. A bar over the Hall, the HUD and the Work panel show it to both sides. Win/lose, Continue in Open-Ended World, Pacify Rivals. An idle player falls in about 12 minutes to the Standard rival |
 | Delivery | Hands take what they've gathered straight to a site that needs it. The yard gets the rest, and first call on food and on what a soldier with a bed is waiting for |
 | Pathfinder | Explores by itself, nearest unseen ground first, and carries on from wherever it's sent |
 | Units | Each kind puts the team colour somewhere else, to read at a distance. A killed unit topples and turns to motes in its team colour |

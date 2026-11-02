@@ -251,6 +251,22 @@ on :frame do
     if (t_frame == 576) { stop_typing }
     if (t_frame == 610) do
         t_check "keys queue nothing on foot, in the menu or in chat" ({t_queued "militia"} == 10)
+    end
+
+    # Space stops the game from overhead, and on foot it's still a jump
+    if (t_frame == 612) { t_tap "space" }
+    if (t_frame == 622) do
+        t_check "Space pauses overhead" {game_paused}
+        do_action "toggle_view"
+    end
+    if (t_frame == 626) { t_tap "space" }
+    if (t_frame == 636) do
+        t_check "and doesn't, on foot" {game_paused}
+        do_action "toggle_view"
+    end
+    if (t_frame == 640) { t_tap "space" }
+    if (t_frame == 650) do
+        t_check "Space carries on" (not {game_paused})
         print "UI TEST DONE"
     end
 end

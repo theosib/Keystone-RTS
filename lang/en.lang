@@ -20,6 +20,7 @@ ui.stat.army: Army
 ui.housed: {count} / {cap}
 ui.palette: Build
 ui.train_hand: Train Hand
+building.core_hall: Core Hall
 building.shelter: Shelter
 building.shelter.other: Shelters
 building.forager_hut: Forager Hut
@@ -68,6 +69,7 @@ work.hold: Holding position
 work.march: Marching
 work.scout: Scouting
 work.fight: Fighting
+work.break_keystone: Breaking the Keystone
 work.rout: Routed, running for home
 ui.muster: Muster
 unit.hand: Hand
@@ -85,7 +87,9 @@ match.defeat.detail: Your realm is conquered, but the world remains.
 match.exit: View Chronicle and Exit
 match.continue: Continue in Open-Ended World
 match.pacify: Make Rivals Passive
-ui.keystone_danger: The Keystone is under attack!
+ui.keystone_danger: The Keystone is under attack! {percent}% broken
+ui.keystone_breaking: Breaking the rival Keystone: {percent}%
+ui.paused: Paused. Press Space to carry on. You can still give orders.
 
 block.banner_blue: Blue Banner
 block.banner_red: Red Banner
@@ -122,12 +126,18 @@ inspect.gives: Gives {count} {kind}
 inspect.site: {name}, {percent}% built
 inspect.yours: Yours
 inspect.rival: Rival
+inspect.keystone.how: Right-click with soldiers selected to break its Keystone
+inspect.keystone.hold: Enemy soldiers in here break the Keystone. One of yours stops them.
+inspect.keystone.broken: Keystone {percent}% broken
 inspect.remembered: As last seen
 
 menu.open: Menu
+menu.pause: Pause
+menu.unpause: Carry On
 tip.needs: Needs
 tip.hotkey: {name} ({key})
 tip.batch: Hold Shift for {count}
+hotkey.pause: Space
 hotkey.shelter: Z
 hotkey.forager_hut: F
 hotkey.sawpit: X
@@ -139,6 +149,7 @@ hotkey.shortbow: B
 hotkey.scout: P
 tip.bed: A free bed ({used} of {cap} taken)
 tip.menu: Resume, start over, or save and quit.
+tip.pause: Stop the game to look around and give orders. Only in a game of your own.
 tip.shelter: Beds for {count} more of your people.
 tip.forager_hut: Hands gather provisions {percent}% quicker within {radius} blocks.
 tip.sawpit: Hands cut timber {percent}% quicker within {radius} blocks.

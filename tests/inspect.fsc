@@ -37,7 +37,7 @@ on :tick do
     # A building going up
     let b {place_building f :shelter (f.x - 14) (f.z + 14) 0}
     let inside {inspect_at f.id b.x (b.y + 1) b.z}
-    expect "building" inside.building b.name
+    expect "building" inside.building {sym_name b.name}
     expect "owner" inside.owner 1
     if ({inside.get :built} == nil) { fail "no build progress" }
 

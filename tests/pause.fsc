@@ -1,0 +1,87 @@
+# Scenario: a paused game stands still and still takes orders. Nothing moves, nothing's gathered, no
+# time goes by, but an order given in the pause is there when it ends, and the Steward can't
+# work with the clock stopped. It's only for a game of one.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set soldier nil
+set paused_for 0
+set ticks_then 0
+set hand_at nil
+set timber_then 0
+set block_then nil
+
+fn hand_pos [] { return {ent_pos factions[1].hands[0].id} }
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (paused_for > 0) do
+        if (ticks_then != nil) do
+            # Back from the pause, and the order should be taking effect
+            if ((t != (ticks_then + 1)) and (paused_for == 60)) { return fail "ticks went by in the pause" }
+            set ticks_then nil
+        end
+        if ((t > 200) and (soldier.order == :move)) do
+            let p {ent_pos soldier.id}
+            if ({dist2 p[0] p[2] soldier.post[0] soldier.post[2]} > 4) do
+                log "PASS"
+                game_exit 0
+            end
+        end
+    end
+
+    if (t == 150) do
+        set soldier {spawn_soldier f :militia}
+    end
+
+    if (t == 180) do
+        set_paused true
+        if (not {game_paused}) { return fail "a game of one should pause" }
+        set ticks_then t
+        set hand_at {hand_pos}
+        set timber_then {stock_of f :timber}
+        set paused_for 0
+    end
+
+    if (t == 600) { fail "the order never landed" }
+end
+
+on :paused_tick do
+    let f factions[1]
+    set paused_for (paused_for + 1)
+    if ({game_tick} != ticks_then) { fail "the clock moved" }
+
+    if (paused_for == 10) do
+        order_units f {=units [soldier.id] =x (f.x + 20) =y f.y =z (f.z + 20)}
+        if (soldier.order != :move) { fail "an order should land in a pause" }
+
+        let spot [(f.x + 6) (f.y + 1) (f.z + 6)]
+        set block_then {block_at spot[0] spot[1] spot[2]}
+        steward_place f spot[0] spot[1] spot[2] :planks
+        if ({block_at spot[0] spot[1] spot[2]} != block_then) { fail "the Steward can't work in a pause" }
+    end
+
+    if (paused_for == 40) do
+        let p {hand_pos}
+        if ({dist2 p[0] p[2] hand_at[0] hand_at[2]} > 0.0001) { fail "a Hand moved in the pause" }
+        if ({stock_of f :timber} != timber_then) { fail "the yard changed in the pause" }
+    end
+
+    if (paused_for == 60) do
+        # With another human in it, nobody gets to stop the clock
+        let rival factions[2]
+        let commander rival.commander
+        set rival.commander nil
+        set_paused false
+        if (not {game_paused}) { fail "a game of two can't be touched by this" }
+        set rival.commander commander
+
+        set_paused false
+        if {game_paused} { fail "the pause should end" }
+    end
+end

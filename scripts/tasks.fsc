@@ -156,6 +156,7 @@ end
 fn soldier_stack [s] do
     if (s.state == :rout) { return [{=key "rout"}] }
     if (s.target != nil) { return [{=key "fight"}] }
+    if (s.siege != nil) { return [{=key "break_keystone"}] }
     if (s.order == :move) {
         if (s.stats.role == :scout) { return [{=key "scout"}] }
         return [{=key "march"}]

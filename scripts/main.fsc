@@ -87,7 +87,7 @@ fn publish_state [f] do
                 =queue {work_queue f}
                 =army f.army.length
                 =match contest.state =winner contest.winner
-                =capture f.capture
+                =capture f.capture =keystones {keystones_going f}
                 =alive f.alive} =faction f.id
 end
 
@@ -111,9 +111,26 @@ fn human_factions [] do
     return out
 end
 
+# Nobody can click through a roof, so an order onto a rival's Hall means the Keystone inside it
+fn keystone_under [f x y z] do
+    if ({vision_state f.id x z} == :unknown) { return nil }
+    for other in factions do
+        if ((other != nil) and (other.id != f.id) and (other.keystone != nil) and (other.hall != nil)) do
+            if {in_footprint other.hall x y z} { return other.keystone }
+        end
+    end
+    return nil
+end
+
 # A tight block centred on the order point, so that one unit goes just where it was sent, and
 # a group gets a cell each instead of all fighting for one
 fn order_units [f cmd] do
+    let k {keystone_under f cmd.x cmd.y cmd.z}
+    if (k != nil) do
+        set cmd.x k[0]
+        set cmd.y k[1]
+        set cmd.z k[2]
+    end
     let count cmd.units.length
     let across 1
     while ((across * across) < count) do
@@ -146,6 +163,7 @@ end
 
 # The Steward works like one strong Hand: useful early, never a hero (DESIGN 1)
 fn steward_break [f x y z] do
+    if {game_paused} { return nil }
     let block {block_at x y z}
     let info {HARVEST.get block}
     if (info == nil) do
@@ -172,6 +190,7 @@ end
 
 fn steward_place [f x y z block] do
     let kind {BLOCK_MATERIAL.get block}
+    if {game_paused} { return nil }
     if ((kind == nil) or ({block_at x y z} != :air)) { return nil }
     if ({zone_take f.zone kind 1 x z} == 0) do
         ui_publish {=denied {sym_name kind}} =faction f.id
@@ -218,7 +237,13 @@ on :start do
     log "settlements:" {alive_factions}.length
 end
 
+# Stopping the clock only makes sense with nobody else waiting on it
+fn set_paused [paused] do
+    if ({human_factions}.length == 1) { game_pause paused }
+end
+
 on :player_join do
+    game_pause false
     seat_player player
 end
 
@@ -264,6 +289,8 @@ fn settle_after_resume [f] do
         set s.hunting nil
         set s.hunt_fails 0
         set s.hunt_blind 0.0
+        set s.siege nil
+        set s.siege_wait 0.0
         ent_anim s.id :idle
     end
     # Saves from before the Hall was noted. One that's lost its Keystone can't say where it stood.
@@ -327,12 +354,7 @@ on :resume do
     log "resumed at t=" ({game_tick} / 30)
 end
 
-on :tick do
-    let tick {game_tick}
-    for f in factions do
-        if (f != nil) { tick_faction f tick }
-    end
-    if ((tick % 30) == 3) { tick_match }
+fn publish_all [tick] do
     if ((tick % 15) == 0) {
         for f in {human_factions} do
             publish_state f
@@ -346,6 +368,23 @@ on :tick do
     }
 end
 
+on :tick do
+    let tick {game_tick}
+    for f in factions do
+        if (f != nil) { tick_faction f tick }
+    end
+    if ((tick % 30) == 3) { tick_match }
+    publish_all tick
+end
+
+# Orders still come in with the game stopped, and players want to see them land
+set paused_ticks 0
+
+on :paused_tick do
+    set paused_ticks (paused_ticks + 1)
+    publish_all paused_ticks
+end
+
 on :command do
     let f {faction_of sender}
     match cmd.name
@@ -354,6 +393,7 @@ on :command do
         :build { if ({place_building f cmd.building cmd.x cmd.z cmd.turns} == nil) { ui_publish {=taken true} =to sender } }
         :train { set f.train_queue (f.train_queue + {batch_size cmd}) }
         :muster { queue_many f cmd.unit {batch_size cmd} }
+        :pause { set_paused cmd.paused }
         :continue { if (contest.state == :over) { continue_open_ended cmd.pacify } }
         :steward_break { steward_break f cmd.x cmd.y cmd.z }
         :steward_place { steward_place f cmd.x cmd.y cmd.z cmd.block }

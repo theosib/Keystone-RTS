@@ -86,8 +86,13 @@ fn wanted_kind [f] do
     return :provisions
 end
 
-# Roughly two thirds of the settlement builds; the rest keep materials coming
-fn is_builder [w] { return ((w.id % 3) != 0) }
+# Roughly two thirds of the settlement builds; the rest keep materials coming. With units waiting
+# on a bed everyone lends a hand, as long as there's food to go on with: it's 10% sooner for a Shelter.
+fn is_builder [w] do
+    if ((w.id % 3) != 0) { return true }
+    let f factions[w.faction]
+    return ((f.sites.length > 0) and {short_of_beds f} and {gives_beds f.sites[0]} and ({stock_of f :provisions} >= FOOD_RESERVE))
+end
 
 fn pick_job [w] do
     let f factions[w.faction]
@@ -361,6 +366,26 @@ fn try_deliver [w site] do
     return true
 end
 
+# A Hand is on a later site because the ones before it had no cell free. As soon as one has, what's
+# left of the load goes back there: sites get finished in the order they're queued.
+fn deliver_ahead_of [w site] do
+    let f factions[w.faction]
+    if (site == f.zone.expanding) { return false }
+    let queue []
+    if (f.zone.expanding != nil) { queue.push f.zone.expanding }
+    for b in f.sites do
+        queue.push b.site
+    end
+    for ahead in queue do
+        if (ahead == site) { return false }
+        if ({site_needs ahead w.carry_kind} and {try_deliver w ahead}) do
+            site_release site w.id
+            return true
+        end
+    end
+    return false
+end
+
 fn start_haul [w] do
     let pos {worker_pos w}
     if (pos == nil) { return nil }
@@ -499,6 +524,7 @@ fn finish_place [w] do
         set w.state :idle
         return nil
     end
+    if ((w.carry_n > 0) and {deliver_ahead_of w site}) { return nil }
     start_build w site
 end
 

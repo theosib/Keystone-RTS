@@ -158,6 +158,8 @@ with open(script, "w") as out:
         out.write(open(os.path.join(root, "tests/net", part)).read())
     out.write("set MIN_PLAYERS 1\nset RUN_MS 3000\n")
     out.write(open(os.path.join(root, "tests/net/watcher.fs")).read())
+call(SOLO, "client_eval", code="send_command {=name :pause =paused true}")
+wait_for(lambda: call(SOLO, "server_eval", code="{game_paused}") is True, "a paused game")
 with open(os.path.join(work, "joiner.log"), "w") as log:
     joiner = subprocess.Popen([bot, "--game", "keystone", "--game-root", root, "--name", "Friend", "--join",
                                "127.0.0.1:7936", "--script", script, "--timeout", "30",
@@ -167,6 +169,10 @@ joined = open(os.path.join(work, "joiner.log")).read()
 check("a friend can walk in", code == 0, joined[-400:])
 check("taking over the rival", "END faction 2" in joined, joined[-400:])
 check("the host's game carried on", in_game(SOLO))
+check("a pause doesn't hold a friend up", call(SOLO, "server_eval", code="{game_paused}") is False)
+call(SOLO, "client_eval", code="send_command {=name :pause =paused true}")
+call(SOLO, "wait", ticks=10)
+check("nor can anyone pause with a friend in the game", call(SOLO, "server_eval", code="{game_paused}") is False)
 sides = call(SOLO, "server_eval", code="factions[2].commander")
 check("and the rival's commander is gone", sides is None, sides)
 stop(solo)

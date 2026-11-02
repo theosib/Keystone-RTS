@@ -19,18 +19,33 @@ end
 
 fn tick_capture [f] do
     if (f.keystone == nil) { return nil }
-    let k f.keystone
-    let attackers {ent_find k[0] k[1] k[2] KEYSTONE_RADIUS =enemy_of f.id =max 32}
-    let defenders {ent_find k[0] k[1] k[2] KEYSTONE_RADIUS =faction f.id =type :militia =max 32}
-    let bows {ent_find k[0] k[1] k[2] KEYSTONE_RADIUS =faction f.id =type :shortbow =max 32}
+    let attackers {count_armed f.keystone KEYSTONE_RADIUS f.id true}
+    let defenders {count_armed f.keystone KEYSTONE_RADIUS f.id false}
 
-    if ((attackers.length > 0) and ((defenders.length + bows.length) == 0)) do
-        set f.capture (f.capture + attackers.length)
+    if ((attackers > 0) and (defenders == 0)) do
+        set f.capture (f.capture + attackers)
     elif (f.capture > 0) do
         set f.capture (f.capture - 1)
     end
 
     if (f.capture >= KEYSTONE_CAPTURE_POINTS) { conquer f }
+end
+
+fn keystone_percent [f] { return {min {floor ((f.capture * 100) / KEYSTONE_CAPTURE_POINTS)} 100} }
+
+# Keystones being broken that this side can see, its own wherever it's looking from
+fn keystones_going [viewer] do
+    let out []
+    for f in factions do
+        if ((f != nil) and (f.keystone != nil) and (f.capture > 0)) do
+            let k f.keystone
+            let mine (f.id == viewer.id)
+            if (mine or {vision_can_see viewer.id k[0] k[2]}) {
+                out.push {=x k[0] =y (k[1] + KEYSTONE_BAR_HEIGHT) =z k[2] =percent {keystone_percent f} =mine mine}
+            }
+        end
+    end
+    return out
 end
 
 fn conquer [f] do

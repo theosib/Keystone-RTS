@@ -144,7 +144,12 @@ set MORALE_LOSS_OUTNUMBERED 0.05
 set MORALE_GAIN_NEAR_HOME 0.12
 set MORALE_GAIN_RESTING 0.03
 
-# Conquest: enemy-seconds at the Keystone, unopposed, to take it
+# Conquest: soldier-seconds at the Keystone, unopposed, to break it
 set KEYSTONE_CAPTURE_POINTS 40
 # Reaches the Hall's walls and doorway: being inside the Hall is what counts
 set KEYSTONE_RADIUS 7
+# How near a soldier gets to swing at it, how long it waits if it can't get that near, and how high
+# over it the bar goes, clear of the Hall's roof
+set KEYSTONE_REACH 2.5
+set KEYSTONE_RETRY_SECONDS 5.0
+set KEYSTONE_BAR_HEIGHT 9

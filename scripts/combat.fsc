@@ -9,6 +9,7 @@ fn make_soldier [f id kind] do
             =target nil =cooldown 0.0 =morale 1.0 =last_hp nil =moving false
             =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil =ignore_until 0
             =striking 0.0 =post nil =errand nil =hunting nil =hunt_fails 0 =hunt_blind 0.0
+            =siege nil =siege_wait 0.0
             =dead_ends [] =explore_wait 0.0 =explore_from nil}
 end
 
@@ -32,6 +33,7 @@ fn order_soldier [s x y z] do
     set s.moving false
     set s.errand nil
     set s.hunting nil
+    set s.siege nil
     # Drop any route in progress, or it arrives and reads as this order being done
     ent_stop s.id
 end
@@ -242,6 +244,83 @@ fn raise_alarm [f pos] do
     end
 end
 
+# A rival's Keystone in sight of this soldier and within what it would go after anyway
+fn keystone_in_sight [s pos] do
+    let reach (s.stats.aggro * s.stats.aggro)
+    for f in factions do
+        if ((f != nil) and (f.id != s.faction) and (f.keystone != nil)) do
+            let k f.keystone
+            if (({dist2 pos[0] pos[2] k[0] k[2]} < reach) and (not {past_leash s k}) and {vision_can_see s.faction k[0] k[2]}) {
+                return f
+            }
+        end
+    end
+    return nil
+end
+
+# Once it's seen one, a soldier sticks to it: sight can drop out for a moment
+fn keystone_to_break [s pos] do
+    if (contest.state != :playing) { return nil }
+    if (s.siege != nil) do
+        let k factions[s.siege].keystone
+        if (k != nil) { return k }
+        set s.siege nil
+    end
+    let f {keystone_in_sight s pos}
+    if (f == nil) { return nil }
+    set s.siege f.id
+    set s.siege_wait 0.0
+    set s.order nil
+    set s.errand nil
+    ent_stop s.id
+    set s.moving false
+    return f.keystone
+end
+
+fn swing_at_keystone [s k] do
+    if s.moving do
+        ent_stop s.id
+        set s.moving false
+    end
+    if (s.cooldown > 0.0) { return nil }
+    ent_look_at s.id (k[0] + 0.5) (k[1] + 0.5) (k[2] + 0.5)
+    ent_anim s.id :work
+    set s.striking STRIKE_SECONDS
+    set s.cooldown s.stats.cooldown
+end
+
+# A crowd round it can leave no way in, and anyone in the Hall is helping from where they stand
+fn walk_to_keystone [s k] do
+    if (s.siege_wait > 0.0) do
+        set s.siege_wait (s.siege_wait - THINK_SECONDS)
+        return nil
+    end
+    let nav {ent_nav s.id}
+    if ((nav == :pending) or (nav == :moving)) { return nil }
+    ent_nav_ack s.id
+    if ((nav == :arrived) or (nav == :failed)) do
+        set s.moving false
+        set s.siege_wait KEYSTONE_RETRY_SECONDS
+        return nil
+    end
+    ent_goto s.id (k[0] + 0.5) k[1] (k[2] + 0.5) =range (KEYSTONE_REACH * 0.8) =partial true =max_nodes 6000
+    set s.moving true
+end
+
+# Soldiers break a Keystone by standing round it unopposed: see tick_capture. This gets them there
+# and shows it happening. It's the same for a player's soldiers and a Rival's.
+fn break_keystone [s pos] do
+    let k {keystone_to_break s pos}
+    if (k == nil) { return false }
+    let near {dist2 pos[0] pos[2] (k[0] + 0.5) (k[2] + 0.5)}
+    if (near <= (KEYSTONE_REACH * KEYSTONE_REACH)) do
+        swing_at_keystone s k
+    else do
+        walk_to_keystone s k
+    end
+    return true
+end
+
 fn update_morale [s pos] do
     let hp {ent_health s.id}
     if ((s.last_hp != nil) and (hp < s.last_hp)) {
@@ -272,6 +351,7 @@ fn rout [s] do
     set s.state :rout
     set s.target nil
     set s.hunting nil
+    set s.siege nil
     set s.moving false
     # It takes up a new post where it rallies
     if (s.errand != nil) { set s.order nil }
@@ -404,6 +484,8 @@ fn think_soldier [s] do
         chase s target_pos
         return nil
     end
+
+    if ((not at_peace) and {keeping_post s} and {break_keystone s pos}) { return nil }
 
     # Nothing to fight: carry out orders
     if (s.order == :move) do

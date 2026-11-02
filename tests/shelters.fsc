@@ -1,0 +1,90 @@
+# Scenario: sites get finished in the order they're queued. Half built, a Shelter houses nobody, and
+# a queued unit waits on the first to be done. With units waiting, Shelters go ahead of whatever
+# else is queued, and the gatherers join in. Among themselves they keep their order: going by which
+# was nearest done, two took turns to lead and the first took twice as long.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn spot_near [f dz] do
+    return {place_building f :shelter (f.x + 24) (f.z + dz) 0}
+end
+
+fn a_gatherer [f] do
+    for w in f.hands do
+        if ((w.id % 3) == 0) { return w }
+    end
+    return nil
+end
+
+set first nil
+set second nil
+set sawpit nil
+set stage 0
+set housing_then 0
+
+# A load on a later site goes back to an earlier one as soon as there's a cell free
+fn check_load_goes_back [f] do
+    let w f.hands[0]
+    drop_job w
+    set w.carry_kind :timber
+    set w.carry_n 2
+    let p {worker_pos w}
+    site_claim second.site w.id p[0] p[1] p[2]
+    if (not {deliver_ahead_of w second.site}) { return fail "a load stayed on the later site" }
+    if (w.site != sawpit.site) { return fail "the load should have gone to the first site" }
+    drop_job w
+    set w.carry_n 0
+    set w.carry_kind nil
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    # Nobody to run from: a Hand who flees breaks up the order this is timing
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
+
+    if (t == 30) do
+        endow f 150 0 100
+        set sawpit {place_building f :sawpit (f.x + 24) (f.z + 28) 0}
+        set first {spot_near f -12}
+        set second {spot_near f 12}
+        if ((sawpit == nil) or (first == nil) or (second == nil)) { return fail "no room to build" }
+
+        check_load_goes_back f
+
+        update_sites f
+        if (f.sites[0] != sawpit) { return fail "the queue moved with nobody waiting on a bed" }
+        if {is_builder {a_gatherer f}} { return fail "gatherers should stay gathering for now" }
+
+        set f.train_queue ((f.housing - {population f}) + 8)
+        update_sites f
+        if (f.sites[0] != first) { return fail "the first Shelter should lead" }
+        if (f.sites[1] != second) { return fail "the Shelters should keep their order" }
+        if (f.sites[2] != sawpit) { return fail "the Sawpit should wait for the Shelters" }
+        if (not {is_builder {a_gatherer f}}) { return fail "gatherers should build a Shelter units are waiting on" }
+
+        set housing_then f.housing
+        set stage 1
+    end
+
+    if ((stage == 1) and (f.housing > housing_then)) do
+        if (not first.complete) { return fail "the second Shelter finished first" }
+        log "first Shelter done at" t
+        set stage 2
+    end
+
+    if ((stage == 2) and second.complete) do
+        log "second Shelter done at" t
+        log "PASS"
+        game_exit 0
+    end
+
+    if (t == 11900) { fail "still not done" }
+end

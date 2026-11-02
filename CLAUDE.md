@@ -67,6 +67,8 @@ finescript traps that cost real time here:
   `:arrived`, and the new order is taken as done.
 - The UI runs after the scene has drawn. `marker_*` geometry shows a frame later, so it goes
   through `markers` and `flushMarkers`, which allow for the camera having moved since.
+- `on :command` runs during a pause, so a command that shouldn't work with the clock stopped has to
+  check `game_paused`, and `on :tick` doesn't, so what clients need to hear goes in `publish_all`.
 - Path searches are the main CPU cost: never re-issue `ent_goto` every think. See the
   backoff in `give_up` and the re-search rule in `chase`.
 
@@ -75,7 +77,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2269 + 174 + 45 = 2488 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2309 + 183 + 45 = 2537 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -86,6 +88,9 @@ finescript traps that cost real time here:
 - `gui_click` goes straight to ImGui. To test who gets an event, use `input_key`,
   `input_button` and `input_move`, which go down the whole listener chain, as
   `tests/run_ui.sh` does. That run opens a window, so it's separate from `run_all.sh`.
+- `tests/run_ui.sh` wants the machine to itself. Beside another window its frame-timed input
+  misses, and a dozen checks fail with nothing wrong. Clicks in it are pixel positions, so anything
+  that moves the palette moves them, and 720 tall is about all the palette has room for.
 - `assert` compiles away in Release, so the `test_phase*` binaries in finevk and finegui
   check little there. Rebuild with `-UNDEBUG`, or use a check that always runs.
 - `tests/run_net.sh` runs a server and bots over real sockets, through a proxy that cuts and slows

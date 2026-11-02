@@ -100,6 +100,9 @@ run training 800
 run flee 2400
 run hunt 1500
 run loads 5500
+run shelters 12000
+run siege 3900
+run pause 700
 
 if python3 "$here/tools/check_models.py"; then
     echo "PASS  check_models"

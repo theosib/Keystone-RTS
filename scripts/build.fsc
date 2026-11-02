@@ -213,6 +213,31 @@ fn finish_building [f b] do
     log "faction" f.id "finished" b.name
 end
 
+# A queued unit waits on a whole Shelter, and half of each of two houses nobody
+fn short_of_beds [f] do
+    return (({population f} + f.train_queue + f.muster.length) > f.housing)
+end
+
+fn gives_beds [b] do
+    let def {BUILDINGS.get b.name}
+    return ((def != nil) and {def.has :housing})
+end
+
+# With units waiting for a bed, Shelters go ahead of everything else. It's the queue itself that
+# moves, so that the work panel shows what will really happen. They stay in order among themselves:
+# going by which is nearest done has builders swapping between two Shelters that take turns to lead.
+fn shelters_first [f] do
+    if ((f.sites.length < 2) or (not {short_of_beds f})) { return nil }
+    let order []
+    for b in f.sites do
+        if {gives_beds b} { order.push b }
+    end
+    for b in f.sites do
+        if (not {gives_beds b}) { order.push b }
+    end
+    set f.sites order
+end
+
 # Retire sites that are done, and floors the Quartermaster queued
 fn update_sites [f] do
     let i 0
@@ -226,6 +251,7 @@ fn update_sites [f] do
             set i (i + 1)
         end
     end
+    shelters_first f
 
     if (f.zone.expanding != nil) do
         let p {site_progress f.zone.expanding}

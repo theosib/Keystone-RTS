@@ -1,0 +1,101 @@
+# Scenario: taking a Keystone. A soldier who comes in sight of one goes and breaks it with nobody
+# telling it to, and an order onto the Hall's roof means the Keystone under it. Hands and Pathfinders
+# don't count, and one defender in the Hall stops it. The bar and the work panel have to say so.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn stand_at [s x z] do
+    let y ({ground_y {floor x} {floor z}} + 1)
+    ent_stop s.id
+    ent_set_pos s.id x y z
+    set s.post [x y z]
+    set s.last_pos [x y z]
+end
+
+set stage 0
+set soldier nil
+set bow nil
+set scout nil
+set defender nil
+set began 0
+set capture_then 0
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+    let rival factions[2]
+    let k rival.keystone
+
+    # Nobody left there to chase, which a soldier does before anything else
+    if (t == 1) do
+        set rival.commander nil
+        for w in rival.hands do
+            ent_damage w.id 1000 0
+        end
+    end
+
+    # Nobody who can't fight counts, however long they stand there
+    if (t == 60) do
+        set scout {spawn_soldier f :scout}
+        stand_at scout (k[0] + 2.5) (k[2] + 2.5)
+        let hand {spawn_hand f}
+        ent_set_pos hand.id (k[0] - 1.5) k[1] (k[2] + 0.5)
+        set hand.state :stopped
+    end
+    if (t == 300) do
+        if (rival.capture != 0) { return fail "a Pathfinder and a Hand shouldn't break a Keystone" }
+        ent_damage scout.id 1000 0
+
+        # At the door, with nothing else to do. It's nobody's order to go in.
+        set soldier {spawn_soldier f :militia}
+        stand_at soldier (k[0] + 0.5) (k[2] + 9.5)
+        set stage 1
+    end
+
+    if ((stage == 1) and (rival.capture > 0)) do
+        if (soldier.siege != rival.id) { return fail "the soldier isn't marked as breaking it" }
+        if ({soldier_stack soldier}[0].key != "break_keystone") { return fail "the work panel doesn't say so" }
+        let seen {keystones_going f}
+        if (seen.length != 1) { return fail "the attacker can't see how it's going" }
+        if seen[0].mine { return fail "that Keystone isn't ours" }
+        let theirs {keystones_going rival}
+        if ((theirs.length != 1) or (not theirs[0].mine)) { return fail "the defender can't see how it's going" }
+        set stage 2
+    end
+
+    if ((stage == 2) and (rival.capture >= 10)) do
+        # One defender in the Hall holds it, and what's been done starts to wear off
+        set defender {spawn_soldier rival :militia}
+        stand_at defender (k[0] - 3.5) (k[2] - 3.5)
+        set capture_then rival.capture
+        set began t
+        set stage 3
+    end
+
+    if ((stage == 3) and (t == (began + 120))) do
+        if (rival.capture > capture_then) { return fail "a defender should stop it" }
+        ent_damage defender.id 1000 0
+        ent_damage soldier.id 1000 0
+
+        # Sent onto the roof, an archer has to end up at the Keystone inside
+        set bow {spawn_soldier f :shortbow}
+        stand_at bow (k[0] + 0.5) (k[2] + 30.5)
+        order_units f {=units [bow.id] =x k[0] =y (k[1] + 6) =z (k[2] + 2)}
+        if (({floor bow.order_x} != k[0]) or ({floor bow.order_z} != k[2])) {
+            return fail "an order onto the Hall should go to its Keystone"
+        }
+        set stage 4
+    end
+
+    if ((stage == 4) and (contest.state == :over)) do
+        if (contest.winner != 1) { return fail "the wrong side won" }
+        if (rival.keystone != nil) { return fail "the Keystone should be gone" }
+        log "PASS"
+        game_exit 0
+    end
+
+    if (t == 3800) { fail "stage {stage} never finished, capture {rival.capture}" }
+end

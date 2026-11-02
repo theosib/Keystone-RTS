@@ -52,8 +52,9 @@ fn inspect_at [viewer x y z] do
 
             let b {structure_at f x y z}
             if (b != nil) do
-                set info.building b.name
+                set info.building {sym_name b.name}
                 set info.owner f.id
+                if ((b == f.hall) and (f.keystone != nil)) { set info.keystone_broken {keystone_percent f} }
                 if (not b.complete) do
                     let progress {site_progress b.site}
                     if (progress != nil) {

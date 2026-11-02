@@ -136,6 +136,11 @@ fn inspect_lines [info] do
     if (owner != nil) {
         if (owner == my_faction) { add {loc "inspect.yours"} } { add {loc "inspect.rival"} }
     }
+    let broken {info.get :keystone_broken}
+    if (broken != nil) do
+        if (owner == my_faction) { add {loc "inspect.keystone.hold"} } { add {loc "inspect.keystone.how"} }
+        if (broken > 0) { add {loc "inspect.keystone.broken" =percent broken} }
+    end
     return lines
 end
 
@@ -512,7 +517,7 @@ end
 
 fn steward_place_block [] do
     let hit {pick_view}
-    if ((hit == nil) or (hit.distance > STEWARD_REACH)) { return nil }
+    if ({game_paused} or (hit == nil) or (hit.distance > STEWARD_REACH)) { return nil }
     let x (hit.x + hit.nx)
     let y (hit.y + hit.ny)
     let z (hit.z + hit.nz)
@@ -548,6 +553,13 @@ end
 fn click_count [] do
     if ({key_held "left_shift"} or {key_held "right_shift"}) { return QUEUE_BATCH }
     return 1
+end
+
+# Only a game nobody else is in can stop. The game says so too, but the button shouldn't offer it.
+fn can_pause [] { return ({net_is_host} and ({net_port} == nil)) }
+
+fn toggle_pause [] do
+    if {can_pause} { send_command {=name :pause =paused (not {game_paused})} }
 end
 
 # What's named on a palette button is under a key. Keys are for commanding, not for the body or a menu.
@@ -589,11 +601,24 @@ fn muster_button [children name] do
     end
 end
 
+set pause_button nil
+set pause_tip nil
+
 fn palette_children [] do
     let children []
-    palette_button children {loc "menu.open"} "menu" "menu" fn [] do
+    # Side by side, or the palette runs off the bottom of a small window
+    let half ((PALETTE_WIDTH - 8) / 2)
+    children.push {ui.button {loc "menu.open"} =icon "menu" =icon_size PALETTE_ICON =width half =on_click fn [] do
         open_menu
-    end
+    end}
+    children.push {make_tip "menu" {loc "menu.open"}}
+    children.push {ui.same_line 0}
+    set pause_button {ui.button {loc "menu.pause"} =width half =on_click fn [] do
+        toggle_pause
+    end}
+    children.push pause_button
+    set pause_tip {make_tip "pause" {loc "tip.hotkey" =name {loc "menu.pause"} =key {loc "hotkey.pause"}}}
+    children.push pause_tip
     children.push {ui.separator}
     children.push {ui.text {loc "ui.palette"}}
     for name in ["shelter" "forager_hut" "sawpit" "watchtower"] do
@@ -688,7 +713,7 @@ end
 # Embodied, the Steward works with their own hands
 fn steward_click [] do
     let hit {pick_view}
-    if ((hit == nil) or (hit.distance > STEWARD_REACH)) { return nil }
+    if ({game_paused} or (hit == nil) or (hit.distance > STEWARD_REACH)) { return nil }
     let after nil
     if (catalog != nil) { set after {catalog.breaks.get {to_sym hit.block}} }
     if (after != nil) do
@@ -783,7 +808,10 @@ fn open_menu [] do
     if {net_is_host} do
         children.push {ui.button {loc "menu.open_game"} =on_click fn [] do
             let problem nil
-            if ({net_port} == nil) { set problem {net_open} }
+            if ({net_port} == nil) do
+                if {game_paused} { toggle_pause }
+                set problem {net_open}
+            end
             open_network_panel problem
         end}
         children.push {ui.button {loc "menu.new"} =on_click fn [] do
@@ -1018,6 +1046,7 @@ fn palette_action [] do
         :muster_shortbow_batch { muster_units "shortbow" QUEUE_BATCH }
         :muster_scout { muster_units "scout" 1 }
         :muster_scout_batch { muster_units "scout" QUEUE_BATCH }
+        :begin_jump { toggle_pause }
         _ { nil }
     end
 end
@@ -1066,6 +1095,22 @@ end
 
 set tools_view :tactical
 
+# The one being broken that matters most: this side's own, if it's that
+fn keystone_going [] do
+    if (state == nil) { return nil }
+    let found nil
+    for k in state.keystones do
+        if (k.mine or (found == nil)) { set found k }
+    end
+    return found
+end
+
+fn update_pause_button [] do
+    set pause_button.visible {can_pause}
+    set pause_tip.visible {can_pause}
+    if {game_paused} { set pause_button.label {loc "menu.unpause"} } { set pause_button.label {loc "menu.pause"} }
+end
+
 on :frame do
     if (state != nil) do
         set amount_timber.text {to_str state.stock.timber}
@@ -1083,10 +1128,15 @@ on :frame do
         set chat_window.window_pos_y (screen[1] - 44)
     end
 
+    let going {keystone_going}
     if (net_trouble != nil) do
         set hud_hint.text net_trouble
-    elif ((state != nil) and (state.capture > 0)) do
-        set hud_hint.text {loc "ui.keystone_danger"}
+    elif {game_paused} do
+        set hud_hint.text {loc "ui.paused"}
+    elif ((going != nil) and going.mine) do
+        set hud_hint.text {loc "ui.keystone_danger" =percent going.percent}
+    elif (going != nil) do
+        set hud_hint.text {loc "ui.keystone_breaking" =percent going.percent}
     elif (denied_frames > 0) do
         set hud_hint.text denied
     elif (view_mode == :embodied) do
@@ -1115,6 +1165,7 @@ on :frame do
 
     update_inspect
     update_work_panel
+    update_pause_button
     if (view_mode != tools_view) do
         set tools_view view_mode
         refresh_tools
@@ -1124,6 +1175,12 @@ on :frame do
     for id in selection do
         let p {entity_pos id}
         if (p != nil) {marker_ring p[0] (p[1] + 0.05) p[2] 0.6 0.3 0.9 1.0 0.9}
+    end
+
+    if (state != nil) do
+        for k in state.keystones do
+            marker_bar (k.x + 0.5) k.y (k.z + 0.5) 5.0 (1.0 - (k.percent / 100.0))
+        end
     end
 
     if (attacked_frames > 0) do
