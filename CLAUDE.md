@@ -95,8 +95,8 @@ finescript traps that cost real time here:
 - `tests/run_ui.sh` wants the machine to itself. Beside another window its frame-timed input
   misses, and a dozen checks fail with nothing wrong. Clicks in it are pixel positions, so anything
   that moves the palette moves them, and 720 tall is about all the palette has room for. The menu
-  clicks are pixels too. "walks up one block at a time" fails now and then even with the machine
-  idle: it allows 0.01 and sometimes measures 2.02. Rerun it before suspecting a change.
+  clicks are pixels too. "walks up one block at a time" fails now and then on unchanged code too:
+  it allows 0.01 and sometimes measures 2.02. Rerun it before suspecting a change.
 - `assert` compiles away in Release, so the `test_phase*` binaries in finevk and finegui
   check little there. Rebuild with `-UNDEBUG`, or use a check that always runs.
 - `tests/run_net.sh` runs a server and bots over real sockets, through a proxy that cuts and slows
