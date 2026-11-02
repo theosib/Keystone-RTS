@@ -158,6 +158,8 @@ finescript traps that cost real time here:
   It keeps up with the frame rate, and a graph of mean brightness shows what stills can't.
 - `tests/run_mcp.sh` tests it end to end, through the bridge, in a real window. It's separate
   from `run_all.sh`. Design and measurements are in the engine's `docs/systems/game-runtime.md`.
+  "the server has the rival's ground" failed 1 run in 7 on an N100, in a check before anything
+  that run had changed. The cause isn't known, so rerun it before suspecting a change.
 
 ## Crashes
 

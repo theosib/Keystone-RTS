@@ -246,6 +246,29 @@ Expect this one to need real work before anything links.
 on losing focus switched on for Windows alone: GLFW keeps a full-screen window `HWND_TOPMOST`, so a
 window that stayed put would cover whatever you switched to. The check is in `tests/mcp_check.py`.
 
+## Releases
+
+Nothing is packaged yet. Before any of this works anywhere:
+
+- **Licence.** None of the six repos has one, so nobody may redistribute a build yet, and a package
+  has to carry the notices of what it bundles (GLFW, MoltenVK, the fonts).
+- **Writing.** Saves go in `<game root>/saves`, `imgui.ini` and `screenshots/` in the working
+  directory. A `.app` must not change itself and an AppImage is read-only, so these need a per-user
+  directory, the same work as `%LOCALAPPDATA%` in the Windows table.
+- **Finding things.** `FINEVOX_SHADER_DIR` is the build directory's absolute path, and the game root
+  comes from `--game-root`. Both have to be found relative to the executable.
+
+macOS: an `.app` in a DMG, carrying `libglfw`, `libvulkan`, MoltenVK and its ICD file, with paths
+rewritten by `install_name_tool`. That breaks signatures, so sign last, with `codesign -s -`. Apple
+silicon won't run native code with no signature at all. A browser download then needs System Settings >
+Privacy & Security > Open Anyway once, and only a paid Developer ID removes that. Homebrew's own
+libraries set the oldest macOS a build runs on (GLFW's says 14.0), and a release should choose that.
+
+Linux: an AppImage for each architecture, built on the oldest Ubuntu meant to work, which sets the
+glibc it needs. Bundle GLFW 3.4 (Ubuntu 22.04's 3.3.6 is the X11 build), never libc, the Vulkan loader
+or GPU drivers. GitHub's `ubuntu-22.04-arm` and `macos-latest` runners can do the building, but they
+can only build: a release still needs a run on real GPUs.
+
 ## Where problems are recorded
 
 | Repo | File |
