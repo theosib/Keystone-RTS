@@ -199,6 +199,40 @@ check("client_eval drives the game", turned.get("embodied") is True, turned)
 client.call("client_eval", code='do_action "toggle_view"')
 client.call("wait", frames=3)
 
+
+def toggle_fullscreen(before):
+    """F11, as a player would press it. Returns the new viewport once it's stopped changing:
+    macOS animates this, and ignores another toggle until that's done."""
+    client.call("client_eval", code='input_key "f11" true')
+    client.call("client_eval", code='input_key "f11" false')
+    last = before
+    for _ in range(40):
+        client.call("wait", frames=10)
+        now = client.call("client_state")["viewport"]
+        if now == last and now != before:
+            return now
+        last = now
+    return last
+
+
+def pixels():
+    note = client.call("client_screenshot", max_size=0)["note"]
+    return [int(n) for n in note.split(",")[0].split("x")]
+
+
+windowed = client.call("client_state")["viewport"]
+windowed_pixels = pixels()
+full = toggle_fullscreen(windowed)
+check("F11 fills the screen", full[0] > windowed[0] and full[1] > windowed[1], (windowed, full))
+full_pixels = pixels()
+check("and the picture fills it too",
+      full_pixels[0] > windowed_pixels[0] and full_pixels[1] > windowed_pixels[1],
+      (windowed_pixels, full_pixels))
+print(f"full screen: {full} window, {full_pixels} pixels")
+back = toggle_fullscreen(full)
+check("F11 again puts the window back", back == windowed, (windowed, back))
+check("and the picture", pixels() == windowed_pixels, windowed_pixels)
+
 shot = client.call("client_screenshot")
 check("client_screenshot returns a JPEG",
       shot.get("image", {}).get("mimeType") == "image/jpeg"

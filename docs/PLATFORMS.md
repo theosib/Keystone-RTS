@@ -148,6 +148,10 @@ What Linux turned up, which applies to anything added from here on:
 - `unordered_map` of an incomplete type doesn't compile on libstdc++, in a header or anywhere else.
 - A static library that ends up in a shared one needs position-independent code. macOS is always
   that, so nothing tells you there.
+- A swap chain can be recreated twice at one size, as leaving full screen does here and a Mac never
+  did. Anything built on its images has to go by `SwapChain::generation()`, not by comparing sizes.
+- GLFW minimizes a full-screen window that loses focus. Under GNOME that's 1fps, and it stays hidden
+  after the other window closes, so `Window::toggleFullscreen` turns it off.
 - `uint64_t` is `unsigned long` here and `unsigned long long` on a Mac, so don't `reinterpret_cast`
   between it and anything else 64-bit.
 - GCC and Clang evaluate function arguments in opposite orders. `vec3(next(), next(), next())` gives
@@ -237,6 +241,10 @@ Expect this one to need real work before anything links.
 
 `module.cpp`, `resource_locator.cpp` and `frame_capture.cpp` already have Windows branches, untested.
 `FineStructureVK` has Windows paths in its CMake, also untested.
+
+`Window::toggleFullscreen` (F11) is the Linux path there, also untested. It leaves GLFW's minimizing
+on losing focus switched on for Windows alone: GLFW keeps a full-screen window `HWND_TOPMOST`, so a
+window that stayed put would cover whatever you switched to. The check is in `tests/mcp_check.py`.
 
 ## Where problems are recorded
 

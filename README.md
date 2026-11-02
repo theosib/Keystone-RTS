@@ -31,6 +31,7 @@ new machine), then:
 | Z F X T L | Shelter, Forager Hut, Sawpit, Watchtower, Log Palisade |
 | H M B P | Train a Hand, or muster Militia, a Shortbow, a Pathfinder. Hold Shift, or Shift-click the button, for 8 |
 | Blocks bar, or 1-6 | Choose a block. Overhead, drag to mark a run for Hands to build. On foot, right-click places it |
+| F11 | Full screen, or back. On a Mac this is the window's green button, or Ctrl+Cmd+F if the system keeps F11 for itself |
 | F12 | Screenshot |
 | Hover, or look at, a block | See what it is and what it holds |
 | Esc | Cancel placement or the block tool, or close the menu |

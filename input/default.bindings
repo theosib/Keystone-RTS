@@ -55,4 +55,5 @@ context: gameplay
   keypress_space: begin_jump
   keyrelease_space: end_jump
   key_escape: cancel
+  key_f11: toggle_fullscreen
   key_f12: screenshot
