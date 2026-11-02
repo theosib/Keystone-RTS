@@ -89,7 +89,7 @@ function Get-Source {
     param([string]$Name, [string]$Url, [string]$Tag)
     $dir = Join-Path $Root "deps-src\$Name"
     if (-not (Test-Path $dir)) {
-        Invoke-Native git @('-c', 'advice.detachedHead=false', 'clone', '--quiet', '--depth', '1', '--branch', $Tag, $Url, $dir)
+        Invoke-Native git @('-c', 'advice.detachedHead=false', 'clone', '--quiet', '--depth', '1', '--branch', $Tag, $Url, $dir) | Out-Host
     }
     return "deps-src\$Name"
 }

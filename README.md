@@ -4,9 +4,19 @@ An RTS on a fully mutable voxel world. Your stockpile is real blocks in a yard y
 workers keep tidy. Fog of war is true 3D line of sight. A civilization falls when its
 Keystone is taken, and whatever the outcome, the world stays yours to keep playing.
 
-Keystone is built on [FineStructureVoxel](../FineStructureVoxel) and is **content,
-script, and configuration**: there is no C++ here. See [docs/DESIGN.md](docs/DESIGN.md)
-for the game design and [docs/STATUS.md](docs/STATUS.md) for what's built.
+- **Your stockpile is made of blocks.** Every plank is somewhere in the world, stacked by workers
+  who keep rows and aisles, and who build a warehouse upwards when the yard fills.
+- **Fog of war you can't cheat.** Sight is 3D line of sight, and the server only ever sends what
+  your side can see.
+- **Rivals who play by your rules.** They react to what their units saw, and nothing else.
+- **Command from above, or walk the world.** Press Tab to drop down and work with your own hands.
+- **Play together.** Host a game and friends on your network find it, or open a game you've already
+  started. Each player has their own settlement and their own fog.
+
+**[Read about the game](docs/GAME.md)**: how a match goes, what's built, and where it's going.
+
+Keystone is **content, script, and configuration**, with no C++ of its own. See
+[How it's built](#how-its-built) for what's underneath.
 
 ## Installing
 
@@ -69,6 +79,25 @@ Regenerate assets with `tools/gen_textures.sh`, `python3 tools/gen_models.py`,
 
 The UI font is [Almendra](https://fonts.google.com/specimen/Almendra) by Ana Sanfelippo, under the
 SIL Open Font License: see `ui/skin/Almendra-OFL.txt`.
+
+## How it's built
+
+Keystone is the game. The rest is a family of open-source libraries, each with its own overview:
+
+| Project | What it is |
+|---|---|
+| [FineStructureVoxel](https://github.com/theosib/FineStructureVoxel) | The voxel game engine: world, rendering, simulation, multiplayer |
+| [finescript](https://github.com/theosib/FineStructureScript) | The scripting language all the game's rules and UI are written in |
+| [finegui](https://github.com/theosib/finegui) | The GUI, where a widget is a live script data structure |
+| [finenet](https://github.com/theosib/finenet) | Networking, with the same API in one process or across the internet |
+| [FineStructureVK](https://github.com/theosib/FineStructureVulkan) | Vulkan with the boilerplate gone |
+
+| Document | Covers |
+|---|---|
+| [docs/GAME.md](docs/GAME.md) | The game: start here |
+| [docs/DESIGN.md](docs/DESIGN.md) | The whole design, including what's still to come |
+| [docs/STATUS.md](docs/STATUS.md) | What's built, and what isn't |
+| [docs/PLATFORMS.md](docs/PLATFORMS.md) | Building and testing on macOS, Linux and Windows, and making releases |
 
 ## License
 
