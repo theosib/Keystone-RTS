@@ -120,9 +120,10 @@ Results on the machine above:
 | `finenet_tests` | All 118 pass |
 | `tests/run_net.sh` | All pass |
 | `tests/run_all.sh` | 28 of 29. `explore` is the flaky one in [STATUS.md](STATUS.md): 2 runs in 8 here and 1 in 7 on a Mac, and the same seed passes on one and fails on the other |
-| `tests/run_ui.sh`, `tests/run_mcp.sh`, `tests/run_windows.sh` | Not run yet |
+| `tests/run_ui.sh`, `tests/run_mcp.sh`, `tests/run_windows.sh` | All pass, with `--validation` clean on Intel's driver |
 
-A game takes this four-core machine about 3.9ms a tick, of the 33 it has.
+A game takes this four-core machine about 3.9ms a tick of the 33 it has, and its integrated GPU
+draws the game at 60fps at 1280x720.
 
 - **Vision on a slow CPU.** A full pass for 200 units takes 32ms on an N100 and 7.5ms on an M-series
   Mac, and the test's limit is 30. Every faction gets a pass each 15 ticks, on a tick of its own where
@@ -173,10 +174,10 @@ export XDG_RUNTIME_DIR=/run/user/$(id -u) WAYLAND_DISPLAY=wayland-0 DISPLAY=:0
 export XAUTHORITY=$(ls -t $XDG_RUNTIME_DIR/.mutter-Xwaylandauth.* | head -1)
 ```
 
-**With the desktop locked a window ran at exactly 1fps,** on the real GPU, and nothing else was
-wrong. That's probably Xwayland's timer for a window nothing is drawing, but it hasn't been compared
-with an unlocked desktop. `loginctl show-session <n> -p LockedHint` says if it's locked. A window
-still opens, and a screenshot at a low `--screenshot-frame` still works.
+**A locked desktop holds a window to exactly 1fps,** and unlocking it gives 60. Nothing is wrong and
+nothing else slows down, so it just looks like a very slow game. GNOME locks after five idle minutes.
+`loginctl show-session <n> -p LockedHint` says if it's locked. A window still opens, and a screenshot
+at a low `--screenshot-frame` still works, but the `run_ui.sh` family needs it unlocked.
 
 The game's own ports are the other way round: they're open to the network, so a firewall may need
 telling about **TCP 7810** (game) and **UDP 7811** (discovery).
@@ -185,8 +186,9 @@ telling about **TCP 7810** (game) and **UDP 7811** (discovery).
 
 This says whether LAN discovery really works. It's passed both ways round, between a Mac and a
 Linux box on the same Wi-Fi, with both firewalls off: each found the other within a second or two
-and joined. A window on a Mac has played on a Linux server, at 57fps with the N100 at 17% CPU, and a
-window on Linux has joined a Mac's lobby. Repeat it on any new network.
+and joined. A window on a Mac has played on a Linux server, at 57fps with the N100 at 17% CPU. Join a
+Game on Linux listed a Mac's game in half a second and joined it, and listed one from its own
+machine too. Repeat it on any new network.
 
 ```sh
 # On one, in Keystone/
@@ -201,9 +203,8 @@ cat tests/net/watcher.fs >> /tmp/find.fs
 ```
 
 It should print `[bot] found <address>`, and then `END faction 1`. Then, if either machine has a
-window, try the menus: Host a Game on one, and Join a Game on the other. That hasn't been tried
-between two machines. `--join lan` is for bots: a window takes it as a hostname, and needs an address
-or the menu.
+window, try the menus: Host a Game on one, and Join a Game on the other. `--join lan` is for bots: a
+window takes it as a hostname, and needs an address or the menu.
 
 If it isn't found, try each route alone before changing anything:
 

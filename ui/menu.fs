@@ -166,7 +166,8 @@ fn join_addresses [server] do
 end
 
 fn server_row [server] do
-    let phase {loc "phase.{server.phase}"}
+    let phase_name {sym_name server.phase}
+    let phase {loc "phase.{phase_name}"}
     let label {loc "join.row" =title server.title =players server.players =max server.max_players =phase phase}
     if server.joinable do
         return {ui.button label =width 400 =on_click fn [] do
