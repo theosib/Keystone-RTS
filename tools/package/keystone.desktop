@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Keystone
+Comment=Build a settlement and defend its Keystone
+Exec=keystone
+Icon=keystone
+Categories=Game;StrategyGame;
+Terminal=false

@@ -270,7 +270,8 @@ What Windows turned up, which applies to anything added from here on:
   fails the next receive. Sockets are made uninheritable, so a restarted game doesn't hold the port.
 - **No exec, no SIGTERM.** `finevox_run` restarts with `CreateProcessW` and exits. A server stops and
   saves on Ctrl+C, Ctrl+Break, its console closing, logoff and shutdown.
-- **Paths.** The content cache is `%LOCALAPPDATA%\finevox\cache`. A path written into a script string
+- **Paths.** The content cache is `%LOCALAPPDATA%\finevox\cache`, and an installed game's own folder
+  is `%APPDATA%\.keystone`. A path written into a script string
   needs forward slashes, or `\U` and the like read as escapes.
 - **Python is `python`**, not `python3`. The test scripts take either.
 - **No `__builtin_clz`**: use `<bit>`.
@@ -281,40 +282,49 @@ window that stayed put would cover whatever you switched to. The check is in `te
 
 ## Releases
 
-Windows is packaged: see the end of this section. Before macOS and Linux are:
+`git tag v0.1.0 && git push origin v0.1.0` runs `.github/workflows/release.yml`, which builds on
+GitHub's machines and leaves a **draft** release: try the packages, then publish it. Running the
+workflow by hand builds the same packages with no release. It takes each sibling repo's `main` at
+the start, and every build uses those commits, which the release notes list. The notes themselves
+are `tools/package/release-notes.md`. `windows-release.yml` is the Windows build, called from there,
+and can be run by hand too.
 
-- **Licence.** None of the six repos has one, so nobody may redistribute a build yet, and a package
-  has to carry the notices of what it bundles (GLFW, MoltenVK, the fonts).
-- **Writing.** Saves go in `<game root>/saves`, `imgui.ini` and `screenshots/` in the working
-  directory. A `.app` must not change itself and an AppImage is read-only, so these need a per-user
-  directory, the same work as `%LOCALAPPDATA%` in the Windows table.
-- **Finding things.** `FINEVOX_SHADER_DIR` is the build directory's absolute path, and the game root
-  comes from `--game-root`. Both have to be found relative to the executable.
+Packages come from GitHub's machines, not from here, so no local paths or usernames end up in them.
 
-macOS: an `.app` in a DMG, carrying `libglfw`, `libvulkan`, MoltenVK and its ICD file, with paths
-rewritten by `install_name_tool`. That breaks signatures, so sign last, with `codesign -s -`. Apple
-silicon won't run native code with no signature at all. A browser download then needs System Settings >
-Privacy & Security > Open Anyway once, and only a paid Developer ID removes that. Homebrew's own
-libraries set the oldest macOS a build runs on (GLFW's says 14.0), and a release should choose that.
+Where an installed copy finds things, from `ResourceLocator`:
 
-Linux: an AppImage for each architecture, built on the oldest Ubuntu meant to work, which sets the
-glibc it needs. Bundle GLFW 3.4 (Ubuntu 22.04's 3.3.6 is the X11 build), never libc, the Vulkan loader
-or GPU drivers. GitHub's `ubuntu-22.04-arm` and `macos-latest` runners can do the building, but they
-can only build: a release still needs a run on real GPUs.
+| Scope | Comes from |
+|---|---|
+| `engine/` | Found from the executable, by its `shaders/`: beside it, in the directory above, in `../Resources`, or in `../share/finevox` |
+| `game/` | `--game-root`, or `engine/game` |
+| `user/` | `--user-dir`. Otherwise the game root if `--game-root` was given, so a source tree works as it always has, or else where Minecraft would: `~/.keystone`, `~/Library/Application Support/keystone`, `%APPDATA%\.keystone` |
 
-Windows: `tools/windows/package.ps1` makes an installer and a portable zip from a windowed build
-(`build.ps1 -BuildDir fv-release -Gui -NoTests`). The game goes in as `Keystone.exe`, with its shaders
-in `shaders\`, this repo's committed content in `game\`, the C++ runtime beside it, each repo's
-`LICENSE` and the notices of what's linked in. There, and only there so far, a `finevox_run` with no
-`--game-root` looks for `game\` beside itself, and for its shaders beside itself before the build
-directory, so a shortcut needs no arguments. The installer is Inno Setup, per user, in
-`%LOCALAPPDATA%\Programs\Keystone`, which needs no administrator and is writable, so saves, `imgui.ini`
-and `screenshots\` can stay where they are. An update clears the old content and keeps `game\saves`.
-Pushing a tag such as `v0.3.0` makes a GitHub release of both through
-`.github/workflows/windows-release.yml`, built from each repo's `main`. Nothing is code-signed, so a
-download's first run brings up SmartScreen's "Windows protected your PC": "More info", then "Run
-anyway". That fades as a release is downloaded more. The SignPath Foundation signs open-source
-projects for free, which is the way to remove it.
+Saves, screenshots and `imgui.ini` go in `user/`. A build's compiled-in paths don't exist on anyone
+else's machine, and a test on the machine that built it can't see that: one like this passed here
+until the build directory was hidden. Test a package from somewhere read-only, with the build tree
+out of reach.
+
+- **macOS:** `tools/package/macos.sh` makes an `.app` and a DMG. `bundle_dylibs.py` copies in every
+  library and rewrites its paths, which breaks signatures, so signing comes last. It's an ad-hoc
+  signature: Apple silicon won't run native code with none, and it's free. A browser download still
+  needs Open Anyway once, or `xattr -cr`. Only a paid Developer ID takes that away. Homebrew's
+  libraries set the oldest macOS it runs on, and that's written into `Info.plist`.
+- **Linux:** `tools/package/linux.sh` makes an AppImage per architecture, on Ubuntu 22.04, which sets
+  the glibc it needs. It has its own GLFW 3.4, and leaves out libc, the Vulkan loader, GPU drivers and
+  libstdc++: a driver loaded into the process wants the machine's own.
+- **Shaders:** SPIR-V is the same on every machine, and 22.04 has no `glslc` for Arm, so CI compiles
+  them once and shares them. A build with no `glslc` leaves them out and still links.
+- GitHub's Linux machines have no GPU, so CI runs the AppImage on Mesa's software renderer. Its Mac
+  run is only a server, and Windows isn't run at all. A release still needs a run on real GPUs
+  before it's published.
+
+- **Windows:** `tools/windows/package.ps1` makes an installer and a portable zip from a windowed
+  build (`build.ps1 -BuildDir fv-release -Gui -NoTests`). The game goes in as `Keystone.exe`, with
+  `shaders\` and `game\` beside it, the C++ runtime, each repo's `LICENSE` and the notices of what's
+  linked in. The installer is Inno Setup, per user, in `%LOCALAPPDATA%\Programs\Keystone`, which
+  needs no administrator. Nothing is code-signed, so a download's first run brings up SmartScreen's
+  "Windows protected your PC": "More info", then "Run anyway". That fades as a release is downloaded
+  more. The SignPath Foundation signs open-source projects for free, which is the way to remove it.
 
 ## Where problems are recorded
 

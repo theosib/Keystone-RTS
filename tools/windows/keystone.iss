@@ -1,7 +1,7 @@
 ; Inno Setup script for Keystone. tools\windows\package.ps1 stages the files and runs this.
 ;
 ; Installs for the current user, under %LOCALAPPDATA%\Programs, so it needs no administrator and
-; the game can write its saves beside itself, which is where the engine keeps them.
+; an update can replace the game with nothing else to ask for.
 
 #ifndef AppVersion
   #define AppVersion "dev"

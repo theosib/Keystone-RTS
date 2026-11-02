@@ -27,6 +27,8 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
 - Engine repo and deps are siblings: `../FineStructureVoxel`, `../game-language` (finescript),
   `../finegui`, `../finenet`, `../FineStructureVK`. The engine links their prebuilt libraries, so a
   change to `finenet` or `finegui` needs `make` in that repo's `build/` before `ninja` sees it.
+- `--game-root` means a source tree, and saves go there. With none it's an installed copy, using
+  the game it shipped with and a per-user folder. Releases: see the end of `docs/PLATFORMS.md`.
 - Build dir: `../fv-keystone` (Ninja, Release with symbols). A fresh configure needs
   `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` (lz4's CMake is too old for CMake 4), and
   `-DCMAKE_CXX_FLAGS_RELEASE="-O3 -g -DNDEBUG"` so core dumps have line numbers.
@@ -81,7 +83,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2309 + 183 + 45 = 2537 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2313 + 183 + 45 = 2541 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.

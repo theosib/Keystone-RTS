@@ -8,12 +8,15 @@ Keystone is built on [FineStructureVoxel](../FineStructureVoxel) and is **conten
 script, and configuration**: there is no C++ here. See [docs/DESIGN.md](docs/DESIGN.md)
 for the game design and [docs/STATUS.md](docs/STATUS.md) for what's built.
 
-## Running
+## Installing
 
-On Windows, the installer on the [Releases](https://github.com/theosib/Keystone-RTS/releases) page
-has everything. It isn't signed, so Windows asks first: "More info", then "Run anyway".
+Download Keystone for Windows, macOS or Linux from
+[Releases](https://github.com/theosib/Keystone-RTS/releases). Windows and macOS each need one extra
+step the first time, because the app isn't signed, and the release page says how.
 
-Otherwise, build the engine once (see [CLAUDE.md](CLAUDE.md), or [docs/PLATFORMS.md](docs/PLATFORMS.md) on a
+## Running from source
+
+Build the engine once (see [CLAUDE.md](CLAUDE.md), or [docs/PLATFORMS.md](docs/PLATFORMS.md) on a
 new machine), then:
 
 ```sh

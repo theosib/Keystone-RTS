@@ -1,12 +1,17 @@
-# Builds Keystone's Windows installer and zip, and attaches them to a GitHub release.
-#
-# Push a tag such as v0.3.0 to make a release of it, or run it by hand from the Actions tab to try
-# a build: that leaves the files as the run's artifacts and makes no release.
+# Builds Keystone's Windows installer and zip. release.yml calls this for a tag, and puts them on
+# the release with the rest. Run by hand from the Actions tab to try a build: that leaves the files
+# as the run's artifacts.
 name: Windows release
 
 on:
-  push:
-    tags: ['v*']
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: dev
+      pins:
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       version:
@@ -14,7 +19,7 @@ on:
         default: dev
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   VULKAN_SDK_VERSION: 1.4.363.0
@@ -26,16 +31,10 @@ jobs:
       # Side by side under exactly these names: docs/PLATFORMS.md
       - uses: actions/checkout@v4
         with: { path: Keystone }
-      - uses: actions/checkout@v4
-        with: { repository: theosib/FineStructureVoxel, path: FineStructureVoxel }
-      - uses: actions/checkout@v4
-        with: { repository: theosib/FineStructureScript, path: game-language }
-      - uses: actions/checkout@v4
-        with: { repository: theosib/FineStructureVulkan, path: FineStructureVK }
-      - uses: actions/checkout@v4
-        with: { repository: theosib/finegui, path: finegui, submodules: true }
-      - uses: actions/checkout@v4
-        with: { repository: theosib/finenet, path: finenet }
+      - shell: bash
+        env:
+          PINS: ${{ inputs.pins }}
+        run: Keystone/tools/package/clone.sh
 
       - name: Cache the Vulkan SDK
         id: vulkan-cache
@@ -70,13 +69,8 @@ jobs:
         id: package
         shell: pwsh
         run: |
-          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '${{ inputs.version }}' }
+          $version = '${{ inputs.version }}' -replace '^v', ''
           Keystone\tools\windows\package.ps1 -Root $env:GITHUB_WORKSPACE -BuildDir fv-release -Version $version
-          $notes = "Built from:`n"
-          foreach ($repo in 'Keystone', 'FineStructureVoxel', 'game-language', 'finenet', 'FineStructureVK', 'finegui') {
-            $notes += "- $repo $(git -C $repo rev-parse --short HEAD)`n"
-          }
-          Set-Content -Path dist\NOTES.md -Value $notes
 
       - uses: actions/upload-artifact@v4
         with:
@@ -84,18 +78,3 @@ jobs:
           path: |
             dist/*.exe
             dist/*.zip
-
-      - name: Release
-        if: github.ref_type == 'tag'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $files = Get-ChildItem dist -File | Where-Object { $_.Extension -in '.exe', '.zip' } | ForEach-Object FullName
-          gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY *> $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $env:GITHUB_REF_NAME @files --clobber --repo $env:GITHUB_REPOSITORY
-          } else {
-            gh release create $env:GITHUB_REF_NAME @files --title "Keystone $env:GITHUB_REF_NAME" --notes-file dist\NOTES.md --repo $env:GITHUB_REPOSITORY
-          }
-          if ($LASTEXITCODE -ne 0) { throw 'gh release failed' }

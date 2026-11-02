@@ -1,0 +1,2 @@
+# Git Bash runs these on Windows, where a checkout could otherwise turn them to CRLF
+*.sh text eol=lf

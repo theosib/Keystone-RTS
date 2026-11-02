@@ -1,0 +1,166 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 builds every package and leaves them on a draft release to try out
+# before publishing. Running this by hand builds them without a release: they're on the run's page.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # What every build uses: the same commits, and one set of shaders. SPIR-V is the same on any
+  # machine, and Ubuntu 22.04 has no glslc for Arm.
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      pins: ${{ steps.clone.outputs.pins }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Keystone
+      - id: clone
+        run: echo "pins=$(Keystone/tools/package/clone.sh)" >> "$GITHUB_OUTPUT"
+      - run: sudo apt-get install -y --no-install-recommends glslc
+      - run: |
+          mkdir shaders
+          for shader in FineStructureVoxel/shaders/*.vert FineStructureVoxel/shaders/*.frag \
+                        finegui/src/shaders/*.vert finegui/src/shaders/*.frag; do
+              glslc "$shader" -o "shaders/$(basename "$shader").spv"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shaders
+          path: shaders
+
+  linux:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-22.04, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.runner }}
+    env:
+      PINS: ${{ needs.prepare.outputs.pins }}
+      SHADERS: ${{ github.workspace }}/shaders
+      OUT: ${{ github.workspace }}/out
+      GLFW_LICENSE: ${{ github.workspace }}/glfw/LICENSE.md
+      LINUXDEPLOY: ${{ github.workspace }}/linuxdeploy
+      APPIMAGE_EXTRACT_AND_RUN: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Keystone
+      - run: Keystone/tools/package/clone.sh
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build g++ libvulkan-dev \
+              libglm-dev libxkbcommon-dev libasound2-dev libwayland-dev wayland-protocols \
+              xorg-dev xvfb xauth mesa-vulkan-drivers
+      - name: GLFW 3.4
+        run: |
+          git clone --quiet --depth 1 --branch 3.4 https://github.com/glfw/glfw.git
+          cmake -S glfw -B glfw/build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+              -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
+          sudo cmake --build glfw/build --target install -j 4
+      - run: Keystone/tools/package/build.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: shaders
+          path: shaders
+      - name: Package
+        run: |
+          case "$GITHUB_REF_NAME" in v*) export KEYSTONE_VERSION="${GITHUB_REF_NAME#v}" ;; esac
+          curl -fsSL -o "$LINUXDEPLOY" \
+              "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$(uname -m).AppImage"
+          chmod +x "$LINUXDEPLOY"
+          mkdir -p "$OUT"
+          Keystone/tools/package/linux.sh
+      - name: It runs, on the software renderer
+        run: |
+          cd "$RUNNER_TEMP"
+          timeout 240 xvfb-run -a "$OUT"/Keystone-*.AppImage --new --size 640 480 \
+              --exit-after 30 --screenshot "$RUNNER_TEMP/shot.png" --screenshot-frame 20
+          test -s "$RUNNER_TEMP/shot.png"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.runner }}
+          path: out/Keystone-*.AppImage
+
+  macos:
+    needs: prepare
+    runs-on: macos-latest
+    env:
+      PINS: ${{ needs.prepare.outputs.pins }}
+      SHADERS: ${{ github.workspace }}/shaders
+      OUT: ${{ github.workspace }}/out
+      MACOSX_DEPLOYMENT_TARGET: '14.0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Keystone
+      - run: Keystone/tools/package/clone.sh
+      - run: brew install ninja glfw glm vulkan-loader vulkan-headers molten-vk
+      - run: Keystone/tools/package/build.sh
+      - uses: actions/download-artifact@v4
+        with:
+          name: shaders
+          path: shaders
+      - name: Package
+        run: |
+          case "$GITHUB_REF_NAME" in v*) export KEYSTONE_VERSION="${GITHUB_REF_NAME#v}" ;; esac
+          mkdir -p "$OUT"
+          Keystone/tools/package/macos.sh
+      - name: It runs, as a server, which needs no GPU
+        run: |
+          "$OUT/Keystone.app/Contents/MacOS/Keystone" --server --port 7930 > server.log 2>&1 &
+          server=$!
+          for _ in $(seq 1 30); do
+              grep -q 'open on port' server.log && break
+              sleep 1
+          done
+          kill "$server"
+          cat server.log
+          grep -q 'open on port' server.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: out/Keystone-*.dmg
+
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/windows-release.yml
+    with:
+      version: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
+      pins: ${{ needs.prepare.outputs.pins }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [prepare, linux, macos, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PINS: ${{ needs.prepare.outputs.pins }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: packages
+      - name: Draft release
+        run: |
+          cp tools/package/release-notes.md notes.md
+          {
+              echo
+              echo "## Built from"
+              echo
+              echo "- Keystone \`$GITHUB_SHA\`"
+              for pin in $PINS; do
+                  echo "- ${pin%%=*} \`${pin##*=}\`"
+              done
+          } >> notes.md
+          gh release create "$GITHUB_REF_NAME" --draft --title "Keystone $GITHUB_REF_NAME" \
+              --notes-file notes.md packages/linux-*/* packages/macos/* packages/keystone-windows/*
