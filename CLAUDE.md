@@ -22,8 +22,8 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
 
 ## Layout
 
-- On any other machine, start with [docs/PLATFORMS.md](docs/PLATFORMS.md): only macOS has been
-  built so far, and that's where to find how to set up, what to expect, and the two-machine test.
+- On any other machine, start with [docs/PLATFORMS.md](docs/PLATFORMS.md): how to set up, what to
+  expect, and the two-machine test. macOS and Linux both work. Windows has never been tried.
 - Engine repo and deps are siblings: `../FineStructureVoxel`, `../game-language` (finescript),
   `../finegui`, `../finenet`, `../FineStructureVK`. The engine links their prebuilt libraries, so a
   change to `finenet` or `finegui` needs `make` in that repo's `build/` before `ninja` sees it.

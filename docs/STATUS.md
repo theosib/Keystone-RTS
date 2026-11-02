@@ -65,7 +65,8 @@ Honest gaps against Stage 1:
 
 ## Not tested
 
-- **Anything but one Mac.** See [PLATFORMS.md](PLATFORMS.md), which has the two-machine test to run.
+- **Windows.** See [PLATFORMS.md](PLATFORMS.md), which also has what's been run on Linux and on two
+  machines.
 - **A whole match in multiplayer.** Runs so far are a minute or so. Conquest, the end screen and
   Continue have only run with one player.
 - **More than four sides,** or a large map with players on it.

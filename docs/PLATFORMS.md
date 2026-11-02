@@ -2,9 +2,10 @@
 
 For anyone, agent or person, working on this somewhere other than the Mac it was written on.
 
-**Only macOS has ever built or run any of this.** It was Apple Silicon, Xcode's clang, the LunarG
-Vulkan SDK, and Homebrew for the rest. What follows about Linux and Windows comes from reading the
-code, not from trying it, so correct this file as you find out.
+**macOS and Linux both build and run all of this.** macOS is where it's written: Apple Silicon,
+Xcode's clang, the LunarG Vulkan SDK, and Homebrew for the rest. Linux has been run on one machine:
+Ubuntu 22.04, x86-64, GCC 11.4, CMake 3.22, and an Intel N100 with Mesa 23.2. What's here about
+Windows comes from reading the code, not from trying it, so correct this file as you find out.
 
 ## Getting the code
 
@@ -54,6 +55,17 @@ global instructions from another machine don't come with the repo.
 | bash, rsync | The `tests/*.sh` scripts and `run.sh` |
 | Vulkan SDK with `glslc`, GLFW 3, GLM | Only for the windowed client |
 
+On Ubuntu 22.04, this is everything but `glslc`:
+
+```sh
+sudo apt-get install --no-install-recommends cmake ninja-build g++ git rsync python3 libvulkan-dev \
+    vulkan-tools vulkan-validationlayers libglfw3-dev libglm-dev libxkbcommon-dev libasound2-dev
+```
+
+22.04 has no `glslc` package. Unpack LunarG's Linux tarball anywhere and put its `x86_64/bin` on
+`PATH` while configuring. Only `glslc` is needed, so a `tar --wildcards '*/x86_64/bin/glslc'` is 30MB
+and not 300. Without it the build goes on and leaves out the shaders, so check `fv-keystone/shaders/`.
+
 ## Building
 
 Dependencies first, in this order, each in its own `build/`, and always Release: an empty build type
@@ -73,9 +85,9 @@ cmake -S FineStructureVoxel -B fv-keystone -G Ninja -DCMAKE_BUILD_TYPE=Release \
 cmake --build fv-keystone
 ```
 
-Both of these recipes have been run from clean clones of GitHub, on macOS only. **With a window**,
-add the graphics libraries first, and turn the render module on. `finevox_run` is quietly left out
-if `finegui` hasn't been built, so check that it exists afterwards.
+Both of these recipes have been run from clean clones of GitHub, on macOS and Linux. **With a
+window**, add the graphics libraries first, and turn the render module on. `finevox_run` is quietly
+left out if `finegui` hasn't been built, so check that it exists afterwards.
 
 ```sh
 for dep in FineStructureVK finegui; do
@@ -99,14 +111,45 @@ From `Keystone/`. Run the engine's test binaries serially, as [../CLAUDE.md](../
 
 ## Linux
 
-Nothing's known to be broken, but nothing's been tried. In order of what's most likely to bite:
+Results on the machine above:
 
-- Discovery: see the `SO_REUSEPORT` note in `finenet/docs/STATUS.md`.
-- The windowed client on real hardware. `FineStructureVK` has Linux paths that haven't been run here.
-- `run.sh` skips its core dump handling on anything but macOS, so a crash needs `ulimit -c` by hand.
-  The notes on crashes in [../CLAUDE.md](../CLAUDE.md) are macOS-specific: `lldb -c`, `.ips` reports.
+| Test | Result |
+|---|---|
+| `finevox_tests` | 2308 of 2309. `FactionVisionTest.ManyUnitsStayCheap` fails, see below |
+| `finevox_script_tests`, `finevox_render_tests` | All pass, goldens included: a pixel at most 1/255 off the Mac's |
+| `finenet_tests` | All 118 pass |
+| `tests/run_net.sh` | All pass |
+| `tests/run_all.sh` | 28 of 29. `explore` is the flaky one in [STATUS.md](STATUS.md): 2 runs in 8 here and 1 in 7 on a Mac, and the same seed passes on one and fails on the other |
+| `tests/run_ui.sh`, `tests/run_mcp.sh`, `tests/run_windows.sh` | Not run yet |
+
+A game takes this four-core machine about 3.9ms a tick, of the 33 it has.
+
+- **Vision on a slow CPU.** A full pass for 200 units takes 32ms on an N100 and 7.5ms on an M-series
+  Mac, and the test's limit is 30. Every faction gets a pass each 15 ticks, on a tick of its own where
+  it can, and the rest of the game has to fit around it in 33ms, so a big army on a small server
+  should stutter. That hasn't been seen, only measured. The test is telling the truth, so don't relax
+  it: make vision cheaper.
+- **Crashes.** `run.sh` skips its core dump handling on anything but macOS, so a crash needs
+  `ulimit -c` by hand, and Ubuntu sends cores to apport. The notes on crashes in
+  [../CLAUDE.md](../CLAUDE.md) are macOS-specific: `lldb -c`, `.ips` reports.
 - ThreadSanitizer should work better than it does on macOS, and is worth running: a build with
   `-fsanitize=thread` in the compile and link flags, then `KEYSTONE_BUILD=<dir> tests/run_net.sh`.
+
+What Linux turned up, which applies to anything added from here on:
+
+- libc++ pulls in far more through its headers. `<shared_mutex>` doesn't give you `unique_lock` on
+  libstdc++, and `<cstring>`, `<cstddef>`, `<cmath>` and `<stdexcept>` have to be asked for.
+- `unordered_map` of an incomplete type doesn't compile on libstdc++, in a header or anywhere else.
+- A static library that ends up in a shared one needs position-independent code. macOS is always
+  that, so nothing tells you there.
+- `uint64_t` is `unsigned long` here and `unsigned long long` on a Mac, so don't `reinterpret_cast`
+  between it and anything else 64-bit.
+- GCC and Clang evaluate function arguments in opposite orders. `vec3(next(), next(), next())` gives
+  different results, and two calls that both change something belong in separate statements.
+- `std::uniform_int_distribution` gives different numbers on different standard libraries.
+  `std::mt19937` itself doesn't.
+- Before CMake 3.24 an unknown keyword in `FetchContent_Declare` joins the argument ahead of it, so
+  `DOWNLOAD_EXTRACT_TIMESTAMP` shows up as a bad `URL_HASH`.
 
 ### Working on it from the Mac over SSH
 
@@ -117,13 +160,27 @@ logged-in display. MCP only listens on 127.0.0.1, so reach it with a tunnel:
 ssh -L 7801:127.0.0.1:7801 linuxbox
 ```
 
+Ubuntu's GNOME is Wayland, and `DISPLAY=:0` is its Xwayland. Logged in over SSH as the same user as
+the desktop, nothing needs opening up. It only needs telling where to look:
+
+```sh
+export XDG_RUNTIME_DIR=/run/user/$(id -u) WAYLAND_DISPLAY=wayland-0 DISPLAY=:0
+export XAUTHORITY=$(ls -t $XDG_RUNTIME_DIR/.mutter-Xwaylandauth.* | head -1)
+```
+
+**With the desktop locked a window ran at exactly 1fps,** on the real GPU, and nothing else was
+wrong. That's probably Xwayland's timer for a window nothing is drawing, but it hasn't been compared
+with an unlocked desktop. `loginctl show-session <n> -p LockedHint` says if it's locked. A window
+still opens, and a screenshot at a low `--screenshot-frame` still works.
+
 The game's own ports are the other way round: they're open to the network, so a firewall may need
 telling about **TCP 7810** (game) and **UDP 7811** (discovery).
 
 ## Two machines
 
-This is the test that's never been run, and it's the one that says whether LAN discovery really
-works. A Mac and a Linux box will do. Run it both ways round, with the server on each.
+This says whether LAN discovery really works. It's passed both ways round, between a Mac and a
+Linux box on the same Wi-Fi, with both firewalls off: each found the other within a second or two
+and joined. A window on Linux has joined a Mac's lobby. Repeat it on any new network.
 
 ```sh
 # On one, in Keystone/
