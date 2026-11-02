@@ -63,3 +63,7 @@ Regenerate assets with `tools/gen_textures.sh`, `python3 tools/gen_models.py`,
 
 The UI font is [Almendra](https://fonts.google.com/specimen/Almendra) by Ana Sanfelippo, under the
 SIL Open Font License: see `ui/skin/Almendra-OFL.txt`.
+
+## License
+
+Apache License 2.0: see [LICENSE](LICENSE) and [NOTICE](NOTICE).
