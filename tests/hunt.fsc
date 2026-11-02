@@ -1,0 +1,106 @@
+# Scenario: an order to attack someone follows them. A soldier goes after the enemy it was sent
+# after rather than the spot it stood on, and a new order or a lost trail ends the hunt.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+set hunter nil
+set idler nil
+set hand nil
+set runner nil
+set clicked nil
+set rival_hand nil
+
+fn flat_dist [a b] { return {sqrt {dist2 a[0] a[2] b[0] b[2]}} }
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+    let rival factions[2]
+
+    if (tick == 30) do
+        set hunter {spawn_soldier f :militia}
+        set idler {spawn_soldier f :scout}
+        let at {ent_pos hunter.id}
+        set rival_hand {spawn_hand rival}
+        let y at[1]
+        ent_set_pos rival_hand.id [(at[0] + 8.0) y (at[2] + 8.0)]
+    end
+
+    # A Hand runs for home, its own home, so it goes well away from where it was clicked on
+    if (tick == 45) do
+        set clicked {ent_pos rival_hand.id}
+        let hands [f.hands[0].id hunter.id idler.id]
+        order_attack f {=units hands =target rival_hand.id =x {floor clicked[0]} =y {floor clicked[1]} =z {floor clicked[2]}}
+        expect "soldier hunting" hunter.hunting rival_hand.id
+        expect "Pathfinder hunting" idler.hunting nil
+        expect "Pathfinder sent there" idler.order :move
+        expect "Hand sent there" f.hands[0].after :rally
+    end
+
+    # Not an enemy, or not one anyone can see: an order to go there, nothing more
+    if (tick == 46) do
+        let was hunter.hunting
+        order_attack f {=units [hunter.id] =target f.hands[1].id =x hunter.order_x =y hunter.order_y =z hunter.order_z}
+        expect "after a friend" hunter.hunting nil
+        hunt hunter was
+    end
+
+    if ((tick > 46) and (tick < 600) and (hunter.hunting != nil)) do
+        let there {ent_pos rival_hand.id}
+        if (there != nil) {
+            if ({flat_dist [hunter.order_x 0 hunter.order_z] there} > 4.0) { fail "the order fell behind its quarry" }
+        }
+    end
+
+    # A Hand runs as fast as a Militia walks, so it's not caught, but the hunter's on its heels
+    # a long way from where it was clicked on
+    if (tick == 600) do
+        let there {ent_pos rival_hand.id}
+        let here {ent_pos hunter.id}
+        expect "still hunting" hunter.hunting rival_hand.id
+        if ({flat_dist there clicked} < 30) { fail "the quarry never ran" }
+        if ({flat_dist here clicked} < 25) { fail "the hunter stayed near where it was sent" }
+        if ({flat_dist here there} > 10) { fail "the hunter fell behind" }
+        ent_damage rival_hand.id 1000.0 hunter.id
+    end
+    if (tick == 620) { expect "hunt over" hunter.hunting nil }
+
+    # Teleported out of sight, it's lost: the soldier goes to where it was last seen
+    if (tick == 700) do
+        set runner {spawn_hand rival}
+        let at {ent_pos hunter.id}
+        ent_set_pos runner.id [(at[0] + 6.0) at[1] at[2]]
+    end
+    if (tick == 712) do
+        set clicked {ent_pos runner.id}
+        order_attack f {=units [hunter.id] =target runner.id =x {floor clicked[0]} =y {floor clicked[1]} =z {floor clicked[2]}}
+        expect "second hunt" hunter.hunting runner.id
+    end
+    if (tick == 716) do
+        ent_set_pos runner.id [(rival.x + 0.5) (rival.y + 1.0) (rival.z + 10.5)]
+    end
+    if (tick == 775) do
+        expect "lost it" hunter.hunting nil
+        if ({dist2 hunter.order_x hunter.order_z rival.x rival.z} < 2500) { fail "it knew where the quarry went" }
+    end
+
+    # A new order replaces the hunt
+    if (tick == 790) do
+        hunt hunter f.hands[0].id
+        order_soldier hunter f.x f.y (f.z + 12)
+        expect "called off" hunter.hunting nil
+        log "HUNT DONE"
+        if (not failed) { game_exit 0 }
+    end
+end

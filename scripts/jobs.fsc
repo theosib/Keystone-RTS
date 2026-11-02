@@ -7,6 +7,7 @@ fn make_worker [f id] do
     return {=id id =faction f.id =state :idle =job nil =kind nil
             =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
             =target nil =site nil =cell nil =retry 0 =failures 0 =after nil =danger_check 0.0
+            =calm_at 0 =load_waits 0
             =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil}
 end
 
@@ -131,11 +132,15 @@ end
 fn start_gather [w kind] do
     let pos {worker_pos w}
     if (pos == nil) { return nil }
+    let f factions[w.faction]
     let names {HARVEST_BLOCKS.get kind}
-    let found {find_blocks pos[0] pos[1] pos[2] SEARCH_RADIUS names =max 24}
+    # The nearest can all be where the raiders are
+    let look 24
+    if (f.danger.length > 0) { set look 96 }
+    let found {find_blocks pos[0] pos[1] pos[2] SEARCH_RADIUS names =max look}
 
     for p in found do
-        if {is_trunk_base p} do
+        if ({is_trunk_base p} and (not {in_danger f p[0] p[2]})) do
             if {claim_block w.faction p[0] p[1] p[2] w.id 1800} do
                 set w.job :gather
                 set w.kind kind
@@ -158,7 +163,8 @@ fn start_gather [w kind] do
         start_gather w next
     else do
         set w.retry 0
-        set w.state :idle
+        set w.state :resting
+        set w.timer 2.0
     end
 end
 
@@ -277,8 +283,36 @@ end
 
 # Take this load to wherever it's wanted. A site that needs it is nearer than the yard and back.
 fn start_carry [w] do
-    if {start_delivery w} { return nil }
+    if {start_delivery w} do
+        set w.load_waits 0
+        return nil
+    end
+    # A cell comes free every few seconds, which is sooner than the yard and back
+    let f factions[w.faction]
+    if ((w.load_waits < LOAD_WAIT_TRIES) and (not {yard_short_of f w.carry_kind}) and {sites_need f w.carry_kind}) do
+        set w.load_waits (w.load_waits + 1)
+        set w.state :resting
+        set w.timer LOAD_WAIT_SECONDS
+        return nil
+    end
+    set w.load_waits 0
     start_haul w
+end
+
+fn site_needs [site kind] do
+    let left {site_remaining site}
+    for block in left.keys do
+        if ({BLOCK_MATERIAL.get block} == kind) { return true }
+    end
+    return false
+end
+
+fn sites_need [f kind] do
+    if ((f.zone.expanding != nil) and {site_needs f.zone.expanding kind}) { return true }
+    for b in f.sites do
+        if {site_needs b.site kind} { return true }
+    end
+    return false
 end
 
 fn start_delivery [w] do
@@ -288,7 +322,11 @@ fn start_delivery [w] do
     if {yard_short_of f w.carry_kind} { return false }
     if ((f.zone.expanding != nil) and {try_deliver w f.zone.expanding}) { return true }
     for b in f.sites do
-        if {try_deliver w b.site} { return true }
+        if {site_needs b.site w.carry_kind} do
+            if {try_deliver w b.site} { return true }
+            # First in line waits for its turn, or a load a site down leaves everything half built
+            if (w.load_waits < LOAD_WAIT_TRIES) { return false }
+        end
     end
     return false
 end
@@ -308,7 +346,10 @@ fn try_deliver [w site] do
     if (pos == nil) { return false }
     let cell {site_claim site w.id pos[0] pos[1] pos[2]}
     if (cell == nil) { return false }
-    if ({BLOCK_MATERIAL.get cell.block} != w.carry_kind) do
+    # Layers go bottom-up, so a site's foundations stand between a load and where it's going
+    let material {BLOCK_MATERIAL.get cell.block}
+    let usable ((material == w.carry_kind) or ((material == nil) and {site_needs site w.carry_kind}))
+    if ((not usable) or {in_danger factions[w.faction] cell.x cell.z}) do
         site_release site w.id
         return false
     end
@@ -376,6 +417,10 @@ fn start_build [w site] do
     let pos {worker_pos w}
     if (pos == nil) { return nil }
     let cell {site_claim site w.id pos[0] pos[1] pos[2]}
+    if ((cell != nil) and {in_danger factions[w.faction] cell.x cell.z}) do
+        site_release site w.id
+        set cell nil
+    end
     if (cell == nil) do
         # Everything's claimed by others. Do something useful meanwhile.
         if (w.carry_n > 0) { return start_carry w }
@@ -446,8 +491,9 @@ fn finish_place [w] do
     let site w.site
     set w.cell nil
     set w.site nil
-    # A gatherer who brought a load goes back for more, or nobody's keeping materials coming
-    if ((w.carry_n == 0) and (not {is_builder w})) do
+    # A gatherer who brought a load goes back for more, or nobody's keeping materials coming. A
+    # builder who was only dropping one off goes back to the front of the line.
+    if ((w.carry_n == 0) and ((not {is_builder w}) or (site != {next_site factions[w.faction]}))) do
         site_release site w.id
         set w.job nil
         set w.state :idle
@@ -521,7 +567,48 @@ fn handle_nav_block [w] do
     end
 end
 
-# Hands aren't soldiers. With raiders close they drop everything and run for home.
+# Where raiders were seen, for the whole side to keep clear of. One on the move keeps its mark.
+fn note_danger [f x z] do
+    let ends ({game_tick} + (DANGER_SECONDS * 30))
+    for spot in f.danger do
+        if ({dist2 spot.x spot.z x z} < (DANGER_RADIUS * DANGER_RADIUS)) do
+            set spot.x x
+            set spot.z z
+            set spot.ends ends
+            return nil
+        end
+    end
+    f.danger.push {=x x =z z =ends ends}
+end
+
+fn in_danger [f x z] do
+    for spot in f.danger do
+        if ({dist2 spot.x spot.z x z} < (DANGER_RADIUS * DANGER_RADIUS)) { return true }
+    end
+    return false
+end
+
+fn forget_danger [f] do
+    let tick {game_tick}
+    let i 0
+    while (i < f.danger.length) do
+        if (tick >= f.danger[i].ends) { f.danger.remove i } { set i (i + 1) }
+    end
+end
+
+# Who's near, or who hurt this Hand: a bow reaches further than it looks
+fn threat_to [w pos] do
+    let near {ent_find pos[0] pos[1] pos[2] FLEE_RADIUS =enemy_of w.faction =max 1}
+    if (near.length > 0) { return near[0] }
+    if ({ent_since_damage w.id} <= STRUCK_SECONDS) do
+        let id {ent_last_attacker w.id}
+        if {ent_alive id} { return id }
+    end
+    return nil
+end
+
+# Hands aren't soldiers. With raiders close they drop everything and run for home, and they don't
+# turn back the moment they're clear: what they were doing is still where the raiders are.
 fn check_danger [w] do
     set w.danger_check (w.danger_check - THINK_SECONDS)
     if (w.danger_check > 0.0) { return false }
@@ -529,13 +616,17 @@ fn check_danger [w] do
 
     let pos {worker_pos w}
     if (pos == nil) { return false }
-    let near {ent_find pos[0] pos[1] pos[2] FLEE_RADIUS =enemy_of w.faction =max 1}
-    if (near.length == 0) do
-        if (w.state == :fleeing) { set w.state :idle }
+    let threat {threat_to w pos}
+    if (threat == nil) do
+        if ((w.state == :fleeing) and ({game_tick} >= w.calm_at)) { set w.state :idle }
         return false
     end
     let f factions[w.faction]
     raise_alarm f pos
+    let at {ent_pos threat}
+    if (at == nil) { set at pos }
+    note_danger f at[0] at[2]
+    set w.calm_at ({game_tick} + (FLEE_CALM_SECONDS * 30))
     if (w.state != :fleeing) do
         drop_job w
         set w.state :fleeing

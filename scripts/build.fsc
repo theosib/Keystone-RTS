@@ -48,7 +48,73 @@ fn can_place [f name x z] do
     return ({blueprint_info def.blueprint} != nil)
 end
 
-# Start a building at (x, z), its footprint centred there
+# Ground that's spoken for, as [x0 z0 x1 z1], the far edges just past it. Two sites on one cell
+# take turns undoing each other, and a foundation cuts down whatever stands in it.
+fn plot_of [b] do
+    let x0 (b.x - (b.size_x / 2))
+    let z0 (b.z - (b.size_z / 2))
+    return [x0 z0 (x0 + b.size_x) (z0 + b.size_z)]
+end
+
+# The yard, with its corner posts and the next floor's stairs, which climb out of its near side
+fn yard_plot [zone] do
+    let top ((zone.levels * 3) - 1)
+    return [(zone.x - zone.levels) (zone.z - top) (zone.x + zone.width + 1) (zone.z + zone.depth + 1)]
+end
+
+fn add_plots [plots f] do
+    if (f.hall != nil) { plots.push {plot_of f.hall} }
+    plots.push {yard_plot f.zone}
+    for b in f.buildings do
+        plots.push {plot_of b}
+    end
+    for b in f.sites do
+        if {b.has :laid} do
+            # Saves from before a run noted its cells have none to go by
+            let cells {b.get :cells}
+            if (cells != nil) do
+                for cell in cells do
+                    plots.push [cell[0] cell[1] (cell[0] + 1) (cell[1] + 1)]
+                end
+            end
+        else do
+            plots.push {plot_of b}
+        end
+    end
+end
+
+fn all_plots [] do
+    let plots []
+    for f in factions do
+        if (f != nil) { add_plots plots f }
+    end
+    return plots
+end
+
+# What the UI can warn about: this side's own, and what it's found of anyone else's
+fn plots_seen_by [f] do
+    let plots []
+    add_plots plots f
+    for other in factions do
+        if ((other != nil) and (other.id != f.id)) do
+            let theirs []
+            add_plots theirs other
+            for p in theirs do
+                if ({vision_state f.id ((p[0] + p[2]) / 2) ((p[1] + p[3]) / 2)} != :unknown) { plots.push p }
+            end
+        end
+    end
+    return plots
+end
+
+fn overlaps [plots x0 z0 x1 z1] do
+    for p in plots do
+        if ((x0 < p[2]) and (p[0] < x1) and (z0 < p[3]) and (p[1] < z1)) { return true }
+    end
+    return false
+end
+
+# Start a building at (x, z), its footprint centred there, if the ground's free
 fn place_building [f name x z turns] do
     let def {BUILDINGS.get name}
     if (def == nil) { return nil }
@@ -57,6 +123,7 @@ fn place_building [f name x z turns] do
     let size {turns_size info turns}
     let x0 (x - (size[0] / 2))
     let z0 (z - (size[1] / 2))
+    if {overlaps {all_plots} x0 z0 (x0 + size[0]) (z0 + size[1])} { return nil }
     let g {ground_y x z}
     if (g == nil) { return nil }
     let y (g + 1)
@@ -70,7 +137,8 @@ fn place_building [f name x z turns] do
     return b
 end
 
-# A stroke of the block tool: a straight run of cells for Hands to work through
+# A stroke of the block tool: a straight run of cells for Hands to work through, around anything
+# whose ground it crosses
 fn lay_blocks [f block x0 z0 x1 z1] do
     if ({BLOCK_MATERIAL.get block} == nil) { return nil }
     let dx (x1 - x0)
@@ -82,47 +150,50 @@ fn lay_blocks [f block x0 z0 x1 z1] do
     let step_z {clamp dz -1 1}
 
     let site {site_create}
-    let added 0
+    let plots {all_plots}
+    let laid []
     for i in (0..cells) do
         let x (x0 + (i * step_x))
         let z (z0 + (i * step_z))
         let g {ground_y x z}
-        if (g != nil) do
+        if ((g != nil) and (not {overlaps plots x z (x + 1) (z + 1)})) do
             let y (g + 1)
             if {SURFACE_BLOCKS.contains block} { set y g }
             site_add site x y z block
-            set added (added + 1)
+            laid.push [x z]
         end
     end
-    queue_laid f site added x0 z0
+    queue_laid f site laid
 end
 
-fn queue_laid [f site added x z] do
-    if (added == 0) do
+fn queue_laid [f site laid] do
+    if (laid.length == 0) do
         site_remove site
         return nil
     end
-    f.sites.push {=name :laid =site site =x x =y 0 =z z =size_x 0 =size_z 0
-                  =complete false =faction f.id =laid true}
+    f.sites.push {=name :laid =site site =x laid[0][0] =y 0 =z laid[0][1] =size_x 0 =size_z 0
+                  =complete false =faction f.id =laid true =cells laid}
 end
 
 # A run of wall over the cells marked out, each section standing on its own ground. Where it
 # crosses a wall already there it's already joined, and to ground_y that wall is ground.
 fn lay_fence [f cells] do
     let site {site_create}
-    let added 0
+    let plots {all_plots}
+    let laid []
     for cell in cells do
         let g {ground_y cell[0] cell[1]}
-        if ((g != nil) and (added < LAY_MAX_CELLS) and (not {FENCE_BLOCKS.contains {block_at cell[0] g cell[1]}})) do
+        let free (not {overlaps plots cell[0] cell[1] (cell[0] + 1) (cell[1] + 1)})
+        if ((g != nil) and free and (laid.length < LAY_MAX_CELLS) and (not {FENCE_BLOCKS.contains {block_at cell[0] g cell[1]}})) do
             let y (g + 1)
             for block in FENCE_BLOCKS do
                 site_add site cell[0] y cell[1] block
                 set y (y + 1)
             end
-            set added (added + 1)
+            laid.push cell
         end
     end
-    queue_laid f site added cells[0][0] cells[0][1]
+    queue_laid f site laid
 end
 
 fn finish_building [f b] do

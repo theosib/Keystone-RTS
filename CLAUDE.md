@@ -97,6 +97,12 @@ finescript traps that cost real time here:
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
   once passed while the whole economy was frozen at 32ms a tick.
 - Enemies spawned near home for a look at them count as raiders: Hands drop their work and flee.
+- `place_building` returns nil on taken ground (`plot_of`, `yard_plot`), which takes in the Hall and
+  the yard, so place relative to `f.x`, not to a Hand that may be standing by them.
+- `game_exit 0` later in the same tick overrides an earlier `game_exit 1`. See `failed` in `tests/hunt.fsc`.
+- `site_progress` counts cells that already match as done, so a site that's never been touched
+  can read 44/140. Measure the gain from when it was placed.
+- `vision_can_see_ent` can drop out for a moment, even five blocks off. Don't end anything on one read.
 - A soldier guards `s.post`, and walks back if it's more than 6 blocks off with nothing to do. A
   scenario that moves one with `ent_set_pos` has to set `s.post` too. See `place` in `tests/guard.fsc`.
 - A client only knows what the protocol tells it, even in single player: see the engine's

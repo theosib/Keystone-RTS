@@ -10,7 +10,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Boot | `finevox_run --game-root Keystone`, no game C++ |
 | World | Generated terrain, biomes, trees, forage, boulders, water |
 | Art | Procedural 32×32 textures, box-part unit models with faction emblems, skeletal animation |
-| Command | Orbit camera, grab panning, box select, right-click move, build palette with ghost footprint and tooltips quoting live costs, drag to run a palisade that joins up straight and on the diagonal, ghosts of unbuilt work that firm up as it goes |
+| Command | Orbit camera, grab panning, box select, right-click to move or to hunt an enemy down, build palette with a ghost footprint that turns red on taken ground, and tooltips quoting live costs, drag to run a palisade that joins up straight and on the diagonal, ghosts of unbuilt work that firm up as it goes |
 | Economy | Gathering, hauling, material fetch, bottom-up construction, hunger, housing |
 | Stockpile | Physical blocks with fill stages, rows and aisles, partial-stack preference, defrag |
 | Warehouse | Yard fills, Hands build mezzanine, posts, stairs, then store upstairs |

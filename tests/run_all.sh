@@ -95,6 +95,11 @@ run chase 1400
 run guard 3200
 run deliver 7100
 run blueprints 60
+run overlap 200
+run training 800
+run flee 2400
+run hunt 1500
+run loads 5500
 
 if python3 "$here/tools/check_models.py"; then
     echo "PASS  check_models"

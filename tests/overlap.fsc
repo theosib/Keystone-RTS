@@ -1,0 +1,144 @@
+# Scenario: ground holds one thing. Buildings can't share it with each other, with what's been
+# queued, with a Hall or a yard, or with anyone else's, and the footprint checked is the real one.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+fn drop_site [f b] do
+    site_remove b.site
+    f.sites.remove (f.sites.length - 1)
+end
+
+# Everything a building puts up, walked over a margin wider than any footprint it could claim
+fn check_within_plot [b height] do
+    let p {plot_of b}
+    let found 0
+    for x in ((p[0] - 4)..(p[2] + 4)) do
+        for z in ((p[1] - 4)..(p[3] + 4)) do
+            for y in (b.y..(b.y + height)) do
+                let block {block_at x y z}
+                if ((block == :planks) or (block == :palisade)) do
+                    if ((x < p[0]) or (x >= p[2]) or (z < p[1]) or (z >= p[3])) {
+                        fail "{b.name} built outside its plot at {x} {z}"
+                    }
+                    set found (found + 1)
+                end
+            end
+        end
+    end
+    if (found == 0) { fail "{b.name} built nothing to measure" }
+end
+
+set finished nil
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+    let rival factions[2]
+
+    if (tick == 40) do
+        # Every neighbouring spot around one shelter. It's five across each way.
+        let cx (f.x - 16)
+        let cz (f.z + 18)
+        let first {place_building f :shelter cx cz 0}
+        if (first == nil) { fail "the first shelter was refused" }
+        for dx in (-7..=7) do
+            for dz in (-7..=7) do
+                let next {place_building f :shelter (cx + dx) (cz + dz) 0}
+                let clash (({abs dx} < 5) and ({abs dz} < 5))
+                if (clash != (next == nil)) { fail "wrong answer {clash} at {dx} {dz}" }
+                if (next != nil) { drop_site f next }
+            end
+        end
+
+        # A turn swaps a long footprint's sides: seven by five, or five by seven
+        expect "along x" {place_building f :sawpit (cx + 5) cz 0} nil
+        let turned {place_building f :sawpit (cx + 5) cz 1}
+        if (turned == nil) { fail "a turned sawpit fits beside it" }
+        drop_site f turned
+
+        # What's already standing, and what's anyone's
+        expect "on the Hall" {place_building f :shelter f.hall.x f.hall.z 0} nil
+        expect "in the yard" {place_building f :shelter (f.zone.x + 3) (f.zone.z + 5) 0} nil
+        expect "on the yard's stairs" {place_building f :shelter (f.zone.x - 2) (f.zone.z - 2) 0} nil
+        expect "on a rival's Hall" {place_building f :shelter rival.hall.x rival.hall.z 0} nil
+        expect "on a rival's yard" {place_building f :shelter (rival.zone.x + 3) (rival.zone.z + 5) 0} nil
+
+        # Runs of blocks go around it, and a queued run keeps its own ground
+        let sites f.sites.length
+        lay_fence f [[(cx - 3) cz] [(cx - 2) cz] [(cx + 2) cz] [(cx + 3) cz]]
+        expect "fence site" f.sites.length (sites + 1)
+        expect "cells it kept" f.sites[sites].cells [[(cx - 3) cz] [(cx + 3) cz]]
+        lay_blocks f :planks (cx - 4) (cz + 3) (cx + 4) (cz + 3)
+        expect "run clear of it" f.sites[sites + 1].cells.length 9
+        lay_blocks f :planks (cx - 4) cz (cx - 3) cz
+        expect "run over a queued fence" f.sites[sites + 2].cells [[(cx - 4) cz]]
+        lay_fence f [[cx cz]]
+        expect "a run with nowhere to go" f.sites.length (sites + 3)
+        expect "on a queued run" {place_building f :shelter (cx - 6) cz 0} nil
+
+        # A run from a save that didn't note its cells
+        f.sites.push {=name :laid =site {site_create} =x 0 =y 0 =z 0 =size_x 0 =size_z 0
+                      =complete false =faction f.id =laid true}
+        all_plots
+
+        # The commander winds out past whatever's in its way, and nothing it picks overlaps
+        let placed []
+        for i in (0..16) do
+            let before rival.sites.length
+            ai_place rival :shelter
+            expect "commander found a spot" rival.sites.length (before + 1)
+            let b rival.sites[before]
+            let p {plot_of b}
+            if {overlaps placed p[0] p[1] p[2] p[3]} { fail "the commander's sites overlap" }
+            placed.push p
+        end
+
+        # Fog: the UI hears of a rival's ground only once it's been found
+        let seen {plots_seen_by f}
+        let p {plot_of rival.hall}
+        for q in seen do
+            if ((q[0] == p[0]) and (q[1] == p[1])) { fail "the UI was told of a Hall nobody's seen" }
+        end
+        expect "own Hall told" ({overlaps seen f.hall.x f.hall.z (f.hall.x + 1) (f.hall.z + 1)}) true
+        expect "rival's ground refused all the same" {overlaps {all_plots} rival.hall.x rival.hall.z (rival.hall.x + 1) (rival.hall.z + 1)} true
+
+        # Real footprints, however they're turned
+        set finished []
+        let at (f.z + 40)
+        for turns in (0..4) do
+            let b {place_building f :sawpit (f.x - 40) at turns}
+            if (b == nil) { fail "nowhere to measure a sawpit" }
+            build_instantly b.site
+            finished.push b
+            set at (at + 12)
+        end
+        let hut {place_building f :forager_hut (f.x - 56) (f.z + 40) 1}
+        build_instantly hut.site
+        finished.push hut
+        let tower {place_building f :watchtower (f.x - 56) (f.z + 52) 0}
+        build_instantly tower.site
+        finished.push tower
+    end
+
+    # They're finished by now, and finished ground stays taken
+    if (tick == 100) do
+        for b in finished do
+            check_within_plot b 12
+            if (not {f.buildings.contains b}) { fail "{b.name} didn't finish" }
+            expect "on a finished {b.name}" {place_building f :shelter b.x b.z 0} nil
+        end
+        log "OVERLAP DONE"
+        if (not failed) { game_exit 0 }
+    end
+end

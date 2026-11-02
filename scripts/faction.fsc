@@ -16,7 +16,7 @@ fn make_faction [id x z] do
            =keystone nil =alive true =housing BASE_HOUSING
            =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []
            =army [] =muster [] =muster_timer 0.0 =capture 0
-           =commander nil =keystone_seen_by nil =tidy_site nil =hall nil =canopy_repaired true
+           =commander nil =keystone_seen_by nil =tidy_site nil =hall nil =canopy_repaired true =danger []
            =owner nil}
     while (factions.length <= id) do
         factions.push nil

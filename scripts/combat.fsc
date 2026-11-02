@@ -8,7 +8,7 @@ fn make_soldier [f id kind] do
             =state :hold =order nil =order_x 0 =order_y 0 =order_z 0
             =target nil =cooldown 0.0 =morale 1.0 =last_hp nil =moving false
             =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil =ignore_until 0
-            =striking 0.0 =post nil =errand nil
+            =striking 0.0 =post nil =errand nil =hunting nil =hunt_fails 0 =hunt_blind 0.0
             =dead_ends [] =explore_wait 0.0 =explore_from nil}
 end
 
@@ -31,8 +31,58 @@ fn order_soldier [s x y z] do
     set s.target nil
     set s.moving false
     set s.errand nil
+    set s.hunting nil
     # Drop any route in progress, or it arrives and reads as this order being done
     ent_stop s.id
+end
+
+# Sent after one enemy, a soldier sticks to it wherever it goes, and walks to where it was last
+# seen if it gets away. The order to go there is what's left when the hunt ends.
+fn hunt [s id] do
+    let at {ent_pos id}
+    order_soldier s at[0] at[1] at[2]
+    set s.hunting id
+    set s.hunt_fails 0
+    set s.hunt_blind 0.0
+    set s.target id
+    set s.ignore nil
+    set s.chase_time 0.0
+end
+
+# Only soldiers hunt. Anyone else in the selection just goes there.
+fn order_attack [f cmd] do
+    let quarry {lookup_unit cmd.target}
+    let huntable ((quarry != nil) and (quarry.faction != f.id) and {ent_alive cmd.target} and {vision_can_see_ent f.id cmd.target})
+    let others []
+    for id in cmd.units do
+        let entry {lookup_unit id}
+        if ((entry != nil) and (entry.faction == f.id)) do
+            let s entry.record
+            if (huntable and {s.has :stats} and (s.stats.role != :scout)) do
+                hunt s cmd.target
+            else do
+                others.push id
+            end
+        end
+    end
+    if (others.length > 0) { order_units f {=units others =x cmd.x =y cmd.y =z cmd.z} }
+end
+
+# Sight can drop out for a moment, even up close, and that's no reason to lose the trail
+fn follow_quarry [s] do
+    if (not {ent_alive s.hunting}) do
+        set s.hunting nil
+    elif {vision_can_see_ent s.faction s.hunting} do
+        let at {ent_pos s.hunting}
+        set s.order_x at[0]
+        set s.order_y at[1]
+        set s.order_z at[2]
+        set s.target s.hunting
+        set s.hunt_blind 0.0
+    else do
+        set s.hunt_blind (s.hunt_blind + THINK_SECONDS)
+        if (s.hunt_blind > HUNT_BLIND_SECONDS) { set s.hunting nil }
+    end
 end
 
 # A soldier guards the spot it was last sent to. Walking back to it, it's still on guard.
@@ -221,6 +271,7 @@ end
 fn rout [s] do
     set s.state :rout
     set s.target nil
+    set s.hunting nil
     set s.moving false
     # It takes up a new post where it rallies
     if (s.errand != nil) { set s.order nil }
@@ -266,7 +317,7 @@ fn chase [s target_pos] do
     ent_nav_ack s.id
     set s.chase_x target_pos[0]
     set s.chase_z target_pos[2]
-    ent_goto s.id target_pos[0] target_pos[1] target_pos[2] =range (s.stats.range * 0.8) =max_nodes 6000
+    ent_goto s.id target_pos[0] target_pos[1] target_pos[2] =range (s.stats.range * 0.8) =partial (s.hunting != nil) =max_nodes 6000
     set s.moving true
 end
 
@@ -293,10 +344,11 @@ fn think_soldier [s] do
     let commander factions[s.faction].commander
     let at_peace ((commander != nil) and commander.passive)
     if at_peace { set s.target nil }
+    if (s.hunting != nil) { follow_quarry s }
 
     # Keep fighting what's in front of you
     if ((s.target != nil) and (not {ent_alive s.target})) { lose_target s }
-    if ((s.target != nil) and (not {vision_can_see_ent s.faction s.target})) { lose_target s }
+    if ((s.target != nil) and (s.hunting == nil) and (not {vision_can_see_ent s.faction s.target})) { lose_target s }
 
     # On the march it keeps going, but on guard it answers whoever's hitting it
     if ((not at_peace) and {keeping_post s}) do
@@ -322,6 +374,21 @@ fn think_soldier [s] do
         # Struck in passing, and off again. No sooner caught this time than last.
         if (s.target == s.ignore) do
             set s.target nil
+            return nil
+        end
+        if (s.hunting != nil) do
+            # No way to it for now. A few goes, then as near as it can get will have to do.
+            let nav {ent_nav s.id}
+            if (nav == :moving) { set s.hunt_fails 0 }
+            if (nav == :failed) { set s.hunt_fails (s.hunt_fails + 1) }
+            if (s.hunt_fails > HUNT_TRIES) do
+                ent_nav_ack s.id
+                set s.hunting nil
+                set s.target nil
+                set s.moving false
+                return nil
+            end
+            chase s target_pos
             return nil
         end
         set s.chase_time (s.chase_time + THINK_SECONDS)
@@ -505,7 +572,10 @@ fn queue_many [f kind count] do
 end
 
 fn update_muster [f] do
-    if (f.muster.length == 0) { return nil }
+    if (f.muster.length == 0) do
+        set f.muster_timer TRAIN_SECONDS
+        return nil
+    end
     if ({population f} >= f.housing) { return nil }
     set f.muster_timer (f.muster_timer - 1.0)
     if (f.muster_timer > 0.0) { return nil }

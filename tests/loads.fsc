@@ -1,0 +1,40 @@
+# Scenario: wood that's wanted goes to where it's wanted. With sites short of timber and nobody
+# mustering, the yard should stay close to empty, not fill while the sites wait, and the first
+# in line should get done first.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+set worst 0
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+
+    if (tick == 40) do
+        zone_take f.zone :timber 60 f.x f.z
+        let cx (f.x - 22)
+        for i in (0..5) do
+            if ({place_building f :shelter (cx + (i * 7)) (f.z + 20) 0} == nil) { fail "no room for a shelter" }
+        end
+    end
+
+    if ((tick > 900) and ((tick % 30) == 0) and {sites_need f :timber}) {
+        set worst {max worst {stock_of f :timber}}
+    }
+
+    if (tick == 5400) do
+        print "LOADS worst yard {worst}, sites left {f.sites.length}"
+        if (worst > 12) { fail "{worst} timber sat in the yard with sites short of it" }
+        # Five half-built sites house nobody, so the first in line comes first
+        if (f.buildings.length == 0) { fail "nothing finished: the work spread over every site" }
+        log "LOADS DONE"
+        if (not failed) { game_exit 0 }
+    end
+end

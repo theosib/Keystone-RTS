@@ -1,0 +1,103 @@
+# Scenario: a Hand that's been frightened off stays off. Raiders by a tree send it home, it doesn't
+# walk straight back, nobody else wanders over either, and it's forgotten once they've gone.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+set raider nil
+set tree nil
+set frights 0
+set was_fleeing []
+set shot nil
+set archer nil
+
+fn flat_dist [a x z] { return {sqrt {dist2 a[0] a[2] x z}} }
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+
+    if (tick == 30) do
+        set f.train_queue 0
+        for w in f.hands do
+            was_fleeing.push false
+        end
+    end
+
+    # Someone's at work out at a tree. Stand a raider on that tree, with nothing to do but stand.
+    if (tick == 200) do
+        for w in f.hands do
+            if ((tree == nil) and (w.job == :gather) and (w.target != nil)) { set tree w.target }
+        end
+        if (tree == nil) { fail "nobody went out for anything" }
+        set raider {ent_spawn :hand [(tree[0] + 1.5) (tree[1] + 0.0) (tree[2] + 0.5)] =faction 2}
+        ent_set_pos raider [(tree[0] + 1.5) (tree[1] + 0.0) (tree[2] + 0.5)]
+    end
+
+    if ((tick > 200) and (tick < 1100) and (raider != nil)) do
+        let i 0
+        while (i < f.hands.length) do
+            let w f.hands[i]
+            let fleeing (w.state == :fleeing)
+            if (fleeing and (not was_fleeing[i])) { set frights (frights + 1) }
+            was_fleeing.set i fleeing
+            set i (i + 1)
+        end
+    end
+
+    # Plenty of time for anyone who was going to turn back to have done it
+    if (tick == 1000) do
+        if (frights == 0) { fail "nobody was frightened off" }
+        if (frights > f.hands.length) { fail "Hands kept coming back: {frights} frights" }
+        if (not {in_danger f tree[0] tree[2]}) { fail "the raider was forgotten while it stood there" }
+        for w in f.hands do
+            if ((w.job == :gather) and (w.target != nil) and {in_danger f w.target[0] w.target[2]}) {
+                fail "a Hand was sent to work beside the raider"
+            }
+        end
+        for w in f.hands do
+            if ((w.state != :fleeing) and (w.state != :idle) and (w.state != :resting) and (w.state != :moving) and (w.state != :working)) {
+                fail "a Hand stuck in {w.state}"
+            }
+        end
+    end
+
+    # Once it's gone and nobody's seen it for a while, the ground's as good as ever
+    if (tick == 1100) do
+        ent_remove raider
+        set raider nil
+    end
+    if (tick == 2100) do
+        expect "danger left" f.danger.length 0
+        for w in f.hands do
+            if (w.state == :fleeing) { fail "still running from nothing" }
+        end
+    end
+
+    # An arrow from further off than a Hand looks is as good as a raider next to it
+    if (tick == 2150) do
+        let w nil
+        for h in f.hands do
+            if (h.state != :fleeing) { set w h }
+        end
+        let at {ent_pos w.id}
+        set archer {ent_spawn :hand [(at[0] + 16.0) at[1] at[2]] =faction 2}
+        ent_damage w.id 1.0 archer
+        set shot w
+    end
+    if (tick == 2210) do
+        expect "the Hand that was shot" shot.state :fleeing
+        log "FLEE DONE"
+        if (not failed) { game_exit 0 }
+    end
+end

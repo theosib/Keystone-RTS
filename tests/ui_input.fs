@@ -213,7 +213,12 @@ on :frame do
     if (t_frame == 496) { input_key "left_shift" false }
     if (t_frame == 498) { t_tap "p" }
     if (t_frame == 502) { t_tap "z" }
-    if (t_frame == 504) { t_check "a key picks up a building" (placing == :shelter) }
+    if (t_frame == 504) do
+        t_check "a key picks up a building" (placing == :shelter)
+        let home state.home
+        t_check "the game says the Hall's ground is taken" {is_taken home[0] home[1] (home[0] + 1) (home[1] + 1)}
+        t_check "and not the ground far from it" (not {is_taken (home[0] - 60) home[1] (home[0] - 59) (home[1] + 1)})
+    end
     if (t_frame == 506) { t_tap "escape" }
     if (t_frame == 508) { t_check "and Escape puts it down" (placing == nil) }
     if (t_frame == 510) { t_tap "l" }

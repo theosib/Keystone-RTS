@@ -27,9 +27,8 @@ on :tick do
         let corner {inspect_at f.id (f.keystone[0] - 4) (f.hall.y + 1) (f.keystone[2] - 4)}
         expect "hall corner" {corner.get :building} :core_hall
 
-        let near {ent_pos f.hands[0].id}
-        set first {place_building f :shelter ({floor near[0]} + 3) {floor near[2]} 0}
-        set second {place_building f :forager_hut ({floor near[0]} + 14) {floor near[2]} 0}
+        set first {place_building f :shelter (f.x - 14) (f.z + 14) 0}
+        set second {place_building f :forager_hut (f.x - 24) (f.z + 14) 0}
         set f.train_queue 2
         queue_unit f :militia
 

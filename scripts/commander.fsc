@@ -88,11 +88,13 @@ end
 # Try a few spots around the hall, away from the yard
 fn ai_place [f name] do
     let count (f.buildings.length + f.sites.length)
-    let angle (2.4 * count)
-    let radius (16 + (count * 3))
-    let x {floor (f.x - 4 + (radius * {cos angle}))}
-    let z {floor (f.z + (radius * {sin angle}))}
-    place_building f name x z 0
+    for i in (count..(count + AI_PLACE_TRIES)) do
+        let angle (2.4 * i)
+        let radius (16 + (i * 3))
+        let x {floor (f.x - 4 + (radius * {cos angle}))}
+        let z {floor (f.z + (radius * {sin angle}))}
+        if ({place_building f name x z 0} != nil) { return nil }
+    end
 end
 
 fn plan_army [c f tick] do

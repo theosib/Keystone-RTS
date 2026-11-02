@@ -12,6 +12,9 @@ set ORDER_GIVE_UP_RANGE 6.0
 # Blocks a Hand carries at once, and units a resource block holds
 set CARRY_CAP 3
 set STACK_UNITS 8
+# A load a site will want waits this long, this many times, for a cell before going to the yard
+set LOAD_WAIT_SECONDS 1.5
+set LOAD_WAIT_TRIES 4
 
 # What a block costs to place. Blocks not listed are free.
 set BLOCK_MATERIAL {
@@ -60,6 +63,9 @@ set BUILDINGS {
 
 set BASE_HOUSING 8
 
+# How many spots a commander looks at before leaving a building for its next plan
+set AI_PLACE_TRIES 12
+
 # Ground cleared around a settlement, either side of its centre and above and below its level
 set LEVEL_RADIUS 14
 set LEVEL_HEIGHT 24
@@ -67,6 +73,11 @@ set LEVEL_HEIGHT 24
 # Hands run from raiders this close, for home
 set FLEE_RADIUS 9
 set FLEE_CHECK_SECONDS 1.0
+# Clear of them, a Hand runs on this long. Everyone then keeps this far from where they were seen,
+# for this long after they last were.
+set FLEE_CALM_SECONDS 5
+set DANGER_RADIUS 14
+set DANGER_SECONDS 30
 set GATHER_BONUS_RADIUS 32
 set GATHER_BONUS_SPEED 0.7
 
@@ -91,6 +102,10 @@ set QUEUE_BATCH 8
 set STRIKE_SECONDS 0.8
 set ARROW_SPEED 26.0
 set CHASE_REPATH_DISTANCE_SQ 16
+# Failed searches in a row before a soldier stops hunting someone it was sent after
+set HUNT_TRIES 3
+# How long out of sight before it's lost, and the soldier makes for where it was last seen
+set HUNT_BLIND_SECONDS 1.5
 set CHASE_GIVE_UP_SECONDS 7.0
 # How long before a unit will run after what it gave up on. It'll still hit it in reach.
 set CHASE_FORGET_SECONDS 20.0

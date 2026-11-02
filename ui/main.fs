@@ -8,6 +8,7 @@ set selection []
 set drag_start nil
 set placing nil
 set place_turns 0
+set place_taken false
 set state nil
 
 ui_skin "ui/skin/hearth.fgs"
@@ -29,6 +30,9 @@ set TOOL_ICON 32
 set FENCE_HEIGHT 3
 set TIP_WRAP 250
 set KINDS ["timber" "stone" "provisions"]
+set ENEMY_PICK_REACHES [0 5 10]
+set GHOST_CLEAR [0.35 0.75 1.0 0.28]
+set GHOST_TAKEN [1.0 0.2 0.16 0.42]
 set TEXT_COLOR [0.95 0.88 0.74 1.0]
 set TITLE_COLOR [1.0 0.72 0.3 1.0]
 set SHORT_COLOR [1.0 0.45 0.33 1.0]
@@ -412,6 +416,25 @@ fn line_cells [x0 z0 x1 z1] do
     return cells
 end
 
+# The game has the last word, but it says what it knows of the ground in every state message
+fn is_taken [x0 z0 x1 z1] do
+    if (state == nil) { return false }
+    for p in state.plots do
+        if ((x0 < p[2]) and (p[0] < x1) and (z0 < p[3]) and (p[1] < z1)) { return true }
+    end
+    return false
+end
+
+fn ghost_box [x y z sx sy sz color] do
+    marker_box x y z sx sy sz color[0] color[1] color[2] color[3]
+end
+
+fn cell_box [x y z height] do
+    let color GHOST_CLEAR
+    if {is_taken x z (x + 1) (z + 1)} { set color GHOST_TAKEN }
+    ghost_box x y z 1 height 1 color
+end
+
 fn tool_button [index] do
     let shown (index + 1)
     let tool BLOCK_TOOLS[index]
@@ -470,7 +493,7 @@ fn draw_laying [] do
     if (start == nil) { set start [hit.x hit.y hit.z] }
     if laying_fence do
         for cell in {line_cells start[0] start[2] hit.x hit.z} do
-            marker_box cell[0] (start[1] + 1) cell[1] 1 FENCE_HEIGHT 1 0.35 0.75 1.0 0.28
+            cell_box cell[0] (start[1] + 1) cell[1] FENCE_HEIGHT
         end
         return nil
     end
@@ -480,7 +503,11 @@ fn draw_laying [] do
     let reach (LAY_MAX_CELLS - 1)
     set dx {clamp dx (0 - reach) reach}
     set dz {clamp dz (0 - reach) reach}
-    marker_box {min start[0] (start[0] + dx)} (start[1] + 1) {min start[2] (start[2] + dz)} ({abs dx} + 1) 1 ({abs dz} + 1) 0.35 0.75 1.0 0.28
+    let step_x {clamp dx -1 1}
+    let step_z {clamp dz -1 1}
+    for i in (0..=({abs dx} + {abs dz})) do
+        cell_box (start[0] + (i * step_x)) (start[1] + 1) (start[2] + (i * step_z)) 1
+    end
 end
 
 fn steward_place_block [] do
@@ -603,16 +630,57 @@ fn finish_drag [] do
     set drag_start nil
 end
 
+# Whoever's closest to the cursor, within reason: at a distance a body's only a few pixels across,
+# and it's on the move
+fn enemy_under [x y] do
+    for reach in ENEMY_PICK_REACHES do
+        for id in {pick_entities (x - reach) (y - reach) (x + reach) (y + reach)} do
+            let side {entity_faction id}
+            if ((side != nil) and (side != 0) and (side != my_faction)) { return id }
+        end
+    end
+    return nil
+end
+
+set attacked nil
+set attacked_frames 0
+
+fn order_attack [id] do
+    let p {entity_pos id}
+    send_command {=name :attack =units selection =target id =x {floor p[0]} =y {floor p[1]} =z {floor p[2]}}
+    set attacked id
+    set attacked_frames 45
+end
+
 fn order_move [] do
     if (selection.length == 0) { return nil }
+    let enemy {enemy_under mouse_x mouse_y}
+    if (enemy != nil) { return order_attack enemy }
     let hit {pick_ground mouse_x mouse_y}
     if (hit == nil) { return nil }
     send_command {=name :move =units selection =x hit.x =y (hit.y + 1) =z hit.z}
 end
 
+# Where a building would stand with its middle at this hit, worked out as the game will
+fn placement_at [hit] do
+    let size {blueprint_size placing}
+    if (size == nil) { return nil }
+    let sx size[0]
+    let sz size[2]
+    if ((place_turns % 2) == 1) do
+        set sx size[2]
+        set sz size[0]
+    end
+    let x (hit.x - (sx / 2))
+    let z (hit.z - (sz / 2))
+    return {=x x =y (hit.y + 1) =z z =sx sx =sy size[1] =sz sz =taken {is_taken x z (x + sx) (z + sz)}}
+end
+
 fn commit_placement [] do
     let hit {pick_ground mouse_x mouse_y}
     if (hit == nil) { return nil }
+    let spot {placement_at hit}
+    if ((spot == nil) or spot.taken) { return nil }
     send_command {=name :build =building placing =x hit.x =z hit.z =turns place_turns}
     set placing nil
 end
@@ -914,7 +982,12 @@ on :state do
     end
     let refused {msg.get :denied}
     if (refused != nil) do
-        set denied refused
+        set denied {loc "ui.denied" =kind {loc "kind.{refused}"}}
+        set denied_frames 120
+        return nil
+    end
+    if ({msg.get :taken} != nil) do
+        set denied {loc "ui.taken"}
         set denied_frames 120
         return nil
     end
@@ -974,19 +1047,17 @@ on :action do
 end
 
 fn draw_placement [] do
+    set place_taken false
     if (placing == nil) { return nil }
     let m {mouse_pos}
-    let hit {pick_block m[0] m[1]}
+    let hit {pick_ground m[0] m[1]}
     if (hit == nil) { return nil }
-    let size {blueprint_size placing}
-    if (size == nil) { return nil }
-    let sx size[0]
-    let sz size[2]
-    if ((place_turns % 2) == 1) do
-        set sx size[2]
-        set sz size[0]
-    end
-    marker_box (hit.x - (sx / 2)) (hit.y + 1) (hit.z - (sz / 2)) sx size[1] sz 0.35 0.75 1.0 0.28
+    let spot {placement_at hit}
+    if (spot == nil) { return nil }
+    set place_taken spot.taken
+    let color GHOST_CLEAR
+    if spot.taken { set color GHOST_TAKEN }
+    ghost_box spot.x spot.y spot.z spot.sx spot.sy spot.sz color
 end
 
 fn draw_drag_box [a b] do
@@ -1017,13 +1088,15 @@ on :frame do
     elif ((state != nil) and (state.capture > 0)) do
         set hud_hint.text {loc "ui.keystone_danger"}
     elif (denied_frames > 0) do
-        set hud_hint.text {loc "ui.denied" =kind {loc "kind.{denied}"}}
+        set hud_hint.text denied
     elif (view_mode == :embodied) do
         set hud_hint.text {loc "ui.hint.embodied"}
     elif laying_fence do
         set hud_hint.text {loc "ui.hint.fence"}
     elif laying do
         set hud_hint.text {loc "ui.hint.lay"}
+    elif place_taken do
+        set hud_hint.text {loc "ui.taken"}
     elif (placing != nil) do
         set hud_hint.text {loc "ui.hint.place"}
     elif (selection.length > 0) do
@@ -1051,6 +1124,12 @@ on :frame do
     for id in selection do
         let p {entity_pos id}
         if (p != nil) {marker_ring p[0] (p[1] + 0.05) p[2] 0.6 0.3 0.9 1.0 0.9}
+    end
+
+    if (attacked_frames > 0) do
+        set attacked_frames (attacked_frames - 1)
+        let p {entity_pos attacked}
+        if (p != nil) {marker_ring p[0] (p[1] + 0.05) p[2] 0.7 1.0 0.2 0.16 1.0}
     end
 
     # Rubber band while dragging

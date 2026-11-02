@@ -39,6 +39,7 @@ fn tick_faction [f tick] do
         update_sites f
         zone_reconcile f.zone
         update_regrow f tick
+        forget_danger f
         update_training f
         update_muster f
     end
@@ -59,8 +60,12 @@ fn update_regrow [f tick] do
     end
 end
 
+# Training takes its time up front, so the clock rests full
 fn update_training [f] do
-    if (f.train_queue <= 0) { return nil }
+    if (f.train_queue <= 0) do
+        set f.train_timer HAND_TRAIN_SECONDS
+        return nil
+    end
     if ({population f} >= f.housing) { return nil }
     set f.train_timer (f.train_timer - 1.0)
     if (f.train_timer > 0.0) { return nil }
@@ -78,7 +83,7 @@ fn publish_state [f] do
                     =stone {zone_count f.zone :stone}
                     =provisions {zone_count f.zone :provisions}}
                 =hands {population f} =housing f.housing
-                =sites f.sites.length =home [f.x f.z]
+                =sites f.sites.length =plots {plots_seen_by f} =home [f.x f.z]
                 =queue {work_queue f}
                 =army f.army.length
                 =match contest.state =winner contest.winner
@@ -235,8 +240,11 @@ fn settle_after_resume [f] do
         set w.timer 0.0
         set w.scaffolding false
         set w.supplying nil
+        set w.calm_at 0
+        set w.load_waits 0
         ent_anim w.id :idle
     end
+    if (not {f.has :danger}) { set f.danger [] }
     for s in f.army do
         set s.moving false
         set s.target nil
@@ -253,6 +261,9 @@ fn settle_after_resume [f] do
             set s.post nil
             set s.errand nil
         end
+        set s.hunting nil
+        set s.hunt_fails 0
+        set s.hunt_blind 0.0
         ent_anim s.id :idle
     end
     # Saves from before the Hall was noted. One that's lost its Keystone can't say where it stood.
@@ -339,7 +350,8 @@ on :command do
     let f {faction_of sender}
     match cmd.name
         :move { order_units f cmd }
-        :build { place_building f cmd.building cmd.x cmd.z cmd.turns }
+        :attack { order_attack f cmd }
+        :build { if ({place_building f cmd.building cmd.x cmd.z cmd.turns} == nil) { ui_publish {=taken true} =to sender } }
         :train { set f.train_queue (f.train_queue + {batch_size cmd}) }
         :muster { queue_many f cmd.unit {batch_size cmd} }
         :continue { if (contest.state == :over) { continue_open_ended cmd.pacify } }

@@ -1,0 +1,56 @@
+# Scenario: an order for eight is eight in the queue. Each takes its training time before it
+# appears, the first included, so nothing leaves the queue the moment it's ordered.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+
+    if (tick == 40) do
+        set f.housing 40
+        grant_stock f :provisions 40
+        queue_many f :militia 8
+        set f.train_queue 8
+    end
+
+    # Most of a Militia's eight seconds in, and all of a Hand's ten still to come
+    if (tick == (40 + (7 * 30) - 15)) do
+        expect "militia queued" f.muster.length 8
+        expect "army" f.army.length 0
+        expect "hands queued" f.train_queue 8
+        expect "hands" f.hands.length 8
+    end
+
+    if (tick == (40 + (11 * 30) + 15)) do
+        expect "militia left" f.muster.length 7
+        expect "army" f.army.length 1
+        expect "hands left" f.train_queue 7
+        expect "hands" f.hands.length 9
+    end
+
+    # One at a time from there, not all at once
+    if (tick == (40 + (17 * 30) + 15)) do
+        expect "militia left" f.muster.length 6
+        expect "army" f.army.length 2
+        expect "hands left" f.train_queue 7
+        expect "hands" f.hands.length 9
+    end
+
+    if (tick == (40 + (21 * 30) + 15)) do
+        expect "hands left" f.train_queue 6
+        expect "hands" f.hands.length 10
+        if (not failed) { game_exit 0 }
+    end
+end

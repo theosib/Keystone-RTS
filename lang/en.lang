@@ -5,6 +5,7 @@ ui.selected.one: 1 unit selected
 ui.selected.other: {count} units selected
 ui.hint.select: Left-drag to select, right-click to send
 ui.hint.place: Left-click to place, R to turn, right-click to cancel
+ui.taken: That ground is already taken
 ui.hint.lay: Drag to mark blocks for Hands to build, right-click to stop
 ui.hint.fence: Drag to run a wall, right-click to finish
 ui.hint.embodied: Left-click to break, right-click to place, 1-6 to choose, Tab for the overview
