@@ -51,7 +51,11 @@ finescript traps that cost real time here:
 - `{}` is an empty block, not an empty map.
 - `set a[i] v` doesn't assign: it silently replaces `a` with the array `[i]`. Use `a.set i v`.
 - A closure made in a `for` loop shares the loop's variable: every button built that way acts
-  on the last value. Make the closure in a function that takes the value as a parameter.
+  on the last value. Make the closure in a function that takes the value as a parameter. That
+  also keeps it alive: put in a local array or map right in the loop body and handed straight to
+  `ui_show`, it dies with the loop ("Closure scope has expired").
+- A closure in a local array that the UI keeps can't read that array: after the function
+  returns, the name is nil. Keep what it needs in a global or a parameter.
 - Interpolating a symbol keeps its colon: `"a.{sym}"` gives `a.:name`.
 - Interpolation can't nest quotes: `"{loc "x"}"` doesn't parse. Assign it to a `let` first.
 - Script `:air` is normalised to real air by `world_set_block`/`site_add`.
@@ -90,7 +94,9 @@ finescript traps that cost real time here:
   `tests/run_ui.sh` does. That run opens a window, so it's separate from `run_all.sh`.
 - `tests/run_ui.sh` wants the machine to itself. Beside another window its frame-timed input
   misses, and a dozen checks fail with nothing wrong. Clicks in it are pixel positions, so anything
-  that moves the palette moves them, and 720 tall is about all the palette has room for.
+  that moves the palette moves them, and 720 tall is about all the palette has room for. The menu
+  clicks are pixels too. "walks up one block at a time" fails now and then even with the machine
+  idle: it allows 0.01 and sometimes measures 2.02. Rerun it before suspecting a change.
 - `assert` compiles away in Release, so the `test_phase*` binaries in finevk and finegui
   check little there. Rebuild with `-UNDEBUG`, or use a check that always runs.
 - `tests/run_net.sh` runs a server and bots over real sockets, through a proxy that cuts and slows

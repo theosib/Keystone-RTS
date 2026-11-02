@@ -25,6 +25,8 @@ set BLOCK_TOOLS ["planks" "palisade" "flagstone" "dressed_stone" "gravel_path" "
 
 set PALETTE_WIDTH 176
 set PALETTE_ICON 24
+set PALETTE_TOP_HEIGHT 36
+set MENU_WIDTH 240
 set TOOL_WIDTH 74
 set TOOL_ICON 32
 set FENCE_HEIGHT 3
@@ -608,12 +610,12 @@ fn palette_children [] do
     let children []
     # Side by side, or the palette runs off the bottom of a small window
     let half ((PALETTE_WIDTH - 8) / 2)
-    children.push {ui.button {loc "menu.open"} =icon "menu" =icon_size PALETTE_ICON =width half =on_click fn [] do
+    children.push {ui.button {loc "menu.open"} =icon "menu" =icon_size PALETTE_ICON =width half =height PALETTE_TOP_HEIGHT =on_click fn [] do
         open_menu
     end}
     children.push {make_tip "menu" {loc "menu.open"}}
     children.push {ui.same_line 0}
-    set pause_button {ui.button {loc "menu.pause"} =width half =on_click fn [] do
+    set pause_button {ui.button {loc "menu.pause"} =width half =height PALETTE_TOP_HEIGHT =on_click fn [] do
         toggle_pause
     end}
     children.push pause_button
@@ -762,11 +764,20 @@ fn close_menu [] do
     end
 end
 
+fn menu_button [label on_click] do
+    return {ui.button label =width MENU_WIDTH =on_click on_click}
+end
+
+fn menu_text [text] do
+    return {ui.text_wrapped text =wrap_width MENU_WIDTH}
+end
+
 fn show_menu_window [children] do
     close_menu
     let size {window_size}
     set menu_panel {ui_show {ui.window "##menu"
-        =window_pos_x ((size[0] / 2) - 120) =window_pos_y ((size[1] / 2) - 110)
+        =window_pos_x (size[0] / 2) =window_pos_y (size[1] / 2)
+        =window_pivot_x 0.5 =window_pivot_y 0.5
         =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings]
         =children children
     } =immediate true}
@@ -774,11 +785,11 @@ end
 
 fn open_new_game_confirm [] do
     show_menu_window [
-        {ui.text {loc "menu.new_confirm"}}
-        {ui.button {loc "menu.new_yes"} =on_click fn [] do
+        {menu_text {loc "menu.new_confirm"}}
+        {menu_button {loc "menu.new_yes"} fn [] do
             new_game
         end}
-        {ui.button {loc "menu.cancel"} =on_click fn [] do
+        {menu_button {loc "menu.cancel"} fn [] do
             open_menu
         end}
     ]
@@ -788,25 +799,26 @@ fn open_network_panel [problem] do
     let children []
     let port {net_port}
     if (port != nil) do
-        children.push {ui.text {loc "menu.open_as"}}
+        children.push {menu_text {loc "menu.open_as"}}
         for address in {net_addresses} do
             children.push {ui.text "{address}:{port}"}
         end
     else do
-        children.push {ui.text {loc "menu.open_failed" =why problem}}
+        children.push {menu_text {loc "menu.open_failed" =why problem}}
     end
-    children.push {ui.button {loc "menu.cancel"} =on_click fn [] do
+    children.push {menu_button {loc "menu.cancel"} fn [] do
         open_menu
     end}
     show_menu_window children
 end
 
 fn open_menu [] do
-    let children [{ui.button {loc "menu.resume"} =on_click fn [] do
+    let children [{menu_button {loc "menu.resume"} fn [] do
         close_menu
     end}]
     if {net_is_host} do
-        children.push {ui.button {loc "menu.open_game"} =on_click fn [] do
+        children.push {ui.separator}
+        children.push {menu_button {loc "menu.open_game"} fn [] do
             let problem nil
             if ({net_port} == nil) do
                 if {game_paused} { toggle_pause }
@@ -814,17 +826,19 @@ fn open_menu [] do
             end
             open_network_panel problem
         end}
-        children.push {ui.button {loc "menu.new"} =on_click fn [] do
+        children.push {menu_button {loc "menu.new"} fn [] do
             open_new_game_confirm
         end}
-        children.push {ui.button {loc "menu.to_title"} =on_click fn [] do
+        children.push {ui.separator}
+        children.push {menu_button {loc "menu.to_title"} fn [] do
             to_menu
         end}
-        children.push {ui.button {loc "menu.quit"} =on_click fn [] do
+        children.push {menu_button {loc "menu.quit"} fn [] do
             quit_game
         end}
     else do
-        children.push {ui.button {loc "menu.leave"} =on_click fn [] do
+        children.push {ui.separator}
+        children.push {menu_button {loc "menu.leave"} fn [] do
             to_menu
         end}
     end
@@ -934,8 +948,8 @@ end
 fn show_lost_game [text] do
     set net_trouble nil
     show_menu_window [
-        {ui.text text}
-        {ui.button {loc "menu.to_title"} =on_click fn [] do
+        {menu_text text}
+        {menu_button {loc "menu.to_title"} fn [] do
             to_menu
         end}
     ]

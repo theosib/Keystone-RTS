@@ -7,6 +7,7 @@ set t_eye 0
 set t_low 0
 set t_rise 0
 set t_hit nil
+set t_menu nil
 
 fn t_to [x y] do
     let m {mouse_pos}
@@ -265,8 +266,25 @@ on :frame do
         do_action "toggle_view"
     end
     if (t_frame == 640) { t_tap "space" }
-    if (t_frame == 650) do
-        t_check "Space carries on" (not {game_paused})
+    if (t_frame == 650) { t_check "Space carries on" (not {game_paused}) }
+
+    # The menu's buttons, by hand: each one's closure has to outlive the function that made it
+    if (t_frame == 652) { open_menu }
+    if (t_frame == 656) do
+        set t_menu menu_panel
+        gui_click 640 360
+    end
+    if (t_frame == 662) do
+        t_check "New Game asks first" ((menu_panel != nil) and (menu_panel != t_menu))
+        set t_menu menu_panel
+        gui_click 640 404
+    end
+    if (t_frame == 668) do
+        t_check "Cancel goes back to the menu" ((menu_panel != nil) and (menu_panel != t_menu))
+        gui_click 640 278
+    end
+    if (t_frame == 674) do
+        t_check "Resume closes the menu" (menu_panel == nil)
         print "UI TEST DONE"
     end
 end
