@@ -69,8 +69,8 @@ know that it's there. Up to seven of them can share a world.
 ## Two ways to see the world
 
 Overhead, it's a strategy game: select units, give orders, lay out buildings from the palette, drag
-out walls, and mark runs of blocks for Hands to build, which is also how you lay a road. Shift-click to put a building down
-and keep another in hand, to lay out a row of Shelters one click each.
+out walls, and mark runs of blocks for Hands to build, which is also how you lay a road. Shift-click
+to put a building down and keep another in hand, to lay out a row of Shelters one click each.
 
 A click picks one unit, even out of a crowd, and clicking again picks the next. Double-click one to
 pick every one of its kind in view. Shift-click adds a unit, or takes it out again, and then the
