@@ -41,6 +41,8 @@ set KINDS ["timber" "stone" "provisions"]
 set ENEMY_PICK_REACHES [0 5 10]
 # A press and release closer together than this is a click, not a drag
 set CLICK_PIXELS 6
+# How long a placement counts as taken here, until the game has had time to say so
+set SENT_PLOT_SECONDS 2.0
 # Two clicks this close in time, and in CLICK_PIXELS of each other, are a double-click
 set DOUBLE_CLICK_SECONDS 0.35
 set GHOST_CLEAR [0.35 0.75 1.0 0.28]
@@ -443,7 +445,14 @@ fn line_cells [x0 z0 x1 z1] do
 end
 
 # The game has the last word, but it says what it knows of the ground in every state message
+# Ground just built on, before the game's word on it comes back: [x0 z0 x1 z1 sent_at]
+set sent_plots []
+
 fn is_taken [x0 z0 x1 z1] do
+    set sent_plots {sent_plots.filter fn [p] ((ui_clock - p[4]) < SENT_PLOT_SECONDS)}
+    for p in sent_plots do
+        if ((x0 < p[2]) and (p[0] < x1) and (z0 < p[3]) and (p[1] < z1)) { return true }
+    end
     if (state == nil) { return false }
     for p in state.plots do
         if ((x0 < p[2]) and (p[0] < x1) and (z0 < p[3]) and (p[1] < z1)) { return true }
@@ -831,7 +840,9 @@ fn commit_placement [] do
     let spot {placement_at hit}
     if ((spot == nil) or spot.taken) { return nil }
     send_command {=name :build =building placing =x hit.x =z hit.z =turns place_turns}
-    set placing nil
+    sent_plots.push [spot.x spot.z (spot.x + spot.sx) (spot.z + spot.sz) ui_clock]
+    # With Shift held, another of the same stays in hand: a row of Shelters is one click each
+    if (not {shift_held}) { set placing nil }
 end
 
 # Embodied, the Steward works with their own hands

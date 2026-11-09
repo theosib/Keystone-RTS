@@ -5,7 +5,7 @@ ui.selected.one: 1 unit selected
 ui.selected.other: {count} units selected
 ui.hint.select: Left-drag to select, right-click to send. Shift-click to pick kinds, double-click for all of one
 ui.only: Boxes pick only {kinds}. Click open ground to pick any
-ui.hint.place: Left-click to place, R to turn, right-click to cancel
+ui.hint.place: Left-click to place, Shift-click to place more, R to turn, right-click to cancel
 ui.taken: That ground is already taken
 ui.hint.lay: Drag to mark blocks for Hands to build, right-click to stop
 ui.hint.fence: Drag to run a wall, right-click to finish

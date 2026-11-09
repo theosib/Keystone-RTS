@@ -227,6 +227,20 @@ on :frame do
         t_check "the wall has a key too" laying_fence
         t_tap "escape"
     end
+    # Shift-click puts one down and keeps another in hand, on ground that reads as taken at once
+    if (t_frame == 514) { t_tap "z" }
+    if (t_frame == 516) { t_to 640 360 }
+    if (t_frame == 518) { input_key "left_shift" true }
+    if (t_frame == 520) { input_button 0 true 640 360 }
+    if (t_frame == 522) { input_button 0 false 640 360 }
+    if (t_frame == 524) { input_key "left_shift" false }
+    if (t_frame == 526) do
+        t_check "Shift-click keeps a building in hand" (placing == :shelter)
+        let hit {pick_ground 640 360}
+        t_check "and where it went is taken straight away" ((hit != nil) and {placement_at hit}.taken)
+        t_tap "escape"
+    end
+    if (t_frame == 608) { t_check "and the game took it" (state.sites > 0) }
     if (t_frame == 545) do
         print "queue {state.queue}"
         t_check "M, a click and a Shift-click queue 10 Militia, got {t_queued "militia"}" ({t_queued "militia"} == 10)
