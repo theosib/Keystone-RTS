@@ -84,6 +84,7 @@ run canopy 6000
 run catalog 20
 run fence 6000
 run heal 2800
+run room 4100
 run tasks 9000
 run economy 9100
 run light 9100

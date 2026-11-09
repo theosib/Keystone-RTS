@@ -1,0 +1,62 @@
+# Scenario: nobody builds a block into someone standing where it goes. A Hand would be shut inside,
+# or on a scaffold, stuck under it. The builder waits for room, and builds once there is.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set stander nil
+set spot nil
+set held_until 900
+set filled_while_there false
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    # Nobody to run from
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
+
+    if (t == 20) do
+        let x (f.x + 6)
+        let z (f.z + 16)
+        let g {ground_y x z}
+        set spot [x (g + 1) z]
+        set stander f.hands[0]
+        drop_job stander
+    end
+    if (t == 30) do
+        endow f 60 0 60
+        lay_blocks f :planks spot[0] spot[2] spot[0] spot[2]
+        if (f.sites.length == 0) { return fail "no site was laid" }
+    end
+
+    # It stays put, standing in the cell and doing nothing else, until it's let go. The others are to
+    # build there, not this one.
+    if ((t > 20) and (t < held_until)) do
+        if (stander.job != nil) { drop_job stander }
+        set stander.state :resting
+        set stander.timer 10.0
+        ent_stop stander.id
+        ent_set_pos stander.id (spot[0] + 0.5) spot[1] (spot[2] + 0.5)
+        if ({block_at spot[0] spot[1] spot[2]} == :planks) { set filled_while_there true }
+    end
+
+    if (t == held_until) do
+        if filled_while_there { return fail "a block was built into the Hand standing there" }
+        set stander.state :idle
+        ent_set_pos stander.id (spot[0] + 3.5) spot[1] (spot[2] + 0.5)
+    end
+
+    if ((t > held_until) and ({block_at spot[0] spot[1] spot[2]} == :planks)) do
+        log "built" ((t - held_until) / 30) "seconds after the Hand moved off"
+        log "PASS"
+        game_exit 0
+    end
+
+    if (t == 4000) { fail "it was never built once there was room" }
+end

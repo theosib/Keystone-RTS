@@ -19,6 +19,8 @@ set LOAD_WAIT_SECONDS 1.5
 set LOAD_WAIT_TRIES 4
 # How far out from a finished building its scaffolding is taken down
 set SCAFFOLD_REACH 3
+# Thinks a Hand waits for someone to step out of where a block goes, before it gives that up
+set PLACE_WAIT_TRIES 8
 # How near a site a Hand waiting on it stands
 set QUEUE_NEAR 5.0
 

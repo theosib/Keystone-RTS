@@ -8,7 +8,8 @@ fn make_worker [f id] do
             =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
             =target nil =site nil =cell nil =retry 0 =failures 0 =after nil =danger_check 0.0
             =calm_at 0 =load_waits 0
-            =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil =queue_at nil}
+            =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil =queue_at nil
+            =place_waits 0}
 end
 
 fn worker_pos [w] {ent_pos w.id}
@@ -596,8 +597,28 @@ fn begin_place [w] do
     wait_for w 0.5 :placed :build
 end
 
+# Someone's standing where the block goes, who'd be shut inside it. They'll likely move off soon.
+fn wait_for_room [w x y z] do
+    if ({cell_occupied x y z =except w.id} == nil) do
+        set w.place_waits 0
+        return false
+    end
+    let waits {w.get :place_waits}
+    if (waits == nil) { set waits 0 }
+    set w.place_waits (waits + 1)
+    return true
+end
+
 fn finish_place [w] do
     let cell w.cell
+    # Clearing a cell to air can't shut anyone in
+    if ({BLOCK_MATERIAL.get cell.block} != nil) do
+        if {wait_for_room w cell.x cell.y cell.z} do
+            if (w.place_waits < PLACE_WAIT_TRIES) { return wait_for w 0.3 :placed :build }
+            set w.place_waits 0
+            return drop_job w
+        end
+    end
     let cut ({block_at cell.x cell.y cell.z} == :timber_log)
     world_set_block cell.x cell.y cell.z cell.block
     if cut { prune_around cell.x cell.y cell.z }
@@ -680,6 +701,15 @@ fn handle_nav_block [w] do
     if (action == nil) { return nil }
     if (action.kind == :place) do
         let p action.pos
+        if {wait_for_room w p[0] p[1] p[2]} do
+            # Still blocked next think, so this is asked again then. Past a while, another way.
+            if (w.place_waits >= PLACE_WAIT_TRIES) do
+                set w.place_waits 0
+                ent_nav_ack w.id
+                give_up w
+            end
+            return nil
+        end
         world_set_block p[0] p[1] p[2] :scaffold
         factions[w.faction].scaffold.push p
         set w.state :working
