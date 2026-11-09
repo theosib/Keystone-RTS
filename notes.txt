@@ -1,9 +1,0 @@
-Delete from this file anything that gets implemented. Triage what you implemented
-from this. If I write a direct prompt, I want it implemented right away. If I
-put a note in here, it a bit lower priority.
-
-Setting up multiplayer games needs teams. The game creator could set things 
-like "4 vs 4" or "free for all" or "3 vs 3 vs 3" just my picking team colors 
-and player count and selecting which ones are AI.
-
-Moats
