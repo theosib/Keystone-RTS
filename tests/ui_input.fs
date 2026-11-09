@@ -272,18 +272,28 @@ on :frame do
     if (t_frame == 652) { open_menu }
     if (t_frame == 656) do
         set t_menu menu_panel
-        gui_click 640 360
+        gui_click 640 297
     end
     if (t_frame == 662) do
+        t_check "Settings opens from the menu" ((menu_panel != nil) and (menu_panel != t_menu))
+        set t_menu menu_panel
+        gui_click 535 436
+    end
+    if (t_frame == 668) do
+        t_check "Done goes back to the menu" ((menu_panel != nil) and (menu_panel != t_menu))
+        set t_menu menu_panel
+        gui_click 640 378
+    end
+    if (t_frame == 674) do
         t_check "New Game asks first" ((menu_panel != nil) and (menu_panel != t_menu))
         set t_menu menu_panel
         gui_click 640 404
     end
-    if (t_frame == 668) do
+    if (t_frame == 680) do
         t_check "Cancel goes back to the menu" ((menu_panel != nil) and (menu_panel != t_menu))
-        gui_click 640 278
+        gui_click 640 260
     end
-    if (t_frame == 674) do
+    if (t_frame == 686) do
         t_check "Resume closes the menu" (menu_panel == nil)
         print "UI TEST DONE"
     end

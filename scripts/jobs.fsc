@@ -8,7 +8,7 @@ fn make_worker [f id] do
             =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
             =target nil =site nil =cell nil =retry 0 =failures 0 =after nil =danger_check 0.0
             =calm_at 0 =load_waits 0
-            =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil}
+            =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil =queue_at nil}
 end
 
 fn worker_pos [w] {ent_pos w.id}
@@ -36,11 +36,11 @@ fn try_scaffolding [w] do
     ent_goto w.id (w.build_x + 0.5) w.build_y (w.build_z + 0.5) =range 2.0 =max_nodes 16000 =place true
 end
 
-fn wait_for [w seconds next] do
+fn wait_for [w seconds next anim] do
     set w.state :working
     set w.timer seconds
     set w.after next
-    ent_anim w.id :work
+    ent_anim w.id anim
 end
 
 fn drop_job [w] do
@@ -94,10 +94,18 @@ fn is_builder [w] do
     return ((f.sites.length > 0) and {short_of_beds f} and {gives_beds f.sites[0]} and ({stock_of f :provisions} >= FOOD_RESERVE))
 end
 
+fn health_of [id] do
+    let most {ent_max_health id}
+    if ((most == nil) or (most <= 0)) { return 1.0 }
+    return ({ent_health id} / most)
+end
+
 fn pick_job [w] do
     let f factions[w.faction]
+    let hungry (w.hunger < HUNGER_EAT_AT)
+    if ((w.hunger < HURT_HUNGER) and ({health_of w.id} < HURT_EATS_AT)) { set hungry true }
 
-    if ((w.hunger < HUNGER_EAT_AT) and ({stock_of f :provisions} > 0)) do
+    if (hungry and ({stock_of f :provisions} > 0)) do
         start_eat w
         return nil
     end
@@ -106,6 +114,9 @@ fn pick_job [w] do
         start_carry w
         return nil
     end
+
+    let hurt {soldier_to_feed f}
+    if ((hurt != nil) and {start_feed w hurt}) { return nil }
 
     set w.supplying nil
 
@@ -194,7 +205,7 @@ fn begin_harvest [w] do
     let info {harvest_info block}
     if (info == nil) { return drop_job w }
     ent_look_at w.id (p[0] + 0.5) (p[1] + 0.5) (p[2] + 0.5)
-    wait_for w (info.seconds * {gather_speed w}) :harvested
+    wait_for w (info.seconds * {gather_speed w}) :harvested info.anim
 end
 
 # Felling takes a trunk from the top, so nothing is ever left floating
@@ -292,10 +303,17 @@ fn start_carry [w] do
         set w.load_waits 0
         return nil
     end
-    # A cell comes free every few seconds, which is sooner than the yard and back
+    # A cell comes free every few seconds, which is sooner than the yard and back. The wait is spent
+    # by the site, not wherever the load was picked up.
     let f factions[w.faction]
     if ((w.load_waits < LOAD_WAIT_TRIES) and (not {yard_short_of f w.carry_kind}) and {sites_need f w.carry_kind}) do
         set w.load_waits (w.load_waits + 1)
+        let pos {worker_pos w}
+        let at w.queue_at
+        if ((at != nil) and (pos != nil) and ({dist2 at[0] at[2] pos[0] pos[2]} > (QUEUE_NEAR * QUEUE_NEAR))) do
+            go_to w (at[0] + 0.5) at[1] (at[2] + 0.5) QUEUE_NEAR :queued
+            return nil
+        end
         set w.state :resting
         set w.timer LOAD_WAIT_SECONDS
         return nil
@@ -322,6 +340,7 @@ end
 
 fn start_delivery [w] do
     let f factions[w.faction]
+    set w.queue_at nil
     # What was gathered for a site goes to it
     if ((w.supplying != nil) and {try_deliver w w.supplying}) { return true }
     if {yard_short_of f w.carry_kind} { return false }
@@ -330,7 +349,10 @@ fn start_delivery [w] do
         if {site_needs b.site w.carry_kind} do
             if {try_deliver w b.site} { return true }
             # First in line waits for its turn, or a load a site down leaves everything half built
-            if (w.load_waits < LOAD_WAIT_TRIES) { return false }
+            if (w.load_waits < LOAD_WAIT_TRIES) do
+                set w.queue_at [b.x b.y b.z]
+                return false
+            end
         end
     end
     return false
@@ -431,8 +453,82 @@ end
 
 fn finish_eat [w] do
     let pos {worker_pos w}
-    if ({zone_take {zone_of w} :provisions 1 pos[0] pos[2]} > 0) { set w.hunger 1.0 }
+    if ({zone_take {zone_of w} :provisions 1 pos[0] pos[2]} > 0) do
+        set w.hunger 1.0
+        heal w.id HAND_MEAL_HEAL
+    end
     set w.job nil
+    set w.state :idle
+end
+
+fn heal [id fraction] do
+    let most {ent_max_health id}
+    if (most == nil) { return nil }
+    ent_set_health id {min most ({ent_health id} + (most * fraction))}
+end
+
+# ---- Feeding soldiers ---------------------------------------------------------
+#
+# A soldier can't leave its post to eat, so a Hand brings it a meal. One Hand to a soldier: who's
+# bringing it is the soldier's fed_by, which goes stale if that Hand has since done something else.
+
+fn feeding [s] do
+    if ((not {s.has :fed_by}) or (s.fed_by == nil)) { return false }
+    let entry {lookup_unit s.fed_by}
+    return ((entry != nil) and {ent_alive s.fed_by} and (entry.record.job == :feed) and (entry.record.target == s.id))
+end
+
+fn soldier_to_feed [f] do
+    if ({stock_of f :provisions} <= 0) { return nil }
+    for s in f.army do
+        let left {s.get :meal_left}
+        let eating ((left != nil) and (left > 0.0))
+        let at {ent_pos s.id}
+        if ({ent_alive s.id} and (at != nil) and (s.state != :rout) and (not eating) and (not {feeding s})) do
+            # Not into where raiders were just seen, whatever the soldier's doing there
+            if (({health_of s.id} < MEAL_AT) and ({ent_since_damage s.id} > MEAL_CALM_SECONDS) and (s.target == nil) and (not {in_danger f at[0] at[2]})) { return s }
+        end
+    end
+    return nil
+end
+
+fn start_feed [w s] do
+    let pos {worker_pos w}
+    if (pos == nil) { return false }
+    let slot {find_take_slot {zone_of w} :provisions pos[0] pos[2]}
+    if (slot == nil) { return false }
+    set w.job :feed
+    set w.target s.id
+    set s.fed_by w.id
+    go_to w (slot.x + 0.5) slot.y (slot.z + 0.5) 1.5 :fetch_meal
+    return true
+end
+
+fn finish_fetch_meal [w] do
+    let pos {worker_pos w}
+    if ({zone_take {zone_of w} :provisions 1 pos[0] pos[2]} == 0) { return drop_job w }
+    serve_meal w
+end
+
+fn serve_meal [w] do
+    let at {ent_pos w.target}
+    if ((at == nil) or (not {ent_alive w.target})) { return drop_job w }
+    go_to w at[0] at[1] at[2] 1.8 :serve
+end
+
+# It may have walked off since. Close enough, it eats; otherwise after it.
+fn finish_serve [w] do
+    let at {ent_pos w.target}
+    let pos {worker_pos w}
+    if ((at == nil) or (pos == nil) or (not {ent_alive w.target})) { return drop_job w }
+    if ({dist2 at[0] at[2] pos[0] pos[2]} > 9.0) { return serve_meal w }
+    let entry {lookup_unit w.target}
+    if (entry != nil) do
+        set entry.record.meal_left MEAL_SECONDS
+        set entry.record.fed_by nil
+    end
+    set w.job nil
+    set w.target nil
     set w.state :idle
 end
 
@@ -497,7 +593,7 @@ end
 fn begin_place [w] do
     let cell w.cell
     ent_look_at w.id (cell.x + 0.5) (cell.y + 0.5) (cell.z + 0.5)
-    wait_for w 0.5 :placed
+    wait_for w 0.5 :placed :build
 end
 
 fn finish_place [w] do
@@ -560,7 +656,10 @@ fn on_arrive [w] do
         :fetched { finish_fetch w }
         :place_block { begin_place w }
         :defrag_take { finish_defrag_take w }
-        :rally { set w.state :idle }
+        :fetch_meal { finish_fetch_meal w }
+        :serve { finish_serve w }
+        :rally { if (not {next_waypoint w}) { set w.state :idle } }
+        :queued { set w.state :idle }
         _ { set w.state :idle }
     end
 end

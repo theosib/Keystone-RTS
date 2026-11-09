@@ -53,6 +53,8 @@ finescript traps that cost real time here:
 - `if (x) { ... }` takes one statement. For more, or for `a.push b`, use `do ... end`, and the same
   goes for a `match` arm.
 - `{}` is an empty block, not an empty map.
+- A method can't be called on a call's result: `{{loc "x"}.split " "}` and `{f x}.push y` don't
+  parse. Put the result in a `let` first. A field is fine: `{UNITS.get k}.cost` works.
 - `set a[i] v` doesn't assign: it silently replaces `a` with the array `[i]`. Use `a.set i v`.
 - A closure made in a `for` loop shares the loop's variable: every button built that way acts
   on the last value. Make the closure in a function that takes the value as a parameter. That

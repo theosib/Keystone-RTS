@@ -210,6 +210,7 @@ fn finish_building [f b] do
         }
     end
     f.buildings.push b
+    take_down_scaffold f b
     log "faction" f.id "finished" b.name
 end
 
@@ -261,9 +262,27 @@ fn update_sites [f] do
     tidy_scaffold f
 end
 
-# Temporary scaffolding comes down once nothing's being built
+# Scaffolding comes down to the air. What was put up for a building goes as soon as it's done: left
+# standing in front of a door, it shuts in whoever's inside.
+fn tidy_cell [f p] do
+    if ({block_at p[0] p[1] p[2]} != :scaffold) { return nil }
+    if (f.tidy_site == nil) { set f.tidy_site {site_create} }
+    site_add f.tidy_site p[0] p[1] p[2] :air
+end
+
+fn take_down_scaffold [f b] do
+    let plot {plot_of b}
+    let keep []
+    for p in f.scaffold do
+        let near ((p[0] >= (plot[0] - SCAFFOLD_REACH)) and (p[0] < (plot[2] + SCAFFOLD_REACH))
+                  and (p[2] >= (plot[1] - SCAFFOLD_REACH)) and (p[2] < (plot[3] + SCAFFOLD_REACH)))
+        if near { tidy_cell f p } { keep.push p }
+    end
+    set f.scaffold keep
+end
+
+# The rest comes down once nothing's being built
 fn tidy_scaffold [f] do
-    if ((f.sites.length > 0) or (f.zone.expanding != nil)) { return nil }
     if (f.tidy_site != nil) do
         let p {site_progress f.tidy_site}
         if ((p == nil) or p.complete) do
@@ -272,14 +291,11 @@ fn tidy_scaffold [f] do
         end
         return nil
     end
-    if (f.scaffold.length == 0) { return nil }
-
-    let site {site_create}
+    if ((f.sites.length > 0) or (f.zone.expanding != nil)) { return nil }
     for p in f.scaffold do
-        if ({block_at p[0] p[1] p[2]} == :scaffold) { site_add site p[0] p[1] p[2] :air }
+        tidy_cell f p
     end
     set f.scaffold []
-    set f.tidy_site site
 end
 
 # What's still to come, drawn where it will stand
@@ -295,6 +311,7 @@ end
 # The most urgent thing to build. Floors count: without room the economy stalls.
 fn next_site [f] do
     if (f.zone.expanding != nil) { return f.zone.expanding }
+    if (f.tidy_site != nil) { return f.tidy_site }
     if (f.sites.length > 0) { return f.sites[0].site }
-    return f.tidy_site
+    return nil
 end

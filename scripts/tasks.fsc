@@ -91,10 +91,10 @@ fn work_queue [f] do
         if (row != nil) { rows.push row }
     end
     add f.zone.expanding
+    add f.tidy_site
     for b in f.sites do
         add b.site
     end
-    add f.tidy_site
 
     if (f.train_queue > 0) do
         rows.push {=key "train" =count f.train_queue =housed ({population f} < f.housing)}

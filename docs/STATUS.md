@@ -41,8 +41,8 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 Honest gaps against Stage 1:
 
 - **Steward combat and carrying the Keystone.** The avatar only works with its hands.
-- **Settings.** No options screen. A title screen and lobby exist now, but sound, keys and language
-  have nowhere to live yet.
+- **Most settings.** The menu's Settings has the overlays only: health bars, units seen through
+  things, and order pins. The rest is planned in PLAN.md, under "Settings".
 - **A multiplayer rematch.** A match is one match: after it a server needs restarting. See the
   engine's `docs/systems/multiplayer.md` for what else isn't done.
 - **Continuing a hosted game.** It's saved to `saves/hosted`, but Host a Game always starts a new one,
@@ -56,7 +56,8 @@ Honest gaps against Stage 1:
   fall back to English.
 - **The new lands are unbalanced.** Desert is thin on timber and dense forest on room to build, with
   numbers that are first guesses. Nobody's played a full game on either.
-- **Unit separation.** Units can overlap; there's no local avoidance.
+- **Local avoidance.** Units standing too close ease apart (`personal_space`), but moving ones don't
+  steer round each other: two crossing paths still walk through one another.
 - **Day and night.** Nights had no part in the game and only made it harder to see, so the sun is
   held at `TIME_OF_DAY`. Bringing them back wants a rule that makes them matter.
 - **Audio.** No sound content yet.
@@ -76,6 +77,10 @@ Honest gaps against Stage 1:
 - `explore` fails about one run in six, under load, with "it left over a sixth of the map": a scout
   sometimes gets stuck with ground still to see. It did before multiplayer too (3 of 20 runs then,
   2 of 20 now, ten at a time on 12 cores), so it's the Pathfinder, not the network.
+- `guard` fails about one run in seven, at the alarm (2026-11-09: 3 of 16 on the scripts before
+  that day's changes, 4 of 41 after). Either the wrong number answer it, or the ones not needed are
+  drawn off their posts, all six then walking back. A Hand fleeing the raider anchors that part of
+  the test, and where it runs varies. Rerun it before suspecting a change.
 
 ## Known engine limits hit along the way
 

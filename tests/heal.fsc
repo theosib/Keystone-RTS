@@ -1,0 +1,58 @@
+# Scenario: a meal heals. A hurt Hand eats before it's hungry and gets health back, and a hurt
+# soldier, once it's out of the fight, is brought food by a Hand and mends over the next while.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set hand nil
+set soldier nil
+set fed_at 0
+set hand_healed false
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    # Nobody to run from, or a Hand would flee instead of eating
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
+
+    if (t == 30) do
+        endow f 0 0 60
+        set hand f.hands[0]
+        set hand.hunger 0.7
+        ent_set_health hand.id 10
+        set soldier {spawn_soldier f :militia}
+        ent_set_health soldier.id 20
+    end
+
+    if ((t > 30) and (not hand_healed) and ({health_of hand.id} > 0.5)) do
+        set hand_healed true
+        log "the Hand ate and healed at" t
+    end
+
+    if ((t > 30) and (fed_at == 0) and ({soldier.get :meal_left} != nil) and (soldier.meal_left > 0.0)) do
+        set fed_at t
+        log "the soldier was brought a meal at" t
+    end
+
+    if ((fed_at > 0) and (t >= (fed_at + (MEAL_SECONDS * 30) + 30))) do
+        let gained ({ent_health soldier.id} - 20)
+        let expected ({ent_max_health soldier.id} * MEAL_HEAL)
+        if ({abs (gained - expected)} > 1.0) { return fail "a meal should give back {expected}, gave {gained}" }
+        if (soldier.meal_left > 0.0) { return fail "the meal should be eaten by now" }
+        if (not hand_healed) { return fail "the hurt Hand never ate" }
+        log "PASS"
+        game_exit 0
+    end
+
+    if (t == 2700) do
+        if (not hand_healed) { return fail "the hurt Hand never ate" }
+        if (fed_at == 0) { return fail "nobody brought the soldier food" }
+        fail "the soldier didn't mend in time"
+    end
+end

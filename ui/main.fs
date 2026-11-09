@@ -3,6 +3,9 @@
 # Reaches the game only through send_command. Hears from it only through on :state.
 
 source "ui/chat"
+source "ui/names"
+source "ui/overlay"
+source "ui/settings"
 
 set selection []
 set drag_start nil
@@ -33,6 +36,8 @@ set FENCE_HEIGHT 3
 set TIP_WRAP 250
 set KINDS ["timber" "stone" "provisions"]
 set ENEMY_PICK_REACHES [0 5 10]
+# A press and release closer together than this is a click, not a drag
+set CLICK_PIXELS 6
 set GHOST_CLEAR [0.35 0.75 1.0 0.28]
 set GHOST_TAKEN [1.0 0.2 0.16 0.42]
 set TEXT_COLOR [0.95 0.88 0.74 1.0]
@@ -653,8 +658,35 @@ end
 fn finish_drag [] do
     if (drag_start == nil) { return nil }
     let picked {pick_entities drag_start[0] drag_start[1] mouse_x mouse_y}
-    set selection {picked.filter fn [id] ({entity_faction id} == my_faction)}
+    let mine {picked.filter fn [id] ({entity_faction id} == my_faction)}
+    let click (({abs (mouse_x - drag_start[0])} < CLICK_PIXELS) and ({abs (mouse_y - drag_start[1])} < CLICK_PIXELS))
     set drag_start nil
+    if (click and (mine.length > 1)) {
+        set mine [{one_of mine}]
+    }
+    set selection mine
+end
+
+# A click is for one unit, even where several stand together: the nearest to where it landed, and
+# clicking again on the same crowd goes on to the next
+fn one_of [ids] do
+    let hit {pick_ground mouse_x mouse_y}
+    let ranked []
+    for id in ids do
+        let p {entity_pos id}
+        let d 0.0
+        if ((hit != nil) and (p != nil)) { set d (((p[0] - hit.x - 0.5) * (p[0] - hit.x - 0.5)) + ((p[2] - hit.z - 0.5) * (p[2] - hit.z - 0.5))) }
+        ranked.push {=id id =d d}
+    end
+    ranked.sort_by fn [a b] (a.d < b.d)
+    if (selection.length == 1) do
+        let i 0
+        while (i < ranked.length) do
+            if (ranked[i].id == selection[0]) { return ranked[(i + 1) % ranked.length].id }
+            set i (i + 1)
+        end
+    end
+    return ranked[0].id
 end
 
 # Whoever's closest to the cursor, within reason: at a distance a body's only a few pixels across,
@@ -672,9 +704,12 @@ end
 set attacked nil
 set attacked_frames 0
 
+fn shift_held [] { return ({key_held "left_shift"} or {key_held "right_shift"}) }
+
 fn order_attack [id] do
     let p {entity_pos id}
     send_command {=name :attack =units selection =target id =x {floor p[0]} =y {floor p[1]} =z {floor p[2]}}
+    drop_pin selection p[0] p[1] p[2] id false
     set attacked id
     set attacked_frames 45
 end
@@ -685,7 +720,9 @@ fn order_move [] do
     if (enemy != nil) { return order_attack enemy }
     let hit {pick_ground mouse_x mouse_y}
     if (hit == nil) { return nil }
-    send_command {=name :move =units selection =x hit.x =y (hit.y + 1) =z hit.z}
+    let queued {shift_held}
+    send_command {=name :move =units selection =x hit.x =y (hit.y + 1) =z hit.z =queue queued}
+    drop_pin selection (hit.x + 0.5) (hit.y + 1) (hit.z + 0.5) nil queued
 end
 
 # Where a building would stand with its middle at this hit, worked out as the game will
@@ -816,6 +853,11 @@ fn open_menu [] do
     let children [{menu_button {loc "menu.resume"} fn [] do
         close_menu
     end}]
+    children.push {menu_button {loc "menu.settings"} fn [] do
+        show_menu_window {settings_children fn [] do
+            open_menu
+        end}
+    end}
     if {net_is_host} do
         children.push {ui.separator}
         children.push {menu_button {loc "menu.open_game"} fn [] do
@@ -858,19 +900,24 @@ set sides_window {ui.window "##sides"
 }
 ui_show sides_window =immediate true
 
+# A rival goes by a made-up name, and a player by their own
+fn side_name [side] do
+    if ((not side.rival) and (side.player != nil) and (side.player != "")) { return side.player }
+    if side.rival { return {made_up_name side.moniker} }
+    return {loc "side.player" =id side.id}
+end
+
 fn side_label [side] do
     if (side.id == my_faction) { return {loc "side.you"} }
-    if side.alive do
-        if side.rival { return {loc "side.rival" =id side.id} }
-        return {loc "side.player" =id side.id}
-    end
-    return {loc "side.fallen" =id side.id}
+    if side.alive { return {side_name side} }
+    return {loc "side.fallen" =name {side_name side}}
 end
 
 fn hear_sides [sides] do
     let key ""
     for side in sides do
         set_faction_color side.id side.color[0] side.color[1] side.color[2]
+        note_faction_color side.id side.color
         let label {side_label side}
         set key "{key}{label}"
     end
@@ -1190,6 +1237,7 @@ on :frame do
         let p {entity_pos id}
         if (p != nil) {marker_ring p[0] (p[1] + 0.05) p[2] 0.6 0.3 0.9 1.0 0.9}
     end
+    draw_overlay
 
     if (state != nil) do
         for k in state.keystones do

@@ -69,3 +69,27 @@ Later stages (DESIGN §8 Stage 2+) are out of scope until the slice is fun.
 finescript is a tree-walking interpreter. Per-tick-per-unit script is out. Units think at
 2–5 Hz (staggered) and C++ carries motion between thinks. Commander AI thinks at ≤1 Hz. Any
 hot loop over blocks or cells belongs in an engine native.
+
+## Settings
+
+The player's own settings, which belong to them and not to a game: kept with `pref` and `set_pref`
+in `prefs.txt` in their folder, and listed as rows in `ui/settings.fs`. Today there are three, all
+about what's drawn over the world. The rest, roughly in order:
+
+1. **Shape of the screen.** Tabs (Display, Interface, Controls, Sound, Language), since one list
+   won't hold everything. Each row says what it does in a tooltip, and Restore Defaults per tab.
+2. **Display.** Window, full screen (F11 exists) or borderless; resolution; frame cap and vsync;
+   view distance; field of view on foot. Needs engine natives: the window and swapchain are C++, and
+   some of these mean recreating the swapchain.
+3. **Interface.** UI scale (finegui's global scale, with the fixed pixel layouts in `ui/main.fs`
+   made relative first); which panels show (work queue, sides, stock); tooltips on or off; health
+   bars, halos and pins as now; colours for players who can't tell red from green, which means
+   faction colours chosen from a safe palette rather than hard-coded.
+4. **Controls.** Rebinding. Bindings live in `input/`, read once at start; the engine needs to
+   rebind at run time and save the player's own over the game's. Edge panning, its speed, and
+   mouse look sensitivity and inversion on foot.
+5. **Sound.** Master, effects and music volumes, once there's any audio.
+6. **Language.** The `lang/` files there are, named in their own language. Changing it rebuilds the
+   UI, which the scripts can do since every string goes through `loc`.
+
+Settings that change a game (land, rivals, fog) stay in the lobby: they're the game's, and the host's.

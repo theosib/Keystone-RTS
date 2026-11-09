@@ -97,7 +97,12 @@ fn publish_sides [] do
     for f in factions do
         if (f != nil) do
             let color FACTION_COLORS[(f.id - 1) % FACTION_COLORS.length]
-            sides.push {=id f.id =color color =alive f.alive =rival (f.commander != nil)}
+            # Saves from before sides had names
+            if (not {f.has :moniker}) { set f.moniker {random_range 0 999999} }
+            let owner nil
+            if ({f.has :owner_name} and (f.commander == nil)) { set owner f.owner_name }
+            sides.push {=id f.id =color color =alive f.alive =rival (f.commander != nil)
+                        =moniker f.moniker =player owner}
         end
     end
     ui_publish {=sides sides}
@@ -131,34 +136,116 @@ fn order_units [f cmd] do
         set cmd.y k[1]
         set cmd.z k[2]
     end
-    let count cmd.units.length
-    let across 1
-    while ((across * across) < count) do
-        set across (across + 1)
-    end
-    let rows {floor ((count + across - 1) / across)}
-
-    let index 0
+    let units []
     for id in cmd.units do
         let entry {lookup_unit id}
-        if ((entry != nil) and (entry.faction == f.id)) do
-            let x (cmd.x + 0.5 + (((index % across) * 2) - (across - 1)))
-            let z (cmd.z + 0.5 + (({floor (index / across)} * 2) - (rows - 1)))
-            let ground {ground_y {floor x} {floor z}}
-            let y cmd.y
-            if ((ground != nil) and ({abs ((ground + 1) - cmd.y)} <= 3)) { set y (ground + 1) }
-            let record entry.record
-            if {record.has :stats} do
-                order_soldier record x y z
-            else do
-                drop_job record
-                set record.state :moving
-                set record.after :rally
-                ent_goto id x y z =range ORDER_RANGE =partial true =max_nodes 6000
-            end
-            set index (index + 1)
+        if ((entry != nil) and (entry.faction == f.id)) { units.push entry.record }
+    end
+    if (units.length == 0) { return nil }
+    let queued ({cmd.has :queue} and cmd.queue)
+
+    let spots {formation units (cmd.x + 0.5) (cmd.z + 0.5)}
+    let i 0
+    for record in spots.order do
+        let x spots.at[i][0]
+        let z spots.at[i][1]
+        set i (i + 1)
+        let ground {ground_y {floor x} {floor z}}
+        let y cmd.y
+        if ((ground != nil) and ({abs ((ground + 1) - cmd.y)} <= 3)) { set y (ground + 1) }
+        if (queued and {under_orders record}) do
+            let ways {waypoints_of record}
+            ways.push [x y z]
+        else do
+            set record.waypoints []
+            send_unit record x y z
         end
     end
+end
+
+# Ranks facing the way they're going: those who fight hand to hand in front, bows behind them, then
+# everyone else. A line is wider than it's deep.
+fn formation [units x z] do
+    let sx 0.0
+    let sz 0.0
+    let counted 0
+    let order []
+    for rank in [:melee :ranged :other] do
+        for r in units do
+            let role :other
+            if {r.has :stats} { set role r.stats.role }
+            if ((role != :melee) and (role != :ranged)) { set role :other }
+            if (role == rank) { order.push r }
+        end
+    end
+    for r in units do
+        let p {ent_pos r.id}
+        if (p != nil) do
+            set sx (sx + p[0])
+            set sz (sz + p[2])
+            set counted (counted + 1)
+        end
+    end
+    # Facing: from where they are to where they're going, or north if they're there already
+    let fx 0.0
+    let fz -1.0
+    if (counted > 0) do
+        let dx (x - (sx / counted))
+        let dz (z - (sz / counted))
+        let d {sqrt ((dx * dx) + (dz * dz))}
+        if (d > 1.0) do
+            set fx (dx / d)
+            set fz (dz / d)
+        end
+    end
+    let count order.length
+    let across 1
+    while ((across * across) < (count * 2)) do
+        set across (across + 1)
+    end
+    if (across > count) { set across count }
+    let rows {floor ((count + across - 1) / across)}
+    let at []
+    for i in (0..count) do
+        let col ((i % across) - ((across - 1) / 2.0))
+        let row ({floor (i / across)} - ((rows - 1) / 2.0))
+        # Right of the facing is (-fz, fx); the front row is furthest along it
+        at.push [(x + (col * FORMATION_SPACING * (0 - fz)) - (row * FORMATION_SPACING * fx))
+                 (z + (col * FORMATION_SPACING * fx) - (row * FORMATION_SPACING * fz))]
+    end
+    return {=order order =at at}
+end
+
+# Busy with an order from the player, which a waypoint waits behind
+fn under_orders [record] do
+    if {record.has :stats} { return ((record.order == :move) or (record.hunting != nil)) }
+    return ((record.state == :moving) and (record.after == :rally))
+end
+
+fn waypoints_of [record] do
+    if (not {record.has :waypoints}) { set record.waypoints [] }
+    return record.waypoints
+end
+
+fn send_unit [record x y z] do
+    if {record.has :stats} do
+        order_soldier record x y z
+    else do
+        drop_job record
+        set record.state :moving
+        set record.after :rally
+        ent_goto record.id x y z =range ORDER_RANGE =partial true =max_nodes 6000
+    end
+end
+
+# Where a player's order goes next, once it's at the last place. False if there's nowhere.
+fn next_waypoint [record] do
+    let ways {waypoints_of record}
+    if (ways.length == 0) { return false }
+    let p ways[0]
+    ways.remove 0
+    send_unit record p[0] p[1] p[2]
+    return true
 end
 
 # The Steward works like one strong Hand: useful early, never a hero (DESIGN 1)
@@ -222,6 +309,7 @@ on :start do
         endow_new f
         if (i < PLAYERS.length) do
             set f.owner PLAYERS[i].id
+            set f.owner_name PLAYERS[i].name
             player_bind PLAYERS[i].id f.id =at {steward_home f}
         end
     end
@@ -267,6 +355,7 @@ fn settle_after_resume [f] do
         set w.supplying nil
         set w.calm_at 0
         set w.load_waits 0
+        set w.queue_at nil
         ent_anim w.id :idle
     end
     if (not {f.has :danger}) { set f.danger [] }

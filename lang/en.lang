@@ -160,6 +160,7 @@ tip.militia: Fights hand to hand. Ready in {seconds} seconds.
 tip.shortbow: Shoots from up to {range} blocks away. Ready in {seconds} seconds.
 tip.scout: Uncovers the map on its own, and carries on from wherever you send it. Can't fight. Ready in {seconds} seconds.
 menu.resume: Resume
+menu.settings: Settings
 menu.new: New Game
 menu.quit: Save and Quit
 menu.cancel: Cancel
@@ -176,7 +177,6 @@ title.quit: Quit
 
 host.title: Host a Game
 host.name: Your name
-host.game_title: Game title
 host.port: Port
 host.password: Password (optional)
 host.start: Open the Lobby
@@ -212,7 +212,7 @@ lobby.setting.size: Size
 lobby.setting.rivals: Rivals
 lobby.setting.rival_level: Rivals' skill
 lobby.setting.fog: Fog of war
-lobby.setting.seed: Map number (0 for a surprise)
+lobby.setting.seed: Seed (0 for a random one)
 lobby.map.mixed: Mixed country
 lobby.map.meadow: Open meadow
 lobby.map.woodland: Woodland
@@ -246,6 +246,19 @@ menu.leave: Leave the Game
 
 side.title: Sides
 side.you: You
-side.rival: Rival {id}
 side.player: Player {id}
-side.fallen: Side {id} (fallen)
+side.fallen: {name} (fallen)
+
+# Made-up names: one of each, for a game or a rival nobody named. Single words, split at spaces.
+names.made_up: {adjective} {noun}
+names.adjectives: Ambling Amber Audacious Bashful Blustering Boisterous Bold Brazen Candid Cantankerous Centaurian Cheerful Copper Cosmic Cunning Dapper Dauntless Doughty Dreaming Drowsy Dubious Earnest Eloquent Elusive Emerald Exuberant Fabled Fastidious Fearless Feisty Ferocious Frosty Furious Gallant Gilded Gloomy Granite Gregarious Grim Grumbling Hapless Hasty Haughty Hearty Hollow Humble Idle Impish Indignant Intrepid Irascible Ivory Jagged Jaunty Jovial Jubilant Keen Kindly Knotted Lanky Lofty Loquacious Lucky Lugubrious Luminous Lunar Magnificent Majestic Meandering Mercurial Merry Mischievous Mossy Muddy Nervous Nimble Noble Nocturnal Nonchalant Northern Oblivious Obstinate Ochre Odd Opulent Ornery Patient Pensive Peculiar Pickled Plucky Pompous Pontificating Prancing Proud Quarrelsome Quiet Quizzical Radiant Rambunctious Resplendent Restless Rowdy Rustic Rusty Sardonic Scheming Shy Silver Sleepy Solar Stalwart Stoic Stubborn Swift Tangled Tardy Tenacious Thrifty Thunderous Tidal Tireless Truculent Uncanny Unflappable Unruly Untamed Upright Uproarious Vain Valiant Velvet Venerable Verdant Vexed Vigilant Wandering Wayward Weary Whimsical Wild Wily Wistful Witty Yodelling Zealous Zesty
+names.nouns: Abbot Albatross Alchemist Archivist Armadillo Astronomer Badger Bard Baron Beaver Beekeeper Bison Botanist Brewer Buccaneer Capybara Cartographer Centaur Chancellor Cobbler Comet Cormorant Cyclops Dingo Dormouse Dragonfly Drummer Duchess Egret Elk Envoy Falcon Ferret Ferryman Fiddler Fish Gardener Gargoyle Gecko Glassblower Goose Griffin Hare Harpist Hedgehog Herald Hermit Heron Ibis Ideator Iguana Inventor Jackal Jay Jester Juggler Kestrel Knight Koala Kraken Lamplighter Lemur Llama Lorekeeper Lynx Magistrate Mammoth Marmot Mason Mole Monk Narwhal Navigator Newt Nomad Ocelot Oracle Orator Otter Owl Pelican Philosopher Phoenix Pilgrim Pirate Poet Potter Puffin Quail Quartermaster Raccoon Ranger Raven Regent Salamander Scholar Scribe Sculptor Shepherd Sphinx Squire Stoat Tactician Tanner Tinker Toad Tortoise Troll Troubadour Urchin Usurper Vagabond Viking Vole Walrus Warden Weasel Weaver Wombat Wren Yak Yeoman Yeti Zealot
+
+settings.title: Settings
+settings.done: Done
+settings.health_bars: Health bars
+settings.halos: Show units behind things
+settings.pins: Pins where units are sent
+settings.choice.damaged: When hurt
+settings.choice.always: Always
+settings.choice.never: Never

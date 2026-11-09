@@ -8,6 +8,8 @@ set TIME_OF_DAY 0.18
 # How near a unit has to get to where it was sent, and how near will do if it can't get closer
 set ORDER_RANGE 1.5
 set ORDER_GIVE_UP_RANGE 6.0
+# Blocks between neighbours in a formation
+set FORMATION_SPACING 1.6
 
 # Blocks a Hand carries at once, and units a resource block holds
 set CARRY_CAP 3
@@ -15,6 +17,10 @@ set STACK_UNITS 8
 # A load a site will want waits this long, this many times, for a cell before going to the yard
 set LOAD_WAIT_SECONDS 1.5
 set LOAD_WAIT_TRIES 4
+# How far out from a finished building its scaffolding is taken down
+set SCAFFOLD_REACH 3
+# How near a site a Hand waiting on it stands
+set QUEUE_NEAR 5.0
 
 # What a block costs to place. Blocks not listed are free.
 set BLOCK_MATERIAL {
@@ -26,9 +32,9 @@ set BLOCK_MATERIAL {
 
 # Harvesting: source block -> resource, units per block, work seconds
 set HARVEST {
-    =timber_log {=kind :timber =units 2 =seconds 1.4}
-    =boulder {=kind :stone =units 2 =seconds 1.8}
-    =berry_bush {=kind :provisions =units 3 =seconds 1.0}
+    =timber_log {=kind :timber =units 2 =seconds 1.4 =anim :chop}
+    =boulder {=kind :stone =units 2 =seconds 1.8 =anim :quarry}
+    =berry_bush {=kind :provisions =units 3 =seconds 1.0 =anim :forage}
 }
 set HARVEST_BLOCKS {=timber [:timber_log] =stone [:boulder] =provisions [:berry_bush]}
 
@@ -41,6 +47,16 @@ set BUSH_REGROW_SECONDS 90.0
 # Hunger: full at 1.0, falls to 0 over this many seconds
 set HUNGER_SECONDS 360.0
 set HUNGER_EAT_AT 0.35
+# A meal heals. A Hand gets this much of its health back at once, and eats sooner when it's below
+# HURT_EATS_AT of it. A soldier is brought one, once it's below MEAL_AT and has been out of the fight
+# for MEAL_CALM_SECONDS, and gets MEAL_HEAL back over MEAL_SECONDS.
+set HAND_MEAL_HEAL 0.4
+set HURT_EATS_AT 0.7
+set HURT_HUNGER 0.8
+set MEAL_AT 0.75
+set MEAL_CALM_SECONDS 8.0
+set MEAL_HEAL 0.4
+set MEAL_SECONDS 20.0
 # Below this in the yard, gathering food comes first and none of it goes to building sites
 set FOOD_RESERVE 20
 
@@ -88,19 +104,21 @@ set THINK_SECONDS (THINK_INTERVAL / 30.0)
 # ---- Units ------------------------------------------------------------------
 # kind: melee or ranged. range is reach for melee, draw length for ranged.
 set UNITS {
-    =militia {=role :melee =damage 8.0 =range 2.2 =cooldown 1.0 =aggro 16
+    =militia {=role :melee =damage 8.0 =range 2.2 =cooldown 1.0 =aggro 16 =strike_anim :thrust
               =cost {=timber 4 =provisions 8}}
-    =shortbow {=role :ranged =damage 6.0 =range 18.0 =cooldown 1.7 =aggro 20
+    =shortbow {=role :ranged =damage 6.0 =range 18.0 =cooldown 1.7 =aggro 20 =strike_anim :shoot
                =cost {=timber 8 =provisions 6}}
-    =scout {=role :scout =damage 0.0 =range 0.0 =cooldown 1.0 =aggro 0
+    =scout {=role :scout =damage 0.0 =range 0.0 =cooldown 1.0 =aggro 0 =strike_anim :work
             =cost {=provisions 8}}
 }
 set TRAIN_SECONDS 8.0
 # The most one order can queue
 set QUEUE_BATCH 8
-# One swing of the work animation
+# One swing of a strike's animation
 set STRIKE_SECONDS 0.8
-set ARROW_SPEED 26.0
+# Slow enough that an arrow climbs and drops on its way, as one from a bow does: at 18 blocks it
+# leaves at about 20 degrees. Gravity is the engine's 14, so nothing past 28 blocks can be reached.
+set ARROW_SPEED 20.0
 set CHASE_REPATH_DISTANCE_SQ 16
 # Failed searches in a row before a soldier stops hunting someone it was sent after
 set HUNT_TRIES 3

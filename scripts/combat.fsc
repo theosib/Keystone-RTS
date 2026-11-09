@@ -13,6 +13,13 @@ fn make_soldier [f id kind] do
             =dead_ends [] =explore_wait 0.0 =explore_from nil}
 end
 
+# From the table, not the copy in s.stats: a save from before there were strikes of each kind has none
+fn strike_anim [s] do
+    let anim {UNITS.get s.kind}.strike_anim
+    if (anim == nil) { return :work }
+    return anim
+end
+
 fn spawn_soldier [f kind] do
     let at {spawn_point f.x (f.z + 10) 5 f.y}
     let id {ent_spawn kind at =faction f.id}
@@ -61,6 +68,7 @@ fn order_attack [f cmd] do
         if ((entry != nil) and (entry.faction == f.id)) do
             let s entry.record
             if (huntable and {s.has :stats} and (s.stats.role != :scout)) do
+                set s.waypoints []
                 hunt s cmd.target
             else do
                 others.push id
@@ -175,7 +183,7 @@ fn strike [s pos target_pos] do
     if ((pos[1] - target_pos[1]) >= 2.0) { set damage (damage * HIGH_GROUND_DAMAGE) }
 
     ent_look_at s.id target_pos[0] target_pos[1] target_pos[2]
-    ent_anim s.id :work
+    ent_anim s.id {strike_anim s}
     set s.striking STRIKE_SECONDS
 
     if (s.stats.role == :ranged) do
@@ -284,7 +292,7 @@ fn swing_at_keystone [s k] do
     end
     if (s.cooldown > 0.0) { return nil }
     ent_look_at s.id (k[0] + 0.5) (k[1] + 0.5) (k[2] + 0.5)
-    ent_anim s.id :work
+    ent_anim s.id {strike_anim s}
     set s.striking STRIKE_SECONDS
     set s.cooldown s.stats.cooldown
 end
@@ -401,12 +409,22 @@ fn chase [s target_pos] do
     set s.moving true
 end
 
+# A meal heals a little at a time, and being hit doesn't stop it
+fn digest [s] do
+    let left {s.get :meal_left}
+    if ((left == nil) or (left <= 0.0)) { return nil }
+    set s.meal_left (left - THINK_SECONDS)
+    heal s.id (MEAL_HEAL * THINK_SECONDS / MEAL_SECONDS)
+    set s.last_hp {ent_health s.id}
+end
+
 fn think_soldier [s] do
     if (not {ent_alive s.id}) { return nil }
     let pos {ent_pos s.id}
     if (pos == nil) { return nil }
 
     if (s.cooldown > 0.0) { set s.cooldown (s.cooldown - THINK_SECONDS) }
+    digest s
     update_morale s pos
 
     # A blow is a single swing. Walking only takes over from idle, so it has to end.
@@ -501,6 +519,7 @@ fn think_soldier [s] do
             ent_nav_ack s.id
             set s.order nil
             set s.moving false
+            if ((s.errand == nil) and {next_waypoint s}) { return nil }
             let errand s.errand
             set s.errand nil
             if (errand == :help) do
@@ -529,6 +548,7 @@ fn think_scout [s pos] do
             ent_nav_ack s.id
             if own_way { note_dead_end s pos }
             set s.order nil
+            if own_way { next_waypoint s }
         end
     end
     if (own_way and (s.order == nil)) { explore s pos }

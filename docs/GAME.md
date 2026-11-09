@@ -33,8 +33,8 @@ both sides how it's going.
 
 ## Your stockpile is made of blocks
 
-Every resource you own is somewhere in the world, as a block you can see. A stack fills up in
-visible stages, so you can read your economy by looking at your yard.
+Every resource you own is somewhere in the world, as a block you can see. A stack holds eight, and
+each one is a small cube of its own, so you can read your economy by looking at your yard.
 
 That turns storage into a real problem, and watching it get solved is one of the game's pleasures:
 
@@ -65,6 +65,12 @@ know that it's there. Up to seven of them can share a world.
 Overhead, it's a strategy game: select units, give orders, lay out buildings from the palette, drag
 out walls, and mark runs of blocks for Hands to build, which is also how you lay a road.
 
+A click picks one unit, even out of a crowd, and clicking again picks the next. Where you send units
+a pin drops, and stays until they get there. Hold Shift to add a waypoint instead, and they'll go to
+each in turn. Soldiers form up facing the way they're going, with spears in front and bows behind.
+Your units, and any enemy one of them can see, show through roofs and trees, and a health bar shows
+over anyone who's hurt. The menu's **Settings** turns any of that off.
+
 Press Tab and you drop down into the world as the Steward, on foot and in first person. You can walk
 your settlement, harvest, dig, and place blocks from your stockpile by hand. It's the same world and
 the same game, and a change you make is there for everyone. Your orders don't stop while you're
@@ -81,6 +87,8 @@ Combat works off the world's real shape:
 - **Soldiers break.** Morale gives way, and a beaten force routs instead of dying to the last.
 - **Soldiers think a little for themselves.** They guard where you sent them, answer whoever hits
   them, and go to an alarm in proportion to the raid, then back again.
+- **Food heals.** A hurt Hand eats early and gets better for it. A soldier can't leave its post, so
+  once it's out of the fight a Hand brings it a meal, and it mends over the next twenty seconds.
 
 ## When it's over
 

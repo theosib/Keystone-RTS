@@ -4,6 +4,7 @@
 # ends when the world arrives and ui/main.fs takes over.
 
 source "ui/chat"
+source "ui/names"
 
 ui_skin "ui/skin/hearth.fgs"
 
@@ -88,17 +89,17 @@ end
 
 # ---- Host
 
-set host_title ""
 set host_port 7810
 set host_password ""
 
 fn start_hosting [on_network] do
     set solo (not on_network)
+    set named_lobby false
     set screen :starting
     show_status {loc "net.loading"}
     let problem nil
     if on_network do
-        set problem {net_host =new true =listen true =title host_title =port host_port =password host_password}
+        set problem {net_host =new true =listen true =port host_port =password host_password}
     else do
         set problem {net_host =new true}
     end
@@ -116,9 +117,6 @@ fn show_host_form [] do
         {ui.text_colored TITLE_COLOR {loc "host.title"}}
         {ui.input {loc "host.name"} {player_name} fn [value] do
             set_player_name value
-        end}
-        {ui.input {loc "host.game_title"} host_title fn [value] do
-            set host_title value
         end}
         {ui.input_int {loc "host.port"} host_port fn [value] do
             set host_port value
@@ -463,8 +461,22 @@ fn refresh_lobby [] do
     build_roster
 end
 
+# A game nobody named gets a made-up name, which the host can still change. It's the lobby's
+# title that the network sees.
+set named_lobby false
+
+fn name_lobby [] do
+    if named_lobby { return nil }
+    let me {me_in lobby}
+    if ((me == nil) or (not me.host)) { return nil }
+    set named_lobby true
+    let title {lobby.settings.get :title}
+    if ((title == nil) or (title == "")) { lobby_set :title {new_made_up_name} }
+end
+
 on :lobby do
     set lobby msg
+    name_lobby
     if (screen == :lobby) do
         refresh_lobby
     elif ((screen == :starting) and (msg.phase == :lobby)) do
