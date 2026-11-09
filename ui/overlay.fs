@@ -71,8 +71,9 @@ set orders []
 
 fn units_key [units] do
     let ids []
+    # Whole numbers, so that ids the game sends back make the same key as the ones that went
     for id in units do
-        ids.push id
+        ids.push {to_int id}
     end
     ids.sort
     let key ""
@@ -114,6 +115,22 @@ fn drop_pin [units x y z target queued] do
         ids.push id
     end
     orders.push {=units ids =key {units_key ids} =pins [pin] =still 0.0 =last nil}
+end
+
+# The game says where an order really went, which isn't always where it was dropped: into a
+# building rather than onto its roof, say
+fn move_pin [units x y z] do
+    let key {units_key units}
+    for order in orders do
+        if (order.key == key) do
+            let pin order.pins[order.pins.length - 1]
+            if (pin.target == nil) do
+                set pin.x (x + 0.5)
+                set pin.y y
+                set pin.z (z + 0.5)
+            end
+        end
+    end
 end
 
 fn pin_pos [pin] do

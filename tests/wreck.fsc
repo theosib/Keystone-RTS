@@ -1,0 +1,188 @@
+# Scenario: breaking buildings, and where an order lands. Militia sent onto a Rival's Shelter break it
+# a block at a time until it stops housing anyone, and the Rival's Hands mend it once they've gone.
+# One left on guard beside it starts again with nobody telling it to. An order onto a roof means the
+# floor under it, and one into a tree means its foot.
+
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+fn stand_at [s x z] do
+    let y ({ground_y {floor x} {floor z}} + 1)
+    ent_stop s.id
+    ent_set_pos s.id x y z
+    set s.post [x y z]
+    set s.last_pos [x y z]
+end
+
+# Somewhere free, out past where a Keystone would draw a soldier off
+fn put_up [f name] do
+    for dx in [36 40 44 -36 -40] do
+        for dz in [0 6 -6] do
+            let b {place_building f name (f.x + dx) (f.z + dz) 0}
+            if (b != nil) do
+                build_instantly b.site
+                return b
+            end
+        end
+    end
+    return nil
+end
+
+fn built [f b] do
+    for other in f.buildings do
+        if (other == b) { return true }
+    end
+    return false
+end
+
+# A column with a tree in it, in sight of home
+fn tree_near [f] do
+    for dx in (-40..=40) do
+        for dz in (-40..=40) do
+            let x (f.x + dx)
+            let z (f.z + dz)
+            let top {surface_y x z}
+            let tree ((top != nil) and ({block_at x top z} == :canopy) and ({block_at x (top - 1) z} == :canopy))
+            if (tree and {vision_can_see f.id x z}) { return [x top z] }
+        end
+    end
+    return nil
+end
+
+set stage 0
+set theirs nil
+set ours nil
+set raiders []
+set looker nil
+set looked false
+set beds 0
+set began 0
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+    let rival factions[2]
+
+    if (t == 1) { set rival.commander.next_think 1000000 }
+
+    if (t == 30) do
+        set theirs {put_up rival :shelter}
+        set ours {put_up f :shelter}
+        if ((theirs == nil) or (ours == nil)) { return fail "nowhere to put a Shelter" }
+        set stage 1
+    end
+
+    # Everything has to have been seen to be sent at, so first someone goes to look
+    if ((stage == 1) and {built rival theirs} and {built f ours}) do
+        set looker {spawn_soldier f :militia}
+        stand_at looker (ours.x + 0.5) (ours.z + 12.5)
+        set beds rival.housing
+        for i in (0..3) do
+            let m {spawn_soldier f :militia}
+            stand_at m (theirs.x + i - 1.5) (theirs.z + 14.5)
+            raiders.push m
+        end
+        set began t
+        set stage 10
+    end
+
+    if ((stage == 10) and (t > (began + 30))) do
+        # Onto our own roof: the floor inside, under it
+        let at {order_units f {=units [looker.id] =x ours.x =y (ours.y + 6) =z ours.z}}
+        let floor_y (ours.y + 1)
+        if (at[1] != floor_y) { return fail "an order onto the roof went to height {at[1]}, not the floor at {floor_y}" }
+        if (not {in_footprint ours at[0] at[1] at[2]}) { return fail "an order onto the roof went outside" }
+        if ({looker.fallbacks.length} == 0) { return fail "nowhere to fall back to from inside" }
+
+        # Into a tree: its foot
+        let tree {tree_near f}
+        if (tree == nil) { return fail "no tree to try" }
+        set at {order_units f {=units [looker.id] =x tree[0] =y (tree[1] + 1) =z tree[2]}}
+        if (at[1] != ({ground_y tree[0] tree[2]} + 1)) { return fail "an order into a tree went to height {at[1]}" }
+        ent_damage looker.id 1000 0
+
+        # Onto their roof: break it
+        let ids []
+        for m in raiders do
+            ids.push m.id
+        end
+        set at {order_units f {=units ids =x theirs.x =y (theirs.y + 6) =z theirs.z}}
+        if ({in_footprint theirs at[0] at[1] at[2]}) { return fail "they were sent inside, not to break it" }
+        for m in raiders do
+            if ((m.wreck == nil) or (not m.wreck.ordered)) { return fail "an order onto a Rival's building should be to break it" }
+        end
+        if ({soldier_stack raiders[0]}[0].key != "wreck") { return fail "the work panel doesn't say so" }
+        set began t
+        set stage 2
+    end
+
+    if ((stage == 2) and (not {building_works theirs})) do
+        let whole {integrity theirs}
+        if (whole >= BUILDING_WORKS_AT) { return fail "broken while still {whole} whole" }
+        if (rival.housing != (beds - 4)) { return fail "a broken Shelter still houses: {rival.housing} of {beds}" }
+        log "broken after" ((t - began) / 30) "s at" {integrity theirs}
+        let seen {inspect_at f.id theirs.x (theirs.y + 1) theirs.z}
+        if (({seen.get :standing} == nil) or seen.working) { return fail "looking at it doesn't say it's broken" }
+        for m in raiders do
+            ent_damage m.id 1000 0
+        end
+        set began t
+        set stage 3
+    end
+
+    if ((stage == 3) and ({integrity theirs} < 1.0)) do
+        let mending false
+        for row in {work_queue rival} do
+            if (row.key == "repair") { set mending true }
+        end
+        if (not mending) { return fail "the Rival's work queue doesn't show the repair" }
+        set stage 4
+    end
+
+    let queued false
+    for b in rival.sites do
+        if {b.has :repair} { set queued true }
+    end
+    # Once its Hands are back to mend it, the Rival can see it again
+    if ((stage == 4) and queued and (not looked)) do
+        let seen {inspect_at rival.id theirs.x (theirs.y + 1) theirs.z}
+        if (not seen.stale) do
+            if ({seen.has :built}) { return fail "one being mended reads as being built" }
+            if ({seen.get :standing} == nil) { return fail "one being mended doesn't say how much stands" }
+            set looked true
+        end
+    end
+    if ((stage == 4) and ({integrity theirs} >= 1.0) and (not queued)) do
+        if (not {building_works theirs}) { return fail "mended but not working" }
+        if (rival.housing != beds) { return fail "a mended Shelter should house again: {rival.housing} of {beds}" }
+        if {theirs.get :repairing} { return fail "still marked as being mended" }
+        if (not looked) { return fail "the Rival never saw it being mended" }
+        log "mended after" ((t - began) / 30) "s"
+
+        # On guard beside it, with nothing to do
+        let m {spawn_soldier f :militia}
+        stand_at m (theirs.x + 0.5) (theirs.z + 6.5)
+        set raiders [m]
+        set began t
+        set stage 5
+    end
+
+    if (stage == 5) do
+        let m raiders[0]
+        if ((m.wreck != nil) and (not m.wreck.ordered) and ({integrity theirs} < 1.0)) do
+            log "PASS"
+            game_exit 0
+        end
+        if (t > (began + 600)) { return fail "a soldier on guard by a Rival's building left it alone" }
+    end
+
+    if ((t == 8800) and (not failed)) do
+        let whole {integrity theirs}
+        fail "stage {stage} never finished, {whole} whole"
+    end
+end

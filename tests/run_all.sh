@@ -105,6 +105,7 @@ run hunt 1500
 run loads 5500
 run shelters 12000
 run siege 3900
+run wreck 9000
 run pause 700
 
 if python3 "$here/tools/check_models.py"; then

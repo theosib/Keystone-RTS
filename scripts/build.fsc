@@ -201,6 +201,7 @@ fn finish_building [f b] do
         site_remove b.site
         return nil
     end
+    if {b.has :repair} { return finish_repair f b }
     set b.complete true
     let def {BUILDINGS.get b.name}
     if (def != nil) do
@@ -212,6 +213,82 @@ fn finish_building [f b] do
     f.buildings.push b
     take_down_scaffold f b
     log "faction" f.id "finished" b.name
+end
+
+# ---- Damage and repair ------------------------------------------------------
+#
+# A building's site stays open once it's built, and goes on counting the cells that match. What
+# it's lost is what doesn't, so mending it is building that site again.
+
+fn integrity [b] do
+    let p {site_progress b.site}
+    if ((p == nil) or (p.total == 0)) { return 1.0 }
+    return ((p.done * 1.0) / p.total)
+end
+
+# Saves from before buildings could be broken have every one working
+fn building_works [b] { return ({b.get :working} != false) }
+
+fn building_height [b] do
+    let def {BUILDINGS.get b.name}
+    if (def == nil) { return 1 }
+    let info {blueprint_info def.blueprint}
+    if (info == nil) { return 1 }
+    return info.size_y
+end
+
+fn find_building [faction_id site] do
+    let f factions[faction_id]
+    if (f == nil) { return nil }
+    for b in f.buildings do
+        if (b.site == site) { return b }
+    end
+    return nil
+end
+
+# What a building gives, it gives only while it works
+fn set_working [f b works] do
+    set b.working works
+    let def {BUILDINGS.get b.name}
+    if (def == nil) { return nil }
+    if {def.has :housing} do
+        if works { set f.housing (f.housing + def.housing) } { set f.housing (f.housing - def.housing) }
+    end
+    if {def.has :vision} do
+        if works do
+            set b.lookout {vision_source f.id b.x (b.y + def.eye_height) b.z def.vision}
+        elif ({b.get :lookout} != nil) do
+            vision_remove_source b.lookout
+            set b.lookout nil
+        end
+    end
+    if works { log "faction" f.id b.name "works again" } { log "faction" f.id b.name "is broken" }
+end
+
+# Mending goes ahead of anything new: a broken building has stopped doing its job
+fn queue_repair [f b] do
+    set b.repairing true
+    let queue [{=name b.name =site b.site =x b.x =y b.y =z b.z =size_x b.size_x =size_z b.size_z
+                =complete false =faction f.id =repair true}]
+    for other in f.sites do
+        queue.push other
+    end
+    set f.sites queue
+end
+
+fn finish_repair [f entry] do
+    let b {find_building f.id entry.site}
+    if (b != nil) { set b.repairing false }
+    take_down_scaffold f entry
+end
+
+fn check_buildings [f] do
+    for b in f.buildings do
+        let whole {integrity b}
+        let works (whole >= BUILDING_WORKS_AT)
+        if (works != {building_works b}) { set_working f b works }
+        if ((whole < 1.0) and ({b.get :repairing} != true)) { queue_repair f b }
+    end
 end
 
 # A queued unit waits on a whole Shelter, and half of each of two houses nobody

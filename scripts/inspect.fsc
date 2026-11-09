@@ -55,11 +55,20 @@ fn inspect_at [viewer x y z] do
                 set info.building {sym_name b.name}
                 set info.owner f.id
                 if ((b == f.hall) and (f.keystone != nil)) { set info.keystone_broken {keystone_percent f} }
-                if (not b.complete) do
+                # One being mended is in the queue as well as standing
+                let standing b
+                if {b.has :repair} { set standing {find_building f.id b.site} }
+                if ((not b.complete) and (not {b.has :repair})) do
                     let progress {site_progress b.site}
                     if (progress != nil) {
                         set info.built ((progress.done * 100) / {max progress.total 1})
                     }
+                elif ((standing != nil) and (standing.site != nil)) do
+                    let whole {integrity standing}
+                    if (whole < 1.0) do
+                        set info.standing {floor (whole * 100)}
+                        set info.working {building_works standing}
+                    end
                 end
             end
         end

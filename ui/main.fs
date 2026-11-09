@@ -8,6 +8,9 @@ source "ui/overlay"
 source "ui/settings"
 
 set selection []
+# Kinds of unit a box picks, once shift-clicks have chosen them. Nil picks any.
+set kind_filter nil
+set last_click nil
 set drag_start nil
 set placing nil
 set place_turns 0
@@ -38,6 +41,8 @@ set KINDS ["timber" "stone" "provisions"]
 set ENEMY_PICK_REACHES [0 5 10]
 # A press and release closer together than this is a click, not a drag
 set CLICK_PIXELS 6
+# Two clicks this close in time, and in CLICK_PIXELS of each other, are a double-click
+set DOUBLE_CLICK_SECONDS 0.35
 set GHOST_CLEAR [0.35 0.75 1.0 0.28]
 set GHOST_TAKEN [1.0 0.2 0.16 0.42]
 set TEXT_COLOR [0.95 0.88 0.74 1.0]
@@ -131,7 +136,15 @@ fn inspect_lines [info] do
     if (building != nil) do
         let name {loc "building.{building}"}
         let built {info.get :built}
-        if (built != nil) { add {loc "inspect.site" =name name =percent {floor built}} } { add name }
+        let standing {info.get :standing}
+        if (built != nil) do
+            add {loc "inspect.site" =name name =percent {floor built}}
+        elif (standing != nil) do
+            add {loc "inspect.damaged" =name name =percent standing}
+            if (not info.working) { add {loc "inspect.broken"} }
+        else do
+            add name
+        end
     end
     let stack {info.get :stack}
     if (stack != nil) {
@@ -144,6 +157,7 @@ fn inspect_lines [info] do
         if (owner == my_faction) { add {loc "inspect.yours"} } { add {loc "inspect.rival"} }
     }
     let broken {info.get :keystone_broken}
+    if ((building != nil) and (broken == nil) and (owner != nil) and (owner != my_faction)) { add {loc "inspect.wreck.how"} }
     if (broken != nil) do
         if (owner == my_faction) { add {loc "inspect.keystone.hold"} } { add {loc "inspect.keystone.how"} }
         if (broken > 0) { add {loc "inspect.keystone.broken" =percent broken} }
@@ -655,16 +669,87 @@ fn begin_drag [] do
     set drag_start [mouse_x mouse_y]
 end
 
+fn mine_in [x0 y0 x1 y1] do
+    let picked {pick_entities x0 y0 x1 y1}
+    return {picked.filter fn [id] ({entity_faction id} == my_faction)}
+end
+
+fn kinds_of [ids] do
+    let kinds []
+    for id in ids do
+        let kind {entity_type id}
+        if ((kind != nil) and (not {kinds.contains kind})) { kinds.push kind }
+    end
+    if (kinds.length == 0) { return nil }
+    return kinds
+end
+
+fn of_kind [ids kind] { return {ids.filter fn [id] ({entity_type id} == kind)} }
+
+fn union [a b] do
+    let all []
+    for id in a do
+        all.push id
+    end
+    for id in b do
+        if (not {all.contains id}) { all.push id }
+    end
+    return all
+end
+
+# Shift-clicks build a selection up, and the kinds in it limit the boxes that follow, until a click
+# or a box on none of your own. A double-click takes every one of its kind in view.
 fn finish_drag [] do
     if (drag_start == nil) { return nil }
-    let picked {pick_entities drag_start[0] drag_start[1] mouse_x mouse_y}
-    let mine {picked.filter fn [id] ({entity_faction id} == my_faction)}
+    let mine {mine_in drag_start[0] drag_start[1] mouse_x mouse_y}
     let click (({abs (mouse_x - drag_start[0])} < CLICK_PIXELS) and ({abs (mouse_y - drag_start[1])} < CLICK_PIXELS))
     set drag_start nil
-    if (click and (mine.length > 1)) {
-        set mine [{one_of mine}]
-    }
-    set selection mine
+    if (mine.length == 0) do
+        set selection []
+        set kind_filter nil
+        set last_click nil
+        return nil
+    end
+    if click { return click_select mine }
+    if (kind_filter != nil) { set mine {mine.filter fn [id] ({kind_filter.contains {entity_type id}} == true)} }
+    if {shift_held} { set selection {union selection mine} } { set selection mine }
+end
+
+fn double_click [] do
+    if (last_click == nil) { return false }
+    let soon ((ui_clock - last_click.at) < DOUBLE_CLICK_SECONDS)
+    return (soon and ({abs (mouse_x - last_click.x)} < CLICK_PIXELS) and ({abs (mouse_y - last_click.y)} < CLICK_PIXELS))
+end
+
+fn click_select [mine] do
+    if {double_click} do
+        let kind {entity_type last_click.id}
+        set last_click nil
+        let size {window_size}
+        let alike {of_kind {mine_in 0 0 size[0] size[1]} kind}
+        if {shift_held} do
+            set selection {union selection alike}
+            set kind_filter {kinds_of selection}
+        else do
+            set selection alike
+            set kind_filter nil
+        end
+        return nil
+    end
+    let id mine[0]
+    if (mine.length > 1) { set id {one_of mine} }
+    set last_click {=at ui_clock =x mouse_x =y mouse_y =id id}
+    if {shift_held} do
+        if {selection.contains id} do
+            set selection {selection.filter fn [other] (other != id)}
+        else do
+            set selection {union selection [id]}
+        end
+        set kind_filter {kinds_of selection}
+    else do
+        set selection [id]
+        set kind_filter nil
+    end
 end
 
 # A click is for one unit, even where several stand together: the nearest to where it landed, and
@@ -1075,6 +1160,11 @@ on :state do
         set denied_frames 120
         return nil
     end
+    let went {msg.get :order_at}
+    if (went != nil) do
+        move_pin went.units went.x went.y went.z
+        return nil
+    end
     if ({msg.get :taken} != nil) do
         set denied {loc "ui.taken"}
         set denied_frames 120
@@ -1119,6 +1209,7 @@ on :action do
         :turn { set place_turns ((place_turns + 1) % 4) }
         :cancel do
             set placing nil
+            set kind_filter nil
             stop_laying
             close_menu
         end
@@ -1155,6 +1246,15 @@ fn draw_drag_box [a b] do
 end
 
 set tools_view :tactical
+
+fn filter_text [] do
+    let names ""
+    for kind in kind_filter do
+        let name {loc "unit.{sym_name kind}" =count 2}
+        if (names == "") { set names name } { set names "{names}, {name}" }
+    end
+    return {loc "ui.only" =kinds names}
+end
 
 # The one being broken that matters most: this side's own, if it's that
 fn keystone_going [] do
@@ -1211,7 +1311,14 @@ on :frame do
     elif (placing != nil) do
         set hud_hint.text {loc "ui.hint.place"}
     elif (selection.length > 0) do
-        set hud_hint.text {loc "ui.selected" =count selection.length}
+        let text {loc "ui.selected" =count selection.length}
+        if (kind_filter != nil) do
+            let only {filter_text}
+            set text "{text}. {only}"
+        end
+        set hud_hint.text text
+    elif (kind_filter != nil) do
+        set hud_hint.text {filter_text}
     else do
         set hud_hint.text {loc "ui.hint.select"}
     end

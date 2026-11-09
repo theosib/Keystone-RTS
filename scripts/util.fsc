@@ -34,6 +34,21 @@ fn open_ground [x z] do
     return y
 end
 
+# Somewhere a body fits: something firm underfoot and room for it to stand up
+fn can_stand [x y z] do
+    if (not {not_soft {block_at x (y - 1) z}}) { return false }
+    return (({block_at x y z} == :air) and ({block_at x (y + 1) z} == :air))
+end
+
+# The height nearest y in this column that a body can stand at, a few blocks either way, for ground
+# that slopes. A roof is ground to ground_y, but not to this: the floor under it is nearer.
+fn stand_y [x z y] do
+    for d in [0 1 -1 2 -2 3 -3] do
+        if {can_stand x (y + d) z} { return (y + d) }
+    end
+    return nil
+end
+
 # Open ground with a cell of room all round. A soldier's spear and shield reach well past its
 # body, so a cell that only just fits it leaves them poking through the wall next door.
 fn clear_ground [x z] do
@@ -81,6 +96,11 @@ end
 
 fn min_int [a b] do
     if (a < b) { return a }
+    return b
+end
+
+fn max_int [a b] do
+    if (a > b) { return a }
     return b
 end
 

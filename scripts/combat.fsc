@@ -9,7 +9,8 @@ fn make_soldier [f id kind] do
             =target nil =cooldown 0.0 =morale 1.0 =last_hp nil =moving false
             =chase_x 0 =chase_z 0 =last_pos nil =chase_time 0.0 =ignore nil =ignore_until 0
             =striking 0.0 =post nil =errand nil =hunting nil =hunt_fails 0 =hunt_blind 0.0
-            =siege nil =siege_wait 0.0
+            =siege nil =siege_wait 0.0 =fallbacks []
+            =wreck nil =wreck_wait 0.0 =wreck_cell nil =wreck_blows 0 =wreck_tries 0
             =dead_ends [] =explore_wait 0.0 =explore_from nil}
 end
 
@@ -41,6 +42,8 @@ fn order_soldier [s x y z] do
     set s.errand nil
     set s.hunting nil
     set s.siege nil
+    set s.wreck nil
+    set s.fallbacks []
     # Drop any route in progress, or it arrives and reads as this order being done
     ent_stop s.id
 end
@@ -329,6 +332,177 @@ fn break_keystone [s pos] do
     return true
 end
 
+# ---- Breaking buildings -----------------------------------------------------
+#
+# Hand to hand, a soldier breaks a building a block at a time: one it's sent at, until there's
+# none of it left it can reach, or one of the enemy's in sight from its post, until it stops
+# working. Bows and Pathfinders can't.
+
+fn can_wreck [s] { return (s.stats.role == :melee) }
+
+fn wreck [s b ordered] do
+    set s.wreck {=faction b.faction =site b.site =name b.name =ordered ordered}
+    set s.wreck_cell nil
+    set s.wreck_blows 0
+    set s.wreck_tries 0
+end
+
+fn stop_wrecking [s wait] do
+    set s.wreck nil
+    set s.wreck_cell nil
+    set s.wreck_wait wait
+    if s.moving do
+        ent_stop s.id
+        set s.moving false
+    end
+end
+
+fn building_in_sight [s pos] do
+    let best nil
+    let best_d (s.stats.aggro * s.stats.aggro)
+    for f in factions do
+        if ((f != nil) and (f.id != s.faction)) do
+            for b in f.buildings do
+                let d {dist2 pos[0] pos[2] b.x b.z}
+                if ((d < best_d) and {building_works b} and (not {past_leash s [b.x b.y b.z]}) and {vision_can_see s.faction b.x b.z}) do
+                    set best b
+                    set best_d d
+                end
+            end
+        end
+    end
+    return best
+end
+
+fn building_to_wreck [s pos] do
+    if (s.wreck != nil) do
+        let b {find_building s.wreck.faction s.wreck.site}
+        if ((b != nil) and (s.wreck.ordered or {building_works b})) { return b }
+        stop_wrecking s 0.0
+    end
+    if (s.wreck_wait > 0.0) do
+        set s.wreck_wait (s.wreck_wait - THINK_SECONDS)
+        return nil
+    end
+    let b {building_in_sight s pos}
+    if (b != nil) { wreck s b false }
+    return b
+end
+
+fn wreck_reach [pos cell] do
+    return {dist3 [(cell[0] + 0.5) (cell[1] + 0.5) (cell[2] + 0.5)] [pos[0] (pos[1] + 1.4) pos[2]]}
+end
+
+# The nearest block of it within a swing of where the soldier stands, chest high first
+fn block_in_reach [b pos] do
+    let plot {plot_of b}
+    let chest {floor (pos[1] + 1.4)}
+    let px {floor pos[0]}
+    let pz {floor pos[2]}
+    let top ((b.y + {building_height b}) - 1)
+    let best nil
+    let best_d WRECK_REACH
+    for x in ({max_int plot[0] (px - 3)}..{min_int plot[2] (px + 4)}) do
+        for z in ({max_int plot[1] (pz - 3)}..{min_int plot[3] (pz + 4)}) do
+            for y in ({max_int b.y (chest - 3)}..={min_int top (chest + 3)}) do
+                if ({block_at x y z} != :air) do
+                    let d {wreck_reach pos [x y z]}
+                    if (d < best_d) do
+                        set best [x y z]
+                        set best_d d
+                    end
+                end
+            end
+        end
+    end
+    return best
+end
+
+# The nearest of it that can be got at from the ground it stands on. The top of a tower can't.
+fn nearest_low_block [b pos] do
+    let plot {plot_of b}
+    let top ({max_int b.y {floor pos[1]}} + WRECK_HEIGHT)
+    let best nil
+    let best_d 0.0
+    for x in (plot[0]..plot[2]) do
+        for z in (plot[1]..plot[3]) do
+            for y in (b.y..=top) do
+                if ({block_at x y z} != :air) do
+                    let d {wreck_reach pos [x y z]}
+                    if ((best == nil) or (d < best_d)) do
+                        set best [x y z]
+                        set best_d d
+                    end
+                end
+            end
+        end
+    end
+    return best
+end
+
+fn blows_for [block] do
+    let kind {BLOCK_MATERIAL.get block}
+    if ((kind == nil) or (not {WRECK_BLOWS.has kind})) { return WRECK_BLOWS_OTHER }
+    return {WRECK_BLOWS.get kind}
+end
+
+# A walk that ended with nothing in reach counts as a try, and a few of those give it up for now
+fn walk_to_wreck [s pos b] do
+    let nav {ent_nav s.id}
+    if ((nav == :pending) or (nav == :moving)) { return nil }
+    if s.moving do
+        ent_nav_ack s.id
+        set s.moving false
+        set s.wreck_tries (s.wreck_tries + 1)
+        if (s.wreck_tries >= WRECK_TRIES) { return stop_wrecking s WRECK_RETRY_SECONDS }
+    end
+    let cell {nearest_low_block b pos}
+    if (cell == nil) { return stop_wrecking s WRECK_RETRY_SECONDS }
+    ent_goto s.id (cell[0] + 0.5) cell[1] (cell[2] + 0.5) =range (WRECK_REACH * 0.7) =partial true =max_nodes 6000
+    set s.moving true
+end
+
+fn break_block [s b cell] do
+    world_set_block cell[0] cell[1] cell[2] :air
+    set s.wreck_cell nil
+    set s.wreck_blows 0
+    set s.wreck_tries 0
+    let owner factions[b.faction]
+    if (owner != nil) do
+        note_danger owner cell[0] cell[2]
+        raise_alarm owner cell
+    end
+end
+
+fn wreck_building [s pos] do
+    if (not {can_wreck s}) { return false }
+    let b {building_to_wreck s pos}
+    if (b == nil) { return false }
+    let cell s.wreck_cell
+    if ((cell != nil) and (({block_at cell[0] cell[1] cell[2]} == :air) or ({wreck_reach pos cell} > WRECK_REACH))) { set cell nil }
+    if (cell == nil) do
+        set cell {block_in_reach b pos}
+        set s.wreck_cell cell
+        set s.wreck_blows 0
+    end
+    if (cell == nil) do
+        walk_to_wreck s pos b
+        return true
+    end
+    if s.moving do
+        ent_stop s.id
+        set s.moving false
+    end
+    if (s.cooldown > 0.0) { return true }
+    ent_look_at s.id (cell[0] + 0.5) (cell[1] + 0.5) (cell[2] + 0.5)
+    ent_anim s.id {strike_anim s}
+    set s.striking STRIKE_SECONDS
+    set s.cooldown s.stats.cooldown
+    set s.wreck_blows (s.wreck_blows + 1)
+    if (s.wreck_blows >= {blows_for {block_at cell[0] cell[1] cell[2]}}) { break_block s b cell }
+    return true
+end
+
 fn update_morale [s pos] do
     let hp {ent_health s.id}
     if ((s.last_hp != nil) and (hp < s.last_hp)) {
@@ -360,6 +534,7 @@ fn rout [s] do
     set s.target nil
     set s.hunting nil
     set s.siege nil
+    set s.wreck nil
     set s.moving false
     # It takes up a new post where it rallies
     if (s.errand != nil) { set s.order nil }
@@ -504,6 +679,7 @@ fn think_soldier [s] do
     end
 
     if ((not at_peace) and {keeping_post s} and {break_keystone s pos}) { return nil }
+    if ((not at_peace) and {keeping_post s} and {wreck_building s pos}) { return nil }
 
     # Nothing to fight: carry out orders
     if (s.order == :move) do
@@ -511,6 +687,10 @@ fn think_soldier [s] do
         # Somebody can be standing in the spot, or it can be a tree. As near as that will do.
         let close ({dist2 pos[0] pos[2] s.order_x s.order_z} < (ORDER_GIVE_UP_RANGE * ORDER_GIVE_UP_RANGE))
         let stop_trying (close or (s.errand == :back))
+        # Where it was sent can't be got to: the next place the order could mean
+        if ((nav == :failed) and (not close)) {
+            if {try_fallback s} { return nil }
+        }
         if (((nav == :idle) or (nav == :failed)) and (not ((nav == :failed) and stop_trying))) do
             ent_nav_ack s.id
             ent_goto s.id s.order_x s.order_y s.order_z =range ORDER_RANGE =partial true =max_nodes 6000

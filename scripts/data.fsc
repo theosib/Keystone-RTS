@@ -81,6 +81,9 @@ set BUILDINGS {
 
 set BASE_HOUSING 8
 
+# A building does its job while this much of it stands. Hands mend anything less than whole.
+set BUILDING_WORKS_AT 0.75
+
 # How many spots a commander looks at before leaving a building for its next plan
 set AI_PLACE_TRIES 12
 
@@ -173,3 +176,13 @@ set KEYSTONE_RADIUS 7
 set KEYSTONE_REACH 2.5
 set KEYSTONE_RETRY_SECONDS 5.0
 set KEYSTONE_BAR_HEIGHT 9
+
+# Soldiers who fight hand to hand break buildings a block at a time: blows for a block of each
+# material, how far from its chest one reaches, and so how many blocks up off the ground it can get
+# at. A building it can't reach any more of, it leaves alone for a while.
+set WRECK_BLOWS {=timber 3 =provisions 2 =stone 6}
+set WRECK_BLOWS_OTHER 4
+set WRECK_REACH 3.0
+set WRECK_HEIGHT 3
+set WRECK_TRIES 3
+set WRECK_RETRY_SECONDS 10.0

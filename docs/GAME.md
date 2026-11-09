@@ -31,6 +31,12 @@ To win, send soldiers into the enemy's Hall. With no defender there, they break 
 soldier-seconds, so ten soldiers take four seconds and two take twenty. A bar over the Hall shows
 both sides how it's going.
 
+Militia can also break buildings, a block at a time. Send them onto one, or leave them on guard next to
+one of the enemy's, and they hack at it. Once a quarter of a building is gone it stops doing its
+job: a Shelter houses nobody, a Watchtower sees nothing, and a Sawpit or Forager Hut no longer speeds
+anyone up. Hands mend whatever's damaged by themselves, ahead of anything new, once the raiders have
+gone.
+
 ## Your stockpile is made of blocks
 
 Every resource you own is somewhere in the world, as a block you can see. A stack holds eight, and
@@ -65,8 +71,16 @@ know that it's there. Up to seven of them can share a world.
 Overhead, it's a strategy game: select units, give orders, lay out buildings from the palette, drag
 out walls, and mark runs of blocks for Hands to build, which is also how you lay a road.
 
-A click picks one unit, even out of a crowd, and clicking again picks the next. Where you send units
-a pin drops, and stays until they get there. Hold Shift to add a waypoint instead, and they'll go to
+A click picks one unit, even out of a crowd, and clicking again picks the next. Double-click one to
+pick every one of its kind in view. Shift-click adds a unit, or takes it out again, and then the
+kinds you've picked are the only ones a box picks, until you click open ground or press Escape: to
+box just the Militia out of a crowd, shift-click one Militia and then drag. Shift-drag adds a box to
+what you have.
+
+An order goes where you meant, not just where you clicked. Onto a roof means inside, on the floor
+under it, or on the highest floor under cover; into a tree means its foot; onto an enemy building means
+break it. If they can't get to the first place, they try the next. Where you send units a pin drops,
+where they're really going, and stays until they get there. Hold Shift to add a waypoint instead, and they'll go to
 each in turn. Soldiers form up facing the way they're going, with spears in front and bows behind.
 Your units, and any enemy one of them can see, show through roofs and trees, and a health bar shows
 over anyone who's hurt. The menu's **Settings** turns any of that off.

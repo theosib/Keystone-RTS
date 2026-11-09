@@ -190,7 +190,7 @@ fn gather_speed [w] do
     let pos {worker_pos w}
     for b in f.buildings do
         let def {BUILDINGS.get b.name}
-        if ({def.has :gather_bonus} and (def.gather_bonus == w.kind)) do
+        if ({def.has :gather_bonus} and (def.gather_bonus == w.kind) and {building_works b}) do
             if ({dist2 b.x b.z pos[0] pos[2]} < (GATHER_BONUS_RADIUS * GATHER_BONUS_RADIUS)) {
                 return GATHER_BONUS_SPEED
             }
@@ -807,11 +807,11 @@ fn think [w] do
                 end
                 :failed do
                     ent_nav_ack w.id
-                    if ((w.job == :build) and (w.after == :place_block) and (not w.scaffolding)) {
+                    if ((w.job == :build) and (w.after == :place_block) and (not w.scaffolding)) do
                         try_scaffolding w
-                    } {
+                    elif ((w.after != :rally) or (not {try_fallback w})) do
                         give_up w
-                    }
+                    end
                 end
                 :blocked { handle_nav_block w }
                 :idle {

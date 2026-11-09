@@ -3,7 +3,8 @@ ui.title: Keystone
 ui.epoch: Hearth Epoch
 ui.selected.one: 1 unit selected
 ui.selected.other: {count} units selected
-ui.hint.select: Left-drag to select, right-click to send
+ui.hint.select: Left-drag to select, right-click to send. Shift-click to pick kinds, double-click for all of one
+ui.only: Boxes pick only {kinds}. Click open ground to pick any
 ui.hint.place: Left-click to place, R to turn, right-click to cancel
 ui.taken: That ground is already taken
 ui.hint.lay: Drag to mark blocks for Hands to build, right-click to stop
@@ -47,6 +48,8 @@ work.muster.one: Muster {name}
 work.muster.other: Muster {count} {name}
 work.build.one: Build {name} {percent}%
 work.build.other: Build {count} {name} {percent}%
+work.repair.one: Mend {name} {percent}%
+work.repair.other: Mend {count} {name} {percent}%
 work.lay.one: Lay blocks {percent}%
 work.lay.other: Lay {count} runs of blocks {percent}%
 work.floor: Raise a yard floor {percent}%
@@ -70,6 +73,7 @@ work.march: Marching
 work.scout: Scouting
 work.fight: Fighting
 work.break_keystone: Breaking the Keystone
+work.wreck: Breaking down a {name}
 work.rout: Routed, running for home
 ui.muster: Muster
 unit.hand: Hand
@@ -124,6 +128,9 @@ kind.provisions: provisions
 inspect.stack: {count} of {cap} {kind}
 inspect.gives: Gives {count} {kind}
 inspect.site: {name}, {percent}% built
+inspect.damaged: {name}, {percent}% standing
+inspect.broken: Broken: it does nothing until Hands mend it
+inspect.wreck.how: Right-click with Militia selected to break it down
 inspect.yours: Yours
 inspect.rival: Rival
 inspect.keystone.how: Right-click with soldiers selected to break its Keystone

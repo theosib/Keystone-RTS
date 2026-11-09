@@ -16,6 +16,7 @@ fn site_frame [f site] do
     for b in f.sites do
         if (b.site == site) do
             if {b.has :laid} { return {=key "lay" =percent {percent_built site}} }
+            if {b.has :repair} { return {=key "repair" =building {sym_name b.name} =percent {percent_built site}} }
             return {=key "build" =building {sym_name b.name} =percent {percent_built site}}
         end
     end
@@ -157,6 +158,7 @@ fn soldier_stack [s] do
     if (s.state == :rout) { return [{=key "rout"}] }
     if (s.target != nil) { return [{=key "fight"}] }
     if (s.siege != nil) { return [{=key "break_keystone"}] }
+    if ({s.get :wreck} != nil) { return [{=key "wreck" =building {sym_name s.wreck.name}}] }
     if (s.order == :move) {
         if (s.stats.role == :scout) { return [{=key "scout"}] }
         return [{=key "march"}]

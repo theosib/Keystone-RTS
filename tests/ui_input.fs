@@ -293,8 +293,31 @@ on :frame do
         t_check "Cancel goes back to the menu" ((menu_panel != nil) and (menu_panel != t_menu))
         gui_click 640 260
     end
-    if (t_frame == 686) do
-        t_check "Resume closes the menu" (menu_panel == nil)
+    if (t_frame == 686) { t_check "Resume closes the menu" (menu_panel == nil) }
+
+    # Once shift-clicks have chosen kinds, a box picks only those. Escape lets it pick anything.
+    if (t_frame == 688) do
+        cam_focus 0 3
+        set kind_filter [:militia]
+    end
+    if (t_frame == 696) { t_to 300 150 }
+    if (t_frame == 698) { input_button 0 true 300 150 }
+    if (t_frame == 700) { t_to 1000 560 }
+    if (t_frame == 702) { input_button 0 false 1000 560 }
+    if (t_frame == 704) do
+        let boxed {mine_in 300 150 1000 560}
+        print "{boxed.length} of ours in the box, {selection.length} picked"
+        t_check "the box has some of ours in it" (boxed.length > 0)
+        t_check "the client knows what they are" ({kinds_of boxed} != nil)
+        t_check "a box picks only the kinds chosen" (selection.length == 0)
+        do_action "cancel"
+    end
+    if (t_frame == 706) { t_to 300 150 }
+    if (t_frame == 708) { input_button 0 true 300 150 }
+    if (t_frame == 710) { t_to 1000 560 }
+    if (t_frame == 712) { input_button 0 false 1000 560 }
+    if (t_frame == 714) do
+        t_check "and after Escape it picks anything" ((selection.length > 0) and (kind_filter == nil))
         print "UI TEST DONE"
     end
 end

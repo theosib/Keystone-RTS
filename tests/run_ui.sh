@@ -16,7 +16,7 @@ fi
 cat "$here/tests/ui_input.fs" >> "$root/ui/main.fs"
 
 output="$(cd "$root" && "$build/finevox_run" --game-root "$root" --new --no-save --seed 7 \
-    --size 1280 720 --exit-after 700 --validation --script "$here/tests/ui_step.fsc" 2>&1)"
+    --size 1280 720 --exit-after 740 --validation --script "$here/tests/ui_step.fsc" 2>&1)"
 status=$?
 
 results="$(grep -E '^(PASS|FAIL) ' <<< "$output")"

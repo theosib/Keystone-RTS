@@ -36,6 +36,7 @@ fn tick_faction [f tick] do
     if (f.commander != nil) { commander_tick f.commander tick }
 
     if ((tick % 30) == ((f.id * 7) % 30)) do
+        check_buildings f
         update_sites f
         zone_reconcile f.zone
         update_regrow f tick
@@ -130,12 +131,6 @@ end
 # A tight block centred on the order point, so that one unit goes just where it was sent, and
 # a group gets a cell each instead of all fighting for one
 fn order_units [f cmd] do
-    let k {keystone_under f cmd.x cmd.y cmd.z}
-    if (k != nil) do
-        set cmd.x k[0]
-        set cmd.y k[1]
-        set cmd.z k[2]
-    end
     let units []
     for id in cmd.units do
         let entry {lookup_unit id}
@@ -143,24 +138,196 @@ fn order_units [f cmd] do
     end
     if (units.length == 0) { return nil }
     let queued ({cmd.has :queue} and cmd.queue)
+    let x {floor cmd.x}
+    let y {floor cmd.y}
+    let z {floor cmd.z}
+    let k {keystone_under f x y z}
+    if (k != nil) { return {send_formation units [k] queued false} }
+    let b {building_to_break f x y z}
+    if (b != nil) { return {order_wreck units b queued} }
+    return {send_formation units {order_spots f x y z {centre_of units}} queued true}
+end
 
-    let spots {formation units (cmd.x + 0.5) (cmd.z + 0.5)}
+# Where an order goes is the first of the spots, and the rest are where to try if that can't be got
+# to. Each unit stands at the height nearest it in its own place in the formation, unless told not to.
+fn send_formation [units spots queued settle] do
+    let at spots[0]
+    let formed {formation units (at[0] + 0.5) (at[2] + 0.5)}
     let i 0
-    for record in spots.order do
-        let x spots.at[i][0]
-        let z spots.at[i][1]
+    for record in formed.order do
+        let x formed.at[i][0]
+        let z formed.at[i][1]
         set i (i + 1)
-        let ground {ground_y {floor x} {floor z}}
-        let y cmd.y
-        if ((ground != nil) and ({abs ((ground + 1) - cmd.y)} <= 3)) { set y (ground + 1) }
+        let y at[1]
+        if settle do
+            let stand {stand_y {floor x} {floor z} at[1]}
+            if (stand != nil) { set y stand }
+        end
         if (queued and {under_orders record}) do
             let ways {waypoints_of record}
             ways.push [x y z]
         else do
             set record.waypoints []
             send_unit record x y z
+            let rest []
+            for j in (1..spots.length) do
+                rest.push spots[j]
+            end
+            set record.fallbacks rest
         end
     end
+    return at
+end
+
+# An order's next place to try, when the last couldn't be got to
+fn try_fallback [record] do
+    let rest {record.get :fallbacks}
+    if ((rest == nil) or (rest.length == 0)) { return false }
+    let p rest[0]
+    rest.remove 0
+    send_unit record p[0] p[1] p[2]
+    set record.fallbacks rest
+    return true
+end
+
+fn centre_of [units] do
+    let sx 0.0
+    let sz 0.0
+    let n 0
+    for r in units do
+        let p {ent_pos r.id}
+        if (p != nil) do
+            set sx (sx + p[0])
+            set sz (sz + p[2])
+            set n (n + 1)
+        end
+    end
+    if (n == 0) { return nil }
+    return [(sx / n) (sz / n)]
+end
+
+# ---- Where an order means ----------------------------------------------------
+#
+# Nobody means the top of a roof or a tree. An order means the nearest place a unit could stand
+# that the click could stand for, and then on down to somewhere it surely can: a building's floors,
+# highest first, each under a roof, and then the ground just outside.
+
+fn building_at [x y z] do
+    for f in factions do
+        if (f != nil) do
+            let b {structure_at f x y z}
+            if ((b != nil) and (not {b.has :laid})) { return b }
+        end
+    end
+    return nil
+end
+
+# Into the fog, a click is taken as it is: the game knows what's there, and the pin would tell
+fn order_spots [f x y z near] do
+    if ({vision_state f.id x z} == :unknown) { return [[x y z]] }
+    let b {building_at x y z}
+    if (b != nil) do
+        let spots {floors_in b x y z}
+        if ((spots.length == 0) and {can_stand x y z}) { spots.push [x y z] }
+        if (near == nil) { set near [x z] }
+        let out {outside_of b near}
+        if (out != nil) { spots.push out }
+        if (spots.length > 0) { return spots }
+    end
+    if {SOFT_BLOCKS.contains {block_at x (y - 1) z}} do
+        # Up a tree, or on a bush: at its foot
+        let g {ground_y x z}
+        if (g != nil) { return [[x (g + 1) z]] }
+    end
+    return [[x y z]]
+end
+
+# The first height clear of it
+fn structure_top [b] do
+    if (b.name == :core_hall) { return (b.y + {blueprint_info :core_hall}.size_y) }
+    return (b.y + {building_height b})
+end
+
+# Room to stand with something overhead, at or below the click, nearest it first. A floor more than
+# a step below the best one is another floor, and comes next.
+fn floors_in [b x y z] do
+    let plot {plot_of b}
+    let top {structure_top b}
+    let found []
+    for cx in (plot[0]..plot[2]) do
+        for cz in (plot[1]..plot[3]) do
+            let roof (top - 1)
+            while ((roof >= b.y) and ({block_at cx roof cz} == :air)) do
+                set roof (roof - 1)
+            end
+            for cy in (b.y..={min_int y (roof - 2)}) do
+                if {can_stand cx cy cz} do
+                    let score ({dist2 x z cx cz} + (4 * (y - cy) * (y - cy)))
+                    found.push {=at [cx cy cz] =score score}
+                end
+            end
+        end
+    end
+    found.sort_by fn [p q] (p.score < q.score)
+    let spots []
+    for c in found do
+        if ((spots.length == 0) or (c.at[1] < (spots[spots.length - 1][1] - 1))) { spots.push c.at }
+    end
+    return spots
+end
+
+# The ground just round it nearest (x, z)
+fn outside_of [b near] do
+    let plot {plot_of b}
+    let best nil
+    let best_d 0.0
+    for cx in ((plot[0] - 1)..=plot[2]) do
+        for cz in ((plot[1] - 1)..=plot[3]) do
+            let edge ((cx == (plot[0] - 1)) or (cx == plot[2]) or (cz == (plot[1] - 1)) or (cz == plot[3]))
+            if edge do
+                let cy {stand_y cx cz b.y}
+                let d {dist2 near[0] near[1] (cx + 0.5) (cz + 0.5)}
+                if ((cy != nil) and ((best == nil) or (d < best_d))) do
+                    set best [cx cy cz]
+                    set best_d d
+                end
+            end
+        end
+    end
+    return best
+end
+
+# An order onto a building of the enemy's that this side can see means breaking it
+fn building_to_break [f x y z] do
+    if ({vision_state f.id x z} == :unknown) { return nil }
+    for other in factions do
+        if ((other != nil) and (other.id != f.id)) do
+            for b in other.buildings do
+                if {in_footprint b x y z} { return b }
+            end
+        end
+    end
+    return nil
+end
+
+# Those who can break it go at it. The rest wait just outside, on the near side.
+fn order_wreck [units b queued] do
+    let out {outside_of b {centre_of units}}
+    if (out == nil) { set out [b.x b.y b.z] }
+    let others []
+    for record in units do
+        if ({record.has :stats} and {can_wreck record}) do
+            set record.waypoints []
+            order_soldier record out[0] out[1] out[2]
+            set record.order nil
+            set record.post out
+            wreck record b true
+        else do
+            others.push record
+        end
+    end
+    if (others.length > 0) { send_formation others [out] queued true }
+    return out
 end
 
 # Ranks facing the way they're going: those who fight hand to hand in front, bows behind them, then
@@ -380,6 +547,14 @@ fn settle_after_resume [f] do
         set s.hunt_blind 0.0
         set s.siege nil
         set s.siege_wait 0.0
+        if (not {s.has :wreck}) do
+            set s.wreck nil
+            set s.wreck_wait 0.0
+            set s.fallbacks []
+        end
+        set s.wreck_cell nil
+        set s.wreck_blows 0
+        set s.wreck_tries 0
         ent_anim s.id :idle
     end
     # Saves from before the Hall was noted. One that's lost its Keystone can't say where it stood.
@@ -477,7 +652,11 @@ end
 on :command do
     let f {faction_of sender}
     match cmd.name
-        :move { order_units f cmd }
+        :move do
+            # Where the units really went, for the pin: not always where the click was
+            let at {order_units f cmd}
+            if (at != nil) { ui_publish {=order_at {=units cmd.units =x at[0] =y at[1] =z at[2]}} =to sender }
+        end
         :attack { order_attack f cmd }
         :build { if ({place_building f cmd.building cmd.x cmd.z cmd.turns} == nil) { ui_publish {=taken true} =to sender } }
         :train { set f.train_queue (f.train_queue + {batch_size cmd}) }
