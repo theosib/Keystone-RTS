@@ -80,7 +80,9 @@ Honest gaps against Stage 1:
 
 - `explore` fails about one run in six, under load, with "it left over a sixth of the map": a scout
   sometimes gets stuck with ground still to see. It did before multiplayer too (3 of 20 runs then,
-  2 of 20 now, ten at a time on 12 cores), so it's the Pathfinder, not the network.
+  2 of 20 now, ten at a time on 12 cores), so it's the Pathfinder, not the network. On 2026-11-09
+  it failed 6 of 14 in a row run against the source tree, then 1 of 18 on the old scripts and 2 of 18
+  on the new ones, side by side in copies of it. The streak wasn't explained.
 - `run_mcp.sh`'s "F11 again puts the window back" failed once on macOS (2026-11-09), still at full
   screen size when it looked, and passed on a rerun. The window's way back from full screen is
   animated, so it's likely timing.

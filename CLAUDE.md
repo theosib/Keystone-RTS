@@ -79,6 +79,11 @@ finescript traps that cost real time here:
   through `markers` and `flushMarkers`, which allow for the camera having moved since.
 - `on :command` runs during a pause, so a command that shouldn't work with the clock stopped has to
   check `game_paused`, and `on :tick` doesn't, so what clients need to hear goes in `publish_all`.
+- A finished building keeps its site, and `site_progress` on it is how much still stands (`integrity`).
+  Anything that changes a building's blocks, the Steward included, gets put back by Hands as a repair.
+- `order_units` takes a click into the fog as it is, so a scenario has to let a unit see a far
+  building (30 ticks will do) before it sends anyone there. Buildings give no sight of their own:
+  with nobody near, even the owner's `inspect_at` on one reads as stale.
 - Path searches are the main CPU cost: never re-issue `ent_goto` every think. See the
   backoff in `give_up` and the re-search rule in `chase`.
 
