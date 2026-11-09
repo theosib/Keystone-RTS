@@ -3,6 +3,7 @@ skeleton: humanoid
 anim:idle: humanoid_idle
 anim:walk: humanoid_walk
 anim:work: humanoid_work
+anim:shoot: humanoid_shoot
 
 part: jerkin
 bone: torso
@@ -78,17 +79,119 @@ offset: 0.12 0.62 -0.21
 size: 0.18 0.14 0.16
 color: 0.75 0.73 0.66
 
-part: bow
-bone: arm_l
-offset: -0.04 -0.3 0.14
-size: 0.05 1.5 0.1
+# The bow lies flat, which is how it reads from above: slung across the back, and levelled at the
+# mark while shooting
+part: bow_grip
+bone: torso
+offset: 0.000 0.5 -0.360
+size: 0.20 0.06 0.05
 color: 0.32 0.21 0.11
+hidden_in: shoot
+
+part: bow_left_1
+bone: torso
+offset: 0.200 0.5 -0.330
+size: 0.20 0.06 0.05
+color: 0.32 0.21 0.11
+hidden_in: shoot
+
+part: bow_right_1
+bone: torso
+offset: -0.200 0.5 -0.330
+size: 0.20 0.06 0.05
+color: 0.32 0.21 0.11
+hidden_in: shoot
+
+part: bow_left_2
+bone: torso
+offset: 0.380 0.5 -0.290
+size: 0.17 0.06 0.05
+color: 0.32 0.21 0.11
+hidden_in: shoot
+
+part: bow_right_2
+bone: torso
+offset: -0.380 0.5 -0.290
+size: 0.17 0.06 0.05
+color: 0.32 0.21 0.11
+hidden_in: shoot
+
+part: bow_left_3
+bone: torso
+offset: 0.520 0.5 -0.250
+size: 0.13 0.06 0.05
+color: 0.32 0.21 0.11
+hidden_in: shoot
+
+part: bow_right_3
+bone: torso
+offset: -0.520 0.5 -0.250
+size: 0.13 0.06 0.05
+color: 0.32 0.21 0.11
+hidden_in: shoot
 
 part: bow_string
-bone: arm_l
-offset: -0.04 -0.3 0.205
-size: 0.015 1.46 0.015
+bone: torso
+offset: 0 0.5 -0.2
+size: 1.1 0.01 0.01
 color: 0.75 0.73 0.66
+hidden_in: shoot
+
+part: drawn_grip
+bone: arm_l
+offset: 0.000 -0.545 0
+size: 0.20 0.05 0.06
+color: 0.32 0.21 0.11
+only_in: shoot
+
+part: drawn_left_1
+bone: arm_l
+offset: 0.200 -0.490 0
+size: 0.20 0.05 0.06
+color: 0.32 0.21 0.11
+only_in: shoot
+
+part: drawn_right_1
+bone: arm_l
+offset: -0.200 -0.490 0
+size: 0.20 0.05 0.06
+color: 0.32 0.21 0.11
+only_in: shoot
+
+part: drawn_left_2
+bone: arm_l
+offset: 0.380 -0.450 0
+size: 0.17 0.05 0.06
+color: 0.32 0.21 0.11
+only_in: shoot
+
+part: drawn_right_2
+bone: arm_l
+offset: -0.380 -0.450 0
+size: 0.17 0.05 0.06
+color: 0.32 0.21 0.11
+only_in: shoot
+
+part: drawn_left_3
+bone: arm_l
+offset: 0.520 -0.410 0
+size: 0.13 0.05 0.06
+color: 0.32 0.21 0.11
+only_in: shoot
+
+part: drawn_right_3
+bone: arm_l
+offset: -0.520 -0.410 0
+size: 0.13 0.05 0.06
+color: 0.32 0.21 0.11
+only_in: shoot
+
+part: drawn_string
+bone: arm_l
+offset: 0 -0.36 0
+size: 1.1 0.01 0.01
+color: 0.75 0.73 0.66
+only_in: shoot
 
 # The faction's mark, the Keystone's diamond, on chest and back
 part: badge_front_patch

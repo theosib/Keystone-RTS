@@ -1,6 +1,7 @@
 # Pathfinder: fast and far-sighted, not a fighter
 name: scout
 half_extents: 0.3 0.85 0.3
+personal_space: 0.4
 max_speed: 6.0
 max_health: 30
 ai: none

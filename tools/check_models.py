@@ -6,7 +6,8 @@ of two surfaces shows. Where the same-facing faces of two parts overlap, they fi
 level, and speckle at a distance if they're close. Parts that look the same can't show it, and
 neither can a stretch of face with another part over it.
 
-Checks the rest pose only.
+Checks the rest pose only, once for each animation, with the parts that show during it: a tool held
+only while chopping can't fight one held only while building.
 """
 import itertools
 import sys
@@ -55,7 +56,25 @@ def parts(path):
             part["look"][0] = tuple(value.split())
         elif part and key == "team":
             part["look"][1] = float(value)
+        elif part and key in ("only_in", "hidden_in"):
+            part[key] = value.split()
     return found
+
+
+def animations(path):
+    """The animations a model names, and none at all: what a part can be shown during."""
+    names = {""}
+    for line in path.read_text().splitlines():
+        key, _, value = line.partition(":")
+        if key == "anim":
+            names.add(value.partition(":")[0].strip())
+    return sorted(names)
+
+
+def shown_during(part, animation):
+    if "only_in" in part and animation not in part["only_in"]:
+        return False
+    return animation not in part.get("hidden_in", [])
 
 
 def pose(part, rig):
@@ -117,7 +136,12 @@ def main():
         model = parts(path)
         for part in model:
             pose(part, rig)
-        for fault in faults(model):
+        found = []
+        for animation in animations(path):
+            for fault in faults([part for part in model if shown_during(part, animation)]):
+                if fault not in found:
+                    found.append(fault)
+        for fault in found:
             print(f"{path.name}: {fault}")
             failed = True
     return 1 if failed else 0

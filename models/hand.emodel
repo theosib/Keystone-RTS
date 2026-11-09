@@ -3,6 +3,10 @@ skeleton: humanoid
 anim:idle: humanoid_idle
 anim:walk: humanoid_walk
 anim:work: humanoid_work
+anim:chop: humanoid_chop
+anim:quarry: humanoid_chop
+anim:build: humanoid_build
+anim:forage: humanoid_forage
 
 part: skirt
 bone: hips
@@ -142,3 +146,46 @@ offset: 0 0.22 -0.178
 size: 0.05 0.04 0.024
 color: 1 1 1
 team: 1.0
+
+# Tools, each in hand only for the work it's for
+part: axe_haft
+bone: arm_r
+offset: 0 -0.72 0
+size: 0.05 0.58 0.05
+color: 0.42 0.3 0.18
+only_in: chop
+
+part: axe_head
+bone: arm_r
+offset: 0 -0.97 -0.08
+size: 0.09 0.16 0.16
+color: 0.55 0.57 0.6
+only_in: chop
+
+part: pick_haft
+bone: arm_r
+offset: 0 -0.72 0
+size: 0.05 0.58 0.05
+color: 0.42 0.3 0.18
+only_in: quarry
+
+part: pick_head
+bone: arm_r
+offset: 0 -1.0 0
+size: 0.09 0.07 0.46
+color: 0.55 0.57 0.6
+only_in: quarry
+
+part: mallet_haft
+bone: arm_r
+offset: 0 -0.64 0
+size: 0.05 0.42 0.05
+color: 0.42 0.3 0.18
+only_in: build
+
+part: mallet_head
+bone: arm_r
+offset: 0 -0.86 0
+size: 0.13 0.13 0.24
+color: 0.36 0.26 0.16
+only_in: build
