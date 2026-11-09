@@ -54,14 +54,14 @@ color: 0.3 0.23 0.15
 
 part: leg_left
 bone: leg_l
-offset: 0 -0.38 0
-size: 0.16 0.56 0.18
+offset: 0 -0.46 0
+size: 0.16 0.72 0.18
 color: 0.2 0.16 0.12
 
 part: leg_right
 bone: leg_r
-offset: 0 -0.38 0
-size: 0.16 0.56 0.18
+offset: 0 -0.46 0
+size: 0.16 0.72 0.18
 color: 0.2 0.16 0.12
 
 # The faction's mark, the Keystone's diamond, on chest and back

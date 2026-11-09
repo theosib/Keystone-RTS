@@ -57,14 +57,14 @@ team: 1.0
 
 part: leg_left
 bone: leg_l
-offset: 0 -0.38 0
-size: 0.16 0.56 0.18
+offset: 0 -0.46 0
+size: 0.16 0.72 0.18
 color: 0.2 0.15 0.1
 
 part: leg_right
 bone: leg_r
-offset: 0 -0.38 0
-size: 0.16 0.56 0.18
+offset: 0 -0.46 0
+size: 0.16 0.72 0.18
 color: 0.2 0.15 0.1
 
 part: quiver

@@ -25,7 +25,8 @@ on :tick do
 
     if (t == 30) do
         zone_take f.zone :timber 100000 f.x f.z
-        lay_blocks f :planks (f.x + 20) (f.z + 20) (f.x + 39) (f.z + 20)
+        # Long enough that a gatherer has a load ready before the builders are done
+        lay_blocks f :planks (f.x + 20) (f.z + 20) (f.x + 51) (f.z + 20)
         set site f.sites[0].site
         set began t
     end

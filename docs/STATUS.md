@@ -56,8 +56,8 @@ Honest gaps against Stage 1:
   fall back to English.
 - **The new lands are unbalanced.** Desert is thin on timber and dense forest on room to build, with
   numbers that are first guesses. Nobody's played a full game on either.
-- **Local avoidance.** Units standing too close ease apart (`personal_space`), but moving ones don't
-  steer round each other: two crossing paths still walk through one another.
+- **Local avoidance.** Units standing too close ease apart (`personal_space`). Moving ones are never
+  pushed, so nothing jams, and they walk through one another rather than steer round.
 - **Day and night.** Nights had no part in the game and only made it harder to see, so the sun is
   held at `TIME_OF_DAY`. Bringing them back wants a rule that makes them matter.
 - **Audio.** No sound content yet.
