@@ -77,6 +77,9 @@ Honest gaps against Stage 1:
 - `explore` fails about one run in six, under load, with "it left over a sixth of the map": a scout
   sometimes gets stuck with ground still to see. It did before multiplayer too (3 of 20 runs then,
   2 of 20 now, ten at a time on 12 cores), so it's the Pathfinder, not the network.
+- `run_mcp.sh`'s "F11 again puts the window back" failed once on macOS (2026-11-09), still at full
+  screen size when it looked, and passed on a rerun. The window's way back from full screen is
+  animated, so it's likely timing.
 - `guard` fails about one run in seven, at the alarm (2026-11-09: 3 of 16 on the scripts before
   that day's changes, 4 of 41 after). Either the wrong number answer it, or the ones not needed are
   drawn off their posts, all six then walking back. A Hand fleeing the raider anchors that part of
