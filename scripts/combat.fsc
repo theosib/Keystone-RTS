@@ -64,7 +64,7 @@ end
 # Only soldiers hunt. Anyone else in the selection just goes there.
 fn order_attack [f cmd] do
     let quarry {lookup_unit cmd.target}
-    let huntable ((quarry != nil) and (quarry.faction != f.id) and {ent_alive cmd.target} and {vision_can_see_ent f.id cmd.target})
+    let huntable ((quarry != nil) and {hostile f factions[quarry.faction]} and {ent_alive cmd.target} and {vision_can_see_ent f.id cmd.target})
     let others []
     for id in cmd.units do
         let entry {lookup_unit id}
@@ -204,8 +204,11 @@ fn count_armed [pos radius faction hostile] do
             let found {ent_find pos[0] pos[1] pos[2] radius =enemy_of faction =type kind =max 16}
             set total (total + found.length)
         else do
-            let found {ent_find pos[0] pos[1] pos[2] radius =faction faction =type kind =max 16}
-            set total (total + found.length)
+            # Allies defend it as their own
+            for ally in {allies_of factions[faction]} do
+                let found {ent_find pos[0] pos[1] pos[2] radius =faction ally.id =type kind =max 16}
+                set total (total + found.length)
+            end
         end
     end
     return total
@@ -259,7 +262,7 @@ end
 fn keystone_in_sight [s pos] do
     let reach (s.stats.aggro * s.stats.aggro)
     for f in factions do
-        if ((f != nil) and (f.id != s.faction) and (f.keystone != nil)) do
+        if ((f != nil) and {hostile f factions[s.faction]} and (f.keystone != nil)) do
             let k f.keystone
             if (({dist2 pos[0] pos[2] k[0] k[2]} < reach) and (not {past_leash s k}) and {vision_can_see s.faction k[0] k[2]}) {
                 return f
@@ -361,7 +364,7 @@ fn building_in_sight [s pos] do
     let best nil
     let best_d (s.stats.aggro * s.stats.aggro)
     for f in factions do
-        if ((f != nil) and (f.id != s.faction)) do
+        if ((f != nil) and {hostile f factions[s.faction]}) do
             for b in f.buildings do
                 let d {dist2 pos[0] pos[2] b.x b.z}
                 if ((d < best_d) and {building_works b} and (not {past_leash s [b.x b.y b.z]}) and {vision_can_see s.faction b.x b.z}) do

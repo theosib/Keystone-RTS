@@ -1,0 +1,92 @@
+# Scenario: sides on one team are allies. Their soldiers stand side by side without a blow, they
+# both go for an enemy, each sees what the other's units see, and when the enemy falls they both win.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+set mine nil
+set theirs nil
+set foe nil
+set scout nil
+set third nil
+set foe_hp nil
+set mine_hp nil
+set theirs_hp nil
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+    let ally factions[2]
+
+    if (tick == 5) do
+        # The second side plays itself here, and a third joins far off
+        set ally.commander nil
+        set third {make_faction 3 (f.x + 60) f.z}
+        vision_add_faction 3
+        endow_new third
+        set_team f 1
+        set_team ally 1
+        set_team third 2
+        expect "allies hostile" {hostile f ally} false
+        expect "enemies hostile" {hostile f third} true
+    end
+
+    # Side by side, from different sides of the same team
+    if (tick == 30) do
+        set mine {spawn_soldier f :militia}
+        set theirs {spawn_soldier ally :militia}
+        let at {ent_pos mine.id}
+        ent_set_pos theirs.id [(at[0] + 1.5) at[1] at[2]]
+        set theirs.post {ent_pos theirs.id}
+        set mine_hp {ent_health mine.id}
+        set theirs_hp {ent_health theirs.id}
+    end
+    if (tick == 230) do
+        expect "my soldier's health" {ent_health mine.id} mine_hp
+        expect "my ally's soldier's health" {ent_health theirs.id} theirs_hp
+    end
+
+    # An enemy among them gets their attention
+    if (tick == 231) do
+        set foe {spawn_soldier third :militia}
+        let at {ent_pos mine.id}
+        ent_set_pos foe.id [(at[0] + 4.0) at[1] (at[2] + 2.0)]
+        set foe.post {ent_pos foe.id}
+        set foe_hp {ent_health foe.id}
+    end
+
+    # The ally's scout, out on its own, sees for us too
+    if (tick == 240) do
+        set scout {spawn_soldier ally :scout}
+        ent_set_pos scout.id [(f.x - 50.5) (f.y + 1) (f.z + 0.5)]
+        set scout.post {ent_pos scout.id}
+    end
+
+    if (tick == 600) do
+        if ({ent_alive foe.id} and ({ent_health foe.id} >= foe_hp)) { fail "nobody fought the enemy" }
+        let at {ent_pos scout.id}
+        if (not {vision_can_see f.id at[0] at[2]}) { fail "an ally's scout doesn't see for us" }
+        if {vision_can_see third.id at[0] at[2]} { fail "an enemy sees through our ally's eyes" }
+
+        # The enemy falls, and the whole team has won
+        conquer third
+        expect "match" contest.state :over
+        expect "won, for me" {won f} true
+        expect "won, for my ally" {won ally} true
+        expect "won, for the fallen" {won third} false
+        if (not failed) do
+            log "teams fight together"
+            game_exit 0
+        end
+    end
+end

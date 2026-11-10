@@ -1003,18 +1003,24 @@ fn side_name [side] do
     return {loc "side.player" =id side.id}
 end
 
-fn side_label [side] do
+fn side_label [side team] do
     if (side.id == my_faction) { return {loc "side.you"} }
-    if side.alive { return {side_name side} }
-    return {loc "side.fallen" =name {side_name side}}
+    let name {side_name side}
+    if ((team != nil) and ({side.get :team} == team)) { set name {loc "side.ally" =name name} }
+    if side.alive { return name }
+    return {loc "side.fallen" =name name}
 end
 
 fn hear_sides [sides] do
+    let team nil
+    for side in sides do
+        if (side.id == my_faction) { set team {side.get :team} }
+    end
     let key ""
     for side in sides do
         set_faction_color side.id side.color[0] side.color[1] side.color[2]
         note_faction_color side.id side.color
-        let label {side_label side}
+        let label {side_label side team}
         set key "{key}{label}"
     end
     if (key == sides_shown) { return nil }
@@ -1022,7 +1028,7 @@ fn hear_sides [sides] do
 
     let rows [{ui.text {loc "side.title"}}]
     for side in sides do
-        rows.push {ui.text_colored [side.color[0] side.color[1] side.color[2] 1.0] {side_label side}}
+        rows.push {ui.text_colored [side.color[0] side.color[1] side.color[2] 1.0] {side_label side team}}
     end
     set sides_group.children rows
 end
@@ -1183,7 +1189,7 @@ on :state do
     end
     if ((state == nil) and (not resumed)) {cam_focus msg.home[0] msg.home[1]}
     if ((msg.match == :over) and (end_screen == nil)) {
-        show_end_screen (msg.winner == my_faction)
+        show_end_screen {msg.get :won}
     }
     set state msg
     refresh_tips
@@ -1278,8 +1284,8 @@ fn keystone_going [] do
 end
 
 fn update_pause_button [] do
-    set pause_button.visible {can_pause}
-    set pause_tip.visible {can_pause}
+    # Greyed out rather than gone, so that nothing under it moves
+    set pause_button.enabled {can_pause}
     if {game_paused} { set pause_button.label {loc "menu.unpause"} } { set pause_button.label {loc "menu.pause"} }
 end
 

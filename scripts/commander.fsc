@@ -16,12 +16,12 @@ fn make_commander [f level] do
             =passive false =last_strike 0}
 end
 
-# The nearest faction still standing
+# The nearest enemy still standing
 fn enemy_of [f] do
     let best nil
     let best_d nil
     for other in factions do
-        if ((other != nil) and (other.id != f.id) and other.alive) do
+        if ((other != nil) and {hostile f other} and other.alive) do
             let d (((other.x - f.x) * (other.x - f.x)) + ((other.z - f.z) * (other.z - f.z)))
             if ((best == nil) or (d < best_d)) do
                 set best other

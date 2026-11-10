@@ -3,6 +3,10 @@
 #
 # `manifest` reaches into game.conf, for what must be known before there's a world: a setting's
 # value goes to that key, and a choice can set several of its own.
+#
+# Teams: everyone for themselves, every player against every rival, or each player and each rival
+# on the team of its number. A player picks their own, a rival's is the host's to pick, and the
+# lobby shows a rival's only while it's custom.
 
 return {
     =start :lobby
@@ -31,7 +35,22 @@ return {
             {=value :standard =label "lobby.level.standard"}
             {=value :veteran =label "lobby.level.veteran"}
         ]}
+        {=key :teams =type :choice =label "lobby.setting.teams" =default :ffa =choices [
+            {=value :ffa =label "lobby.teams.ffa"}
+            {=value :versus =label "lobby.teams.versus"}
+            {=value :custom =label "lobby.teams.custom"}
+        ]}
+        {=key :rival_team_1 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 1}
+        {=key :rival_team_2 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 2}
+        {=key :rival_team_3 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 3}
+        {=key :rival_team_4 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 4}
+        {=key :rival_team_5 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 5}
+        {=key :rival_team_6 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 6}
+        {=key :rival_team_7 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 7}
         {=key :fog =type :bool =label "lobby.setting.fog" =default true =manifest "fog_of_war"}
         {=key :seed =type :int =label "lobby.setting.seed" =default 0 =min 0 =manifest "world_seed"}
+    ]
+    =player_settings [
+        {=key :team =type :int =label "lobby.player.team" =default 1 =min 1 =max 8}
     ]
 }

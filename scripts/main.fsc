@@ -87,7 +87,7 @@ fn publish_state [f] do
                 =sites f.sites.length =plots {plots_seen_by f} =home [f.x f.z]
                 =queue {work_queue f}
                 =army f.army.length
-                =match contest.state =winner contest.winner
+                =match contest.state =winner contest.winner =won {won f}
                 =capture f.capture =keystones {keystones_going f}
                 =alive f.alive} =faction f.id
 end
@@ -103,7 +103,7 @@ fn publish_sides [] do
             let owner nil
             if ({f.has :owner_name} and (f.commander == nil)) { set owner f.owner_name }
             sides.push {=id f.id =color color =alive f.alive =rival (f.commander != nil)
-                        =moniker f.moniker =player owner}
+                        =moniker f.moniker =player owner =team f.team}
         end
     end
     ui_publish {=sides sides}
@@ -121,7 +121,7 @@ end
 fn keystone_under [f x y z] do
     if ({vision_state f.id x z} == :unknown) { return nil }
     for other in factions do
-        if ((other != nil) and (other.id != f.id) and (other.keystone != nil) and (other.hall != nil)) do
+        if ((other != nil) and {hostile f other} and (other.keystone != nil) and (other.hall != nil)) do
             if {in_footprint other.hall x y z} { return other.keystone }
         end
     end
@@ -301,7 +301,7 @@ end
 fn building_to_break [f x y z] do
     if ({vision_state f.id x z} == :unknown) { return nil }
     for other in factions do
-        if ((other != nil) and (other.id != f.id)) do
+        if ((other != nil) and {hostile f other}) do
             for b in other.buildings do
                 if {in_footprint b x y z} { return b }
             end
@@ -468,6 +468,7 @@ on :start do
     let humans {max PLAYERS.length 1}
     let count (humans + rivals)
     if (count == 1) { set count 2 }
+    let teams {SETTINGS.get :teams}
 
     for i in (0..humans) do
         let spot {settlement_spot i count}
@@ -479,6 +480,16 @@ on :start do
             set f.owner_name PLAYERS[i].name
             player_bind PLAYERS[i].id f.id =at {steward_home f}
         end
+        if (teams == :versus) do
+            set_team f 1
+        elif (teams == :custom) do
+            let chosen nil
+            if (i < PLAYERS.length) { set chosen PLAYERS[i].settings.team }
+            if (chosen == nil) { set chosen 1 }
+            set_team f chosen
+        else do
+            set_team f f.team
+        end
     end
 
     for i in (humans..(humans + rivals)) do
@@ -487,6 +498,16 @@ on :start do
         vision_add_faction rival.id
         endow_new rival
         set rival.commander {make_commander rival level}
+        if (teams == :versus) do
+            set_team rival 2
+        elif (teams == :custom) do
+            let number (i - humans + 1)
+            let chosen {SETTINGS.get {to_sym "rival_team_{number}"}}
+            if (chosen == nil) { set chosen 2 }
+            set_team rival chosen
+        else do
+            set_team rival rival.team
+        end
     end
 
     log "settlements:" {alive_factions}.length
@@ -613,7 +634,12 @@ on :resume do
     set unit_index saved.unit_index
     set contest saved.contest
     for f in factions do
-        if (f != nil) { settle_after_resume f }
+        if (f != nil) do
+            # Saves from before teams had everyone on their own
+            if (not {f.has :team}) { set f.team (SOLO_TEAM + f.id) }
+            set_team f f.team
+            settle_after_resume f
+        end
     end
     log "resumed at t=" ({game_tick} / 30)
 end

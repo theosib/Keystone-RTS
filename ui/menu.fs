@@ -282,7 +282,16 @@ fn can_set [state key] do
 end
 
 fn setting_label [setting] do
+    if {setting.has :rival} { return {loc setting.label =number setting.rival} }
     return {loc setting.label}
+end
+
+# A rival's team counts only when teams are chosen one by one, and only for rivals there are
+fn setting_shown [setting] do
+    if (not {setting.has :rival}) { return true }
+    let rivals {lobby.settings.get :rivals}
+    if (rivals == nil) { set rivals 0 }
+    return (({lobby.settings.get :teams} == :custom) and (setting.rival <= rivals))
 end
 
 fn choice_index [setting value] do
@@ -343,11 +352,13 @@ fn build_settings [] do
     let rows [{ui.text_colored TITLE_COLOR {loc "lobby.settings"}} {ui.separator}]
     for setting in info.settings do
         let value {lobby.settings.get setting.key}
-        if {can_set lobby setting.key} do
-            rows.push {setting_widget setting value}
-        else do
-            let text "{setting_label setting}: {value_text setting value}"
-            rows.push {ui.text text}
+        if {setting_shown setting} do
+            if {can_set lobby setting.key} do
+                rows.push {setting_widget setting value}
+            else do
+                let text "{setting_label setting}: {value_text setting value}"
+                rows.push {ui.text text}
+            end
         end
     end
     if (settings_panel != nil) { ui_hide settings_panel }
@@ -364,11 +375,30 @@ fn player_line [p] do
     return {ui.text text}
 end
 
+# With teams chosen one by one, each player picks their own, and the host anyone's
+fn team_line [p] do
+    let team {p.settings.get :team}
+    if (team == nil) { set team 1 }
+    let me {me_in lobby}
+    if ((me != nil) and ((me.id == p.id) or me.host)) do
+        return {ui.input_int {loc "lobby.team_of" =name p.name} team fn [number] do
+            lobby_set :team number =player p.id
+        end}
+    end
+    return {ui.text {loc "lobby.team_mark" =name p.name =team team}}
+end
+
 fn build_roster [] do
     let rows [{ui.text_colored TITLE_COLOR {loc "lobby.players" =count lobby.players.length =max info.max_players}}
               {ui.separator}]
     for p in lobby.players do
         rows.push {player_line p}
+    end
+    if ({lobby.settings.get :teams} == :custom) do
+        rows.push {ui.separator}
+        for p in lobby.players do
+            rows.push {team_line p}
+        end
     end
 
     let port {net_port}

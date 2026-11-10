@@ -7,7 +7,7 @@ fn note_keystone_sightings [] do
     for f in factions do
         if (f != nil) do
             for other in factions do
-                if ((other != nil) and (other.id != f.id) and (other.keystone != nil)) do
+                if ((other != nil) and {hostile f other} and (other.keystone != nil)) do
                     if {vision_can_see f.id other.keystone[0] other.keystone[2]} {
                         set other.keystone_seen_by f.id
                     }
@@ -59,19 +59,31 @@ fn conquer [f] do
         set s.morale 0.0
     end
 
-    let survivors 0
+    # Over once everyone left standing is on one team
     let winner nil
+    let divided false
     for other in factions do
         if ((other != nil) and other.alive) do
-            set survivors (survivors + 1)
-            set winner other.id
+            if (winner == nil) do
+                set winner other.id
+            elif (factions[winner].team != other.team) do
+                set divided true
+            end
         end
     end
-    if (survivors <= 1) do
+    if (not divided) do
         set contest.state :over
         set contest.winner winner
+        if (winner != nil) { set contest.team factions[winner].team }
         log "match over, winner" winner
     end
+end
+
+# Whether this side's team won: everyone on it did, fallen or not
+fn won [f] do
+    if (contest.state != :over) { return false }
+    if (not {contest.has :team}) { return (contest.winner == f.id) }
+    return (contest.team == f.team)
 end
 
 fn tick_match [] do

@@ -17,7 +17,7 @@ fn make_faction [id x z] do
            =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []
            =army [] =muster [] =muster_timer 0.0 =capture 0
            =commander nil =keystone_seen_by nil =tidy_site nil =hall nil =canopy_repaired true =danger []
-           =owner nil =owner_name nil =moniker {random_range 0 999999}}
+           =owner nil =owner_name nil =moniker {random_range 0 999999} =team (SOLO_TEAM + id)}
     while (factions.length <= id) do
         factions.push nil
     end
@@ -31,6 +31,26 @@ fn faction_of [player] do
     let id {player_faction player}
     if (id == nil) { return factions[1] }
     return factions[id]
+end
+
+# Teams: allies don't fight, and see what each other sees. A faction on its own has a team of its
+# own, numbered past any a lobby gives out. The engine doesn't keep them, so a resumed game puts
+# them back.
+set SOLO_TEAM 100
+
+fn set_team [f team] do
+    set f.team team
+    faction_team f.id team
+end
+
+fn hostile [a b] { return (a.team != b.team) }
+
+fn allies_of [f] do
+    let out []
+    for other in factions do
+        if ((other != nil) and other.alive and (other.team == f.team)) { out.push other }
+    end
+    return out
 end
 
 fn alive_factions [] do

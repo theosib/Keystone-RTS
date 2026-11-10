@@ -101,8 +101,27 @@ call(GUEST, "client_eval", code="join_game {join_addresses servers[0]}")
 wait_for(lambda: call(GUEST, "client_eval", code="screen") == ":lobby", "the guest's lobby")
 wait_for(lambda: "Guest joined" in call(HOST, "client_eval", code="chat_tail 5"), "the host to hear of it")
 
+# Teams: each player picks their own, and only the host can pick a rival's or someone else's
+call(HOST, "client_eval", code="lobby_set :teams :custom")
+call(HOST, "client_eval", code="lobby_set :rival_team_1 3")
+call(GUEST, "client_eval", code="lobby_set :team 2 =player {net_me}")
+
+
+def team_of(name):
+    code = f'let t nil\nfor p in lobby.players do\n    if (p.name == "{name}") {{ set t {{p.settings.get :team}} }}\nend\nt'
+    return call(HOST, "client_eval", code=code)
+
+
+wait_for(lambda: team_of("Guest") == 2, "the guest's team to reach the host")
+host_id = call(HOST, "client_eval", code="net_me")
+call(GUEST, "client_eval", code=f"lobby_set :team 5 =player {host_id}")
+call(GUEST, "wait", frames=30)
+check("a guest can't pick the host's team", team_of("Host") == 1, team_of("Host"))
+
 call(HOST, "client_eval", code="lobby_launch")
 wait_for(lambda: in_game(HOST) and in_game(GUEST), "the game to start", 30)
+teams = call(HOST, "server_eval", code="[factions[1].team factions[2].team factions[3].team]")
+check("the game has the teams the lobby chose", teams == [1, 2, 3], teams)
 
 # The view goes to the player's home with the first news from the game, and glides there
 wait_for(lambda: call(GUEST, "client_eval", code="state") is not None, "the guest's first state")
@@ -173,6 +192,8 @@ check("a pause doesn't hold a friend up", call(SOLO, "server_eval", code="{game_
 call(SOLO, "client_eval", code="send_command {=name :pause =paused true}")
 call(SOLO, "wait", ticks=10)
 check("nor can anyone pause with a friend in the game", call(SOLO, "server_eval", code="{game_paused}") is False)
+button = call(SOLO, "client_eval", code="[pause_button.visible pause_button.enabled]")
+check("and its button stays, greyed out, so nothing moves", button in ([None, False], [True, False]), button)
 sides = call(SOLO, "server_eval", code="factions[2].commander")
 check("and the rival's commander is gone", sides is None, sides)
 stop(solo)

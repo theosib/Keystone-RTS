@@ -219,6 +219,14 @@ lobby.setting.size: Size
 lobby.setting.rivals: Rivals
 lobby.setting.rival_level: Rivals' skill
 lobby.setting.fog: Fog of war
+lobby.setting.teams: Teams
+lobby.teams.ffa: Everyone for themselves
+lobby.teams.versus: Players against rivals
+lobby.teams.custom: Choose each side's
+lobby.setting.rival_team: Rival {number}'s team
+lobby.player.team: Team
+lobby.team_mark: {name}, team {team}
+lobby.team_of: {name}'s team
 lobby.setting.seed: Seed (0 for a random one)
 lobby.map.mixed: Mixed country
 lobby.map.meadow: Open meadow
@@ -255,6 +263,7 @@ side.title: Sides
 side.you: You
 side.player: Player {id}
 side.fallen: {name} (fallen)
+side.ally: {name} (ally)
 
 # Made-up names: one of each, for a game or a rival nobody named. Single words, split at spaces.
 names.made_up: {adjective} {noun}
