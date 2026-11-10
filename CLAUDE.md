@@ -73,6 +73,11 @@ finescript traps that cost real time here:
   range. `tools/check_models.py` checks this, and `tests/run_all.sh` runs it.
 - `.geom` UVs are image coordinates: `v = 0` is the top row, so a side face's top edge has the
   lower `v`. `finevox_render_tests` goldens can't see this; `MeshTest.*SideFaces*` covers cubes.
+- A `.geom` face with a name of its own always takes the block's top texture, and tiles are 32x32,
+  so a shape that needs two looks puts both on one tile (see the bush in `tools/gen_blocks.py`).
+- A block that isn't `opaque` reads as foliage to sight: it thins the view through it, but doesn't stop
+  it. A shape that doesn't fill its cell has to be non-opaque, or its neighbours stop drawing the
+  faces next to it.
 - A new unit order must `ent_stop` first. Otherwise the old route finishes, reads as
   `:arrived`, and the new order is taken as done.
 - The UI runs after the scene has drawn. `marker_*` geometry shows a frame later, so it goes
@@ -106,8 +111,10 @@ finescript traps that cost real time here:
 - `tests/run_ui.sh` wants the machine to itself. Beside another window its frame-timed input
   misses, and a dozen checks fail with nothing wrong. Clicks in it are pixel positions, so anything
   that moves the palette moves them, and 720 tall is about all the palette has room for. The menu
-  clicks are pixels too. "walks up one block at a time" fails now and then on unchanged code too:
-  it allows 0.01 and sometimes measures 2.02. Rerun it before suspecting a change.
+  clicks are pixels too.
+- A window run always goes through the lobby. Until 2026-11, the lobby's random seed beat `--seed`,
+  so `run_ui.sh` and `run_mcp.sh` played a new world every time. A check that fails on some runs
+  and not others could have been that, so if one turns out flaky, check the world is the same first.
 - `assert` compiles away in Release, so the `test_phase*` binaries in finevk and finegui
   check little there. Rebuild with `-UNDEBUG`, or use a check that always runs.
 - `tests/run_net.sh` runs a server and bots over real sockets, through a proxy that cuts and slows
@@ -122,6 +129,8 @@ finescript traps that cost real time here:
 - `place_building` returns nil on taken ground (`plot_of`, `yard_plot`), which takes in the Hall and
   the yard, so place relative to `f.x`, not to a Hand that may be standing by them.
 - `game_exit 0` later in the same tick overrides an earlier `game_exit 1`. See `failed` in `tests/hunt.fsc`.
+- `guard` fails about 1 run in 6 on unchanged code, "the wrong number answered the alarm" with
+  nobody answering. The cause isn't known yet.
 - `site_progress` counts cells that already match as done, so a site that's never been touched
   can read 44/140. Measure the gain from when it was placed.
 - `vision_can_see_ent` can drop out for a moment, even five blocks off. Don't end anything on one read.
@@ -170,7 +179,8 @@ finescript traps that cost real time here:
 - `tests/run_mcp.sh` tests it end to end, through the bridge, in a real window. It's separate
   from `run_all.sh`. Design and measurements are in the engine's `docs/systems/game-runtime.md`.
   "the server has the rival's ground" failed 1 run in 7 on an N100, in a check before anything
-  that run had changed. The cause isn't known, so rerun it before suspecting a change.
+  that run had changed, back when every run had a world of its own (see above). The F11 checks
+  miss now and then on macOS, where going full screen is animated. Rerun before suspecting a change.
 
 ## Crashes
 
