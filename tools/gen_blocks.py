@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Generate fill-stage resource blocks and the palisade: their .model files and shapes.
+"""Generate fill-stage resource blocks, the palisade, the berry bush and the boulder: their .model
+files and shapes.
 
 Each resource block holds 1..UNITS units and shows how full it is, a half-size cube for each. The
 last stage is a plain cube, because cube blocks must not declare geometry. The others have
 matching collision, so workers and arrows see the real shape. They're marked not
 opaque, or sky light wouldn't enter the cell and they'd sit in the dark.
 """
+import itertools
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -169,6 +171,192 @@ def palisade_model(shape):
             "texture: blocks/palisade\n")
 
 
+# ---- Berry bush --------------------------------------------------------------------------
+# A clump of leafy boxes and berries half sunk into them, all on one tile (gen_textures.py's
+# berry_bush): a leaf sheet with a ragged edge on its top rows, and a berry below it. The sheet has
+# berries painted in as well, as from far off the real ones are too small to see. The picked bush
+# has a sheet without them. Every leaf face
+# shows the whole sheet, so each box's edges are ragged and no box reads as a box. The faces have
+# names of their own, so a neighbour never hides one, as it would a cube's.
+
+SLOP = 1e-6
+LEAF_UV = (0, 0, 1, 0.75)        # u0 v0 u1 v1
+BERRY_UV = (0, 0.75, 0.25, 1)
+LEAVES = [  # x0 y0 z0 x1 y1 z1: a low wide body, a crown off centre, and lumps either side
+    (0.08, 0.00, 0.12, 0.90, 0.50, 0.88),
+    (0.18, 0.28, 0.20, 0.78, 0.82, 0.76),
+    (0.48, 0.06, 0.48, 0.95, 0.62, 0.95),
+    (0.03, 0.10, 0.04, 0.50, 0.66, 0.52),
+    (0.56, 0.20, 0.06, 0.92, 0.58, 0.40),
+]
+BERRY = 0.1
+BERRIES = 16
+BUSH_SIDES = {"top": (0, 1, 0), "west": (-1, 0, 0), "east": (1, 0, 0), "north": (0, 0, -1), "south": (0, 0, 1)}
+
+
+def box_faces(name, box, uv, bevel=0.0):
+    """A box's sides and top as (name, corners, uvs, outward), each showing the whole of `uv`.
+    Nobody sees a bush from below. A bevel slopes the top in from every side, like a hipped roof,
+    so that leaves look round."""
+    lo, hi = box[:3], box[3:]
+    u0, v0, u1, v1 = uv
+    eave = hi[1] - bevel
+    faces = []
+    for side, outward in BUSH_SIDES.items():
+        axis = [i for i in range(3) if outward[i]][0]
+        plane = hi[axis] if outward[axis] > 0 else lo[axis]
+        if axis == 1:
+            a, b = 0, 2
+            uvs = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
+        else:
+            # Corners bottom first, so the top edge gets the lower v: v is an image row
+            a, b = 2 - axis, 1
+            uvs = [(u0, v1), (u1, v1), (u1, v0), (u0, v0)]
+        corners = []
+        for s, t in ((0, 0), (1, 0), (1, 1), (0, 1)):
+            point = [0.0, 0.0, 0.0]
+            point[axis] = plane
+            point[a] = (lo[a], hi[a])[s]
+            point[b] = (lo[b], hi[b])[t]
+            if axis == 1:
+                point[a] += bevel if s == 0 else -bevel
+                point[b] += bevel if t == 0 else -bevel
+            elif t == 1:
+                point[1] = eave
+            corners.append(tuple(point))
+        faces.append((f"{name}_{side}", corners, uvs, outward))
+        if axis == 1 or not bevel:
+            continue
+        # From the eave up and in to the top's edge
+        inset = bevel / (hi[a] - lo[a]) * (u1 - u0)
+        slope = []
+        for along_a, level, depth in ((lo[a], eave, 0), (hi[a], eave, 0),
+                                      (hi[a] - bevel, hi[1], bevel), (lo[a] + bevel, hi[1], bevel)):
+            point = [0.0, 0.0, 0.0]
+            point[axis] = plane - outward[axis] * depth
+            point[a] = along_a
+            point[1] = level
+            slope.append(tuple(point))
+        uvs = [(u0, v1), (u1, v1), (u1 - inset, v0), (u0 + inset, v0)]
+        faces.append((f"{name}_slope_{side}", slope, uvs, (outward[0], 1, outward[2])))
+    return faces
+
+
+def bevel(box):
+    return min(0.15, 0.3 * min(box[3] - box[0], box[5] - box[2]), 0.45 * (box[4] - box[1]))
+
+
+def planes(box):
+    """Each outward face of a box as (direction, level, the box), for the z-fighting check."""
+    return [(side, (box[3:] if sum(n) > 0 else box[:3])[[i for i in range(3) if n[i]][0]], box)
+            for side, n in BUSH_SIDES.items()]
+
+
+def fights(a, b):
+    """Two same-facing faces that overlap and are within MIN_GAP of level: they speckle."""
+    side, level, box = a
+    other_side, other_level, other = b
+    if side != other_side or abs(level - other_level) >= 0.02:
+        return False
+    axis = [i for i in range(3) if BUSH_SIDES[side][i]][0]
+    return all(box[i] < other[i + 3] and other[i] < box[i + 3] for i in range(3) if i != axis)
+
+
+def inside(point, box, margin=0.0):
+    return all(box[i] + margin < point[i] < box[i + 3] - margin for i in range(3))
+
+
+def berry_boxes():
+    """Berries on the tops and upper sides of the leaves, where nothing else covers them, held off
+    each other and kept clear of where a leaf face's edge is cut away. Seeded, so the same every run."""
+    import random
+    r = random.Random("berry_bush")
+    taken = [p for leaf in LEAVES for p in planes(leaf)]
+    berries = []
+    for _ in range(20000):
+        if len(berries) == BERRIES:
+            break
+        leaf = r.choice(LEAVES)
+        side = r.choice(["top", "top", "west", "east", "north", "south"])
+        outward = BUSH_SIDES[side]
+        axis = [i for i in range(3) if outward[i]][0]
+        centre = [0.0, 0.0, 0.0]
+        for i in range(3):
+            if i == axis:
+                surface = leaf[i + 3] if outward[i] > 0 else leaf[i]
+                centre[i] = surface + outward[i] * BERRY * 0.1
+            elif side == "top":  # Clear of the slopes
+                centre[i] = r.uniform(leaf[i] + bevel(leaf) + 0.05, leaf[i + 3] - bevel(leaf) - 0.05)
+            elif i == 1:  # The upper half of a side, below its slope
+                centre[i] = r.uniform((leaf[1] + leaf[4]) / 2, leaf[4] - bevel(leaf) - 0.04)
+            else:
+                centre[i] = r.uniform(leaf[i] + 0.1, leaf[i + 3] - 0.1)
+        if any(inside(centre, other, -0.01) for other in LEAVES if other is not leaf):
+            continue
+        if any(sum((centre[i] - c[i]) ** 2 for i in range(3)) < 0.12 ** 2 for c in berries):
+            continue
+        box = tuple(c - BERRY / 2 for c in centre) + tuple(c + BERRY / 2 for c in centre)
+        mine = planes(box)
+        if any(fights(p, q) for p in mine for q in taken):
+            continue
+        taken += mine
+        berries.append(centre)
+    assert len(berries) == BERRIES, "no room for the berries"
+    return [tuple(c - BERRY / 2 for c in centre) + tuple(c + BERRY / 2 for c in centre) for centre in berries]
+
+
+def buried(corners, box):
+    """A face with every corner in a box is in it all over, as a box is convex"""
+    return all(all(box[i] - SLOP <= c[i] <= box[i + 3] + SLOP for i in range(3)) for c in corners)
+
+
+def clump(title, parts):
+    """Boxes as (name, box, uv, bevel), less what they hide of each other, as a .geom"""
+    sides = [p for _, box, _, _ in parts for p in planes(box)]
+    assert not any(fights(p, q) for p, q in itertools.combinations(sides, 2)), f"{title}: faces fight"
+    faces = []
+    for name, box, uv, slope in parts:
+        for face_name, corners, uvs, outward in box_faces(name, box, uv, slope):
+            # Not drawn where another part hides it all, as a berry's sunk side or a lump's inside
+            if not any(other is not box and buried(corners, other) for _, other, _, _ in parts):
+                faces.append(face(face_name, corners, uvs, outward))
+    return f"# {title}, generated by tools/gen_blocks.py\n\n" + "\n".join(faces)
+
+
+def bush_geometry(ripe):
+    parts = [(f"leaf{index}", leaf, LEAF_UV, bevel(leaf)) for index, leaf in enumerate(LEAVES)]
+    if ripe:
+        parts += [(f"berry{index}", berry, BERRY_UV, 0) for index, berry in enumerate(berry_boxes())]
+    return clump("Berry bush" if ripe else "Picked berry bush", parts)
+
+
+def bush_model(shape, texture):
+    return (f"# Generated by tools/gen_blocks.py\n"
+            f"geometry: shapes/{shape}\n"
+            "collision: none\n"
+            "hit: full\n"
+            "rotations: none\n"
+            "opaque: false\n"
+            "hardness: 0.3\n"
+            f"texture: blocks/{texture}\n")
+
+
+# ---- Boulder -----------------------------------------------------------------------------
+# Three rocks with rounded tops. The tallest reaches the top of the cell, so that a boulder stacked
+# on another rests on it. It still collides as the whole cube: it fills most of it, and a unit's
+# path around it shouldn't change.
+
+ROCKS = [  # x0 y0 z0 x1 y1 z1, bevel
+    ((0.04, 0.00, 0.06, 0.94, 0.70, 0.92), 0.18),
+    ((0.12, 0.30, 0.14, 0.80, 1.00, 0.78), 0.16),
+    ((0.50, 0.00, 0.44, 0.97, 0.52, 0.97), 0.12),
+]
+
+
+def boulder_geometry():
+    return clump("Boulder", [(f"rock{index}", box, (0, 0, 1, 1), slope) for index, (box, slope) in enumerate(ROCKS)])
+
+
 def collision(stage):
     boxes = [f"box:\n    {x / 2:g} {y / 2:g} {z / 2:g}\n    {x / 2 + 0.5:g} {y / 2 + 0.5:g} {z / 2 + 0.5:g}\n"
              for (x, y, z) in CELLS[:stage]]
@@ -203,7 +391,21 @@ def main():
     (shapes / "palisade_top_faces.geom").write_text(palisade_top_geometry())
     (blocks / "log_palisade.model").write_text(palisade_model("palisade_faces"))
     (blocks / "log_palisade_top.model").write_text(palisade_model("palisade_top_faces"))
-    print("wrote fill-stage blocks and the palisade")
+    (shapes / "berry_bush_faces.geom").write_text(bush_geometry(True))
+    (shapes / "berry_bush_bare_faces.geom").write_text(bush_geometry(False))
+    (blocks / "berry_bush.model").write_text(bush_model("berry_bush_faces", "berry_bush"))
+    (blocks / "berry_bush_bare.model").write_text(bush_model("berry_bush_bare_faces", "berry_bush_bare"))
+    (shapes / "boulder_faces.geom").write_text(boulder_geometry())
+    (blocks / "boulder.model").write_text(
+        "# Generated by tools/gen_blocks.py\n"
+        "geometry: shapes/boulder_faces\n"
+        "collision: full\n"
+        "rotations: none\n"
+        "opaque: false\n"
+        "hardness: 2.0\n"
+        "texture: blocks/boulder\n"
+    )
+    print("wrote fill-stage blocks, the palisade, the berry bush and the boulder")
 
 
 if __name__ == "__main__":

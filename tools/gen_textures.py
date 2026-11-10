@@ -137,6 +137,26 @@ def pebbles(base, seed, count=18, radius=(2, 4), contrast=0.22):
     return img
 
 
+def rock():
+    """A boulder's face: broad mottling, a few cracks, and edges a shade darker, as every face of the
+    boulder shows the whole tile and its rocks should look rounded off."""
+    r = rng("rock")
+    base = np.array((136, 138, 142), dtype=float)
+    img = tint(tint(flat(base), smooth_noise(r, 10), 0.22), smooth_noise(r, 4), 0.08)
+    ys, xs = np.mgrid[0:SIZE, 0:SIZE].astype(float)
+    for _ in range(3):
+        x, y = r.uniform(4, SIZE - 4, 2)
+        angle = r.uniform(0, np.pi)
+        for _ in range(r.integers(8, 14)):
+            img[int(y) % SIZE, int(x) % SIZE] *= 0.7
+            img[int(y + 1) % SIZE, int(x) % SIZE] *= 1.06  # The lip below the crack catches light
+            angle += r.uniform(-0.5, 0.5)
+            x, y = x + np.cos(angle), y + np.sin(angle)
+    edge = np.minimum(np.minimum(xs, SIZE - 1 - xs), np.minimum(ys, SIZE - 1 - ys))
+    img *= (0.84 + 0.16 * np.clip(edge / 4, 0, 1))[..., None]
+    return img
+
+
 def bark():
     img = flat((92, 66, 44))
     r = rng("bark")
@@ -161,16 +181,58 @@ def canopy():
     return tint(img, smooth_noise(r, 12), 0.16)
 
 
-def berry_bush():
+BUSH_SHEET = 24  # Rows of leaves. Below them, a berry. See the bush in gen_blocks.py.
+
+
+def berry_bush(ripe=True):
+    """Leaves in overlapping rounded clumps, each lit from above and shadowed under, with the
+    sheet's edge cut out between the clumps along it. Every leaf face of the bush shows the whole
+    sheet. Hidden pixels are a dark leaf green, so a distant mip darkens the edge instead of greying it.
+    A ripe bush has berries in its leaves too: its real ones are too small to see from far off."""
     r = rng("berry")
-    img = tint(flat((66, 122, 70)), smooth_noise(r, 7), 0.3)
-    ys, xs = np.mgrid[0:SIZE, 0:SIZE]
-    for _ in range(9):
-        cx, cy = r.uniform(3, 29, 2)
-        dist = np.hypot(xs - cx, ys - cy)
-        img[dist < 2.2] = (168, 46, 62)
-        img[dist < 1.0] = (222, 110, 120)
-    return img
+    leaf = np.array((70, 128, 66), dtype=float)
+    img = np.zeros((SIZE, SIZE, 3)) + (34, 70, 38)
+    alpha = np.zeros((SIZE, SIZE))
+    ys, xs = np.mgrid[0:BUSH_SHEET, 0:SIZE].astype(float)
+
+    # The edge: an inset body, and clumps along its rim that reach out to the sheet's border
+    sheet = img[:BUSH_SHEET]
+    solid = (xs >= 3) & (xs <= SIZE - 4) & (ys >= 3) & (ys <= BUSH_SHEET - 4)
+    sheet[solid] = leaf * 0.82
+    clumps = []
+    for x in np.arange(3.5, SIZE - 3, 6.2):
+        clumps += [(x + r.uniform(-1, 1), 3.2), (x + r.uniform(-1, 1), BUSH_SHEET - 3.8)]
+    for y in np.arange(7.5, BUSH_SHEET - 5, 5.5):
+        clumps += [(3.2, y + r.uniform(-1, 1)), (SIZE - 3.8, y + r.uniform(-1, 1))]
+    # And inside it, from the top row down, so each clump overlaps the one above it
+    for y in np.arange(5, BUSH_SHEET - 3, 4.5):
+        for x in np.arange(5 + (y % 9) * 0.5, SIZE - 4, 7):
+            clumps.append((x + r.uniform(-1.2, 1.2), y + r.uniform(-0.8, 0.8)))
+    clumps.sort(key=lambda c: c[1])
+    for cx, cy in clumps:
+        rx, ry = r.uniform(3.4, 4.2), r.uniform(2.8, 3.4)
+        d = ((xs - cx) / rx) ** 2 + ((ys - cy) / ry) ** 2
+        inside = d < 1
+        light = 1.12 - 0.34 * np.clip((ys - (cy - ry)) / (2 * ry), 0, 1)
+        sheet[inside] = (leaf * r.uniform(0.92, 1.08) * light[..., None])[inside]
+        sheet[inside & (d > 0.62) & (ys > cy)] *= 0.72  # Shadow under its lower rim
+        solid |= inside
+    alpha[:BUSH_SHEET][solid] = 255
+    img[:BUSH_SHEET] = tint(sheet, smooth_noise(r, 8)[:BUSH_SHEET], 0.12)
+    if ripe:
+        for cx, cy in ((9, 8), (22, 11), (13, 18)):
+            dist = np.hypot(xs - cx, ys - cy)
+            img[:BUSH_SHEET][dist < 1.7] = (196, 30, 52)
+            img[:BUSH_SHEET][(dist < 0.9) & (xs < cx) & (ys < cy)] = (236, 132, 140)
+
+    # The berry, lit from the top left
+    by, bx = np.mgrid[0:SIZE - BUSH_SHEET, 0:8].astype(float)
+    berry = np.zeros(by.shape + (3,)) + (176, 36, 56)
+    berry *= (1.12 - 0.05 * (bx + by))[..., None]
+    berry[(bx >= 1) & (bx <= 2) & (by >= 1) & (by <= 2)] = (236, 132, 140)
+    img[BUSH_SHEET:, :8] = berry
+    alpha[BUSH_SHEET:, :8] = 255
+    return img, alpha
 
 
 def planks():
@@ -278,11 +340,12 @@ def main():
     save("turf_side", turf_side())
     save("gravel", pebbles((140, 132, 120), "gravel"))
     save("sand", tint(flat((214, 196, 150)), smooth_noise(rng("sand"), 9), 0.1))
-    save("boulder", pebbles((132, 136, 142), "boulder", count=8, radius=(5, 9), contrast=0.12))
+    save("boulder", rock())
     save("bark", bark())
     save("log_end", log_end())
     save("canopy", canopy())
-    save("berry_bush", berry_bush())
+    save("berry_bush", *berry_bush())
+    save("berry_bush_bare", *berry_bush(ripe=False))
     save("planks", planks())
     save("thatch", thatch())
     save("palisade", palisade())
