@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Generate fill-stage resource blocks, the palisade, the berry bush and the boulder: their .model
-files and shapes.
+"""Generate fill-stage resource blocks, the palisade, the berry bush, the boulder and the canopy:
+their .model files and shapes.
 
 Each resource block holds 1..UNITS units and shows how full it is, a half-size cube for each. The
 last stage is a plain cube, because cube blocks must not declare geometry. The others have
@@ -194,20 +194,23 @@ BERRIES = 16
 BUSH_SIDES = {"top": (0, 1, 0), "west": (-1, 0, 0), "east": (1, 0, 0), "north": (0, 0, -1), "south": (0, 0, 1)}
 
 
-def box_faces(name, box, uv, bevel=0.0):
+def box_faces(name, box, uv, bevel=0.0, bottom=False):
     """A box's sides and top as (name, corners, uvs, outward), each showing the whole of `uv`.
-    Nobody sees a bush from below. A bevel slopes the top in from every side, like a hipped roof,
-    so that leaves look round."""
+    Nobody sees a bush from below, but a box can have a bottom too. A bevel slopes the top in from
+    every side, like a hipped roof, so that leaves look round."""
     lo, hi = box[:3], box[3:]
     u0, v0, u1, v1 = uv
     eave = hi[1] - bevel
     faces = []
-    for side, outward in BUSH_SIDES.items():
+    sides = dict(BUSH_SIDES, bottom=(0, -1, 0)) if bottom else BUSH_SIDES
+    for side, outward in sides.items():
         axis = [i for i in range(3) if outward[i]][0]
         plane = hi[axis] if outward[axis] > 0 else lo[axis]
         if axis == 1:
             a, b = 0, 2
             uvs = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
+            if outward[1] < 0:
+                plane = lo[1]
         else:
             # Corners bottom first, so the top edge gets the lower v: v is an image row
             a, b = 2 - axis, 1
@@ -218,7 +221,7 @@ def box_faces(name, box, uv, bevel=0.0):
             point[axis] = plane
             point[a] = (lo[a], hi[a])[s]
             point[b] = (lo[b], hi[b])[t]
-            if axis == 1:
+            if axis == 1 and outward[1] > 0:
                 point[a] += bevel if s == 0 else -bevel
                 point[b] += bevel if t == 0 else -bevel
             elif t == 1:
@@ -240,6 +243,18 @@ def box_faces(name, box, uv, bevel=0.0):
         uvs = [(u0, v1), (u1, v1), (u1 - inset, v0), (u0 + inset, v0)]
         faces.append((f"{name}_slope_{side}", slope, uvs, (outward[0], 1, outward[2])))
     return faces
+
+
+def shown_planes(box, inside=None):
+    """planes(box), less any face that's wholly within `inside`"""
+    result = []
+    for side, level, owner in planes(box):
+        axis = [i for i in range(3) if BUSH_SIDES[side][i]][0]
+        if inside and inside[axis] <= level <= inside[axis + 3] and all(
+                inside[i] <= box[i] and box[i + 3] <= inside[i + 3] for i in range(3) if i != axis):
+            continue
+        result.append((side, level, owner))
+    return result
 
 
 def bevel(box):
@@ -325,14 +340,19 @@ def together(a, b):
     return not (ca and cb and ca[1] == cb[1] and ca[0] != cb[0])
 
 
-def clump(title, parts):
-    """Boxes as (name, box, uv, bevel), less what they hide of each other, as a .geom"""
+def clump(title, parts, extra=(), inside=None):
+    """Boxes as (name, box, uv, bevel), less what they hide of each other, as a .geom. `extra` are
+    faces of other kinds, already made. Nothing is drawn wholly within `inside`, a box that other
+    faces enclose."""
     for (a, box_a, _, _), (b, box_b, _, _) in itertools.combinations(parts, 2):
         if together(a, b):
-            assert not any(fights(p, q) for p in planes(box_a) for q in planes(box_b)), f"{title}: {a} fights {b}"
-    faces = []
+            assert not any(fights(p, q) for p in shown_planes(box_a, inside) for q in shown_planes(box_b, inside)), \
+                f"{title}: {a} fights {b}"
+    faces = list(extra)
     for name, box, uv, slope in parts:
-        for face_name, corners, uvs, outward in box_faces(name, box, uv, slope):
+        for face_name, corners, uvs, outward in box_faces(name, box, uv, slope, bottom=inside is not None):
+            if inside and buried(corners, inside):
+                continue
             # Not drawn where another part hides it all, as a berry's sunk side or a lump's inside.
             # That part has to be there whenever this one is.
             if not any(other is not box and condition(other_name) in (None, condition(name))
@@ -376,6 +396,87 @@ def boulder_geometry():
     return clump("Boulder", [(name, box, (0, 0, 1, 1), slope) for name, box, slope in ROCKS])
 
 
+# ---- Canopy ------------------------------------------------------------------------------
+# A tree's leaves. Close up, each side of a block with no leaves beyond it has rounded tufts
+# sticking out of it, over a plain leaf face; from far off it has only the face (see detail_pixels
+# in game.conf). Leaves beside leaves show nothing between them either way, so a tree is one
+# shell. Both use the canopy tile: the face its solid middle, a tuft all of it, ragged edge and all.
+
+CANOPY_UV = (0, 0, 1, 0.75)
+CANOPY_SKIN_UV = (4 / 32, 5 / 32, 28 / 32, 19 / 32)
+CANOPY_SIDES = {  # name, outward axis and sign
+    "up": (1, 1), "down": (1, -1), "n": (2, -1), "s": (2, 1), "w": (0, -1), "e": (0, 1),
+}
+# Tufts on a side, laid out at random but the same every run: several to a side, overlapping, of
+# different sizes and standing out by different amounts, and a different layout on every side so
+# that a block doesn't look the same all round. A tuft sinks SINK into the block.
+CANOPY_TUFTS = {"up": 4, "down": 2, "n": 3, "s": 3, "w": 3, "e": 3}
+SINK = 0.06
+
+
+def canopy_axes(axis):
+    """The two axes across a side, a then b: across the top, x then z; across a wall, the
+    horizontal axis then up"""
+    return (0, 2) if axis == 1 else (2 - axis, 1)
+
+
+def canopy_skin(side):
+    """The plain face on a side, at the block's edge"""
+    axis, sign = CANOPY_SIDES[side]
+    a, b = canopy_axes(axis)
+    u0, v0, u1, v1 = CANOPY_SKIN_UV
+    corners, uvs = [], []
+    for s_, t, uv in ((0, 0, (u0, v1)), (1, 0, (u1, v1)), (1, 1, (u1, v0)), (0, 1, (u0, v0))):
+        point = [0.0, 0.0, 0.0]
+        point[axis] = 1.0 if sign > 0 else 0.0
+        point[a], point[b] = s_, t
+        corners.append(tuple(point))
+        uvs.append(uv)
+    outward = [0, 0, 0]
+    outward[axis] = sign
+    return face(f"open_{side}_skin", corners, uvs, tuple(outward))
+
+
+def canopy_tufts():
+    import random
+    r = random.Random("canopy")
+    parts, taken = [], []
+    for side, count in CANOPY_TUFTS.items():
+        axis, sign = CANOPY_SIDES[side]
+        a, b = canopy_axes(axis)
+        made = 0
+        for _ in range(5000):
+            if made == count:
+                break
+            size_a, size_b = r.uniform(0.34, 0.58), r.uniform(0.30, 0.52)
+            a0, b0 = r.uniform(0.02, 0.98 - size_a), r.uniform(0.02, 0.98 - size_b)
+            out = r.uniform(0.08, 0.24 if side == "up" else 0.16)
+            lo, hi = [0.0] * 3, [0.0] * 3
+            lo[a], hi[a], lo[b], hi[b] = a0, a0 + size_a, b0, b0 + size_b
+            if sign > 0:
+                lo[axis], hi[axis] = 1 - SINK, 1 + out
+            else:
+                lo[axis], hi[axis] = -out, SINK
+            box = tuple(round(v, 3) for v in lo + hi)
+            mine = shown_planes(box, (0, 0, 0, 1, 1, 1))
+            if any(fights(p, q) for p in mine for q in taken):
+                continue
+            taken += mine
+            slope = 0 if side == "down" else min(0.08, 0.3 * min(size_a, size_b, out + SINK))
+            parts.append((f"open_{side}_tuft{made}", box, CANOPY_UV, slope))
+            made += 1
+        assert made == count, f"no room for the tufts on {side}"
+    return parts
+
+
+def canopy_geometry(near):
+    skins = [canopy_skin(side) for side in CANOPY_SIDES]
+    what = "Canopy, close up" if near else "Canopy, from far off"
+    if not near:
+        return f"# {what}, generated by tools/gen_blocks.py\n\n" + "\n".join(skins)
+    return clump(what, canopy_tufts(), extra=skins, inside=(0, 0, 0, 1, 1, 1))
+
+
 def collision(stage):
     boxes = [f"box:\n    {x / 2:g} {y / 2:g} {z / 2:g}\n    {x / 2 + 0.5:g} {y / 2 + 0.5:g} {z / 2 + 0.5:g}\n"
              for (x, y, z) in CELLS[:stage]]
@@ -415,6 +516,22 @@ def main():
     (blocks / "berry_bush.model").write_text(bush_model("berry_bush_faces", "berry_bush"))
     (blocks / "berry_bush_bare.model").write_text(bush_model("berry_bush_bare_faces", "berry_bush_bare"))
     (shapes / "boulder_faces.geom").write_text(boulder_geometry())
+    (shapes / "canopy_faces.geom").write_text(canopy_geometry(True))
+    (shapes / "canopy_far_faces.geom").write_text(canopy_geometry(False))
+    (blocks / "canopy.model").write_text(
+        "# Generated by tools/gen_blocks.py\n"
+        "geometry: shapes/canopy_faces\n"
+        "far-geometry: shapes/canopy_far_faces\n"
+        "collision: none\n"
+        "hit: full\n"
+        "connects: canopy\n"
+        "rotations: none\n"
+        "opaque: false\n"
+        "# Lets light through, but shades the ground under a tree\n"
+        "blocks-sky-light: true\n"
+        "hardness: 0.3\n"
+        "texture: blocks/canopy\n"
+    )
     (blocks / "boulder.model").write_text(
         "# Generated by tools/gen_blocks.py\n"
         "geometry: shapes/boulder_faces\n"
@@ -425,7 +542,7 @@ def main():
         "hardness: 2.0\n"
         "texture: blocks/boulder\n"
     )
-    print("wrote fill-stage blocks, the palisade, the berry bush and the boulder")
+    print("wrote fill-stage blocks, the palisade, the berry bush, the boulder and the canopy")
 
 
 if __name__ == "__main__":

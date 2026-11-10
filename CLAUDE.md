@@ -155,6 +155,14 @@ finescript traps that cost real time here:
   group on top, `open_up_*` without. That's how a boulder under another is flat on top.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
   `--validation` turns on Vulkan validation, `--stats` prints render counts each second.
+  A screenshot taken at frame N in two runs can be at different game ticks: compare after the
+  map has settled, around frame 1500, or the explored ground differs.
+- To measure a frame's cost, add `--no-vsync` to `--stats`. On the Mac it runs at 60-80fps
+  whatever it draws, 400k triangles included, so count `tris=` there. The GPU shows on the N100.
+  `built=` is mesh builds a second, never 0 in a live game: Hands keep changing blocks.
+- Canopy is drawn with tufts close up and plain further out, switching where a block is
+  `detail_pixels` tall (`game.conf`). A UI script's `detail_pixels n` changes it in a running game,
+  0 drawing everything in full, and returns the distance in blocks.
 
 ## Multiplayer
 

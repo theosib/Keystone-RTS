@@ -176,27 +176,29 @@ def log_end():
 
 
 def canopy():
+    """A tree's leaf sheet, darker than a bush's. Its solid middle covers a canopy block's sides,
+    and the whole of it each tuft that sticks out of them (see gen_blocks.py)."""
     r = rng("canopy")
-    img = tint(flat((58, 112, 62)), smooth_noise(r, 6), 0.34)
-    return tint(img, smooth_noise(r, 12), 0.16)
+    img = np.zeros((SIZE, SIZE, 3)) + (28, 56, 31)
+    alpha = np.zeros((SIZE, SIZE))
+    sheet, solid = leaf_sheet(r, (58, 112, 62))
+    img[:BUSH_SHEET][solid] = sheet[solid]
+    alpha[:BUSH_SHEET][solid] = 255
+    return img, alpha
 
 
 BUSH_SHEET = 24  # Rows of leaves. Below them, a berry. See the bush in gen_blocks.py.
 
 
-def berry_bush(ripe=True):
+def leaf_sheet(r, leaf):
     """Leaves in overlapping rounded clumps, each lit from above and shadowed under, with the
-    sheet's edge cut out between the clumps along it. Every leaf face of the bush shows the whole
-    sheet. Hidden pixels are a dark leaf green, so a distant mip darkens the edge instead of greying it.
-    A ripe bush has berries in its leaves too: its real ones are too small to see from far off."""
-    r = rng("berry")
-    leaf = np.array((70, 128, 66), dtype=float)
-    img = np.zeros((SIZE, SIZE, 3)) + (34, 70, 38)
-    alpha = np.zeros((SIZE, SIZE))
+    sheet's edge cut out between the clumps along it: BUSH_SHEET rows, and which pixels show.
+    A block shows the whole sheet on each of its leafy faces, so their edges are ragged."""
+    leaf = np.array(leaf, dtype=float)
+    sheet = np.zeros((BUSH_SHEET, SIZE, 3)) + leaf * 0.5
     ys, xs = np.mgrid[0:BUSH_SHEET, 0:SIZE].astype(float)
 
     # The edge: an inset body, and clumps along its rim that reach out to the sheet's border
-    sheet = img[:BUSH_SHEET]
     solid = (xs >= 3) & (xs <= SIZE - 4) & (ys >= 3) & (ys <= BUSH_SHEET - 4)
     sheet[solid] = leaf * 0.82
     clumps = []
@@ -217,8 +219,20 @@ def berry_bush(ripe=True):
         sheet[inside] = (leaf * r.uniform(0.92, 1.08) * light[..., None])[inside]
         sheet[inside & (d > 0.62) & (ys > cy)] *= 0.72  # Shadow under its lower rim
         solid |= inside
+    return tint(sheet, smooth_noise(r, 8)[:BUSH_SHEET], 0.12), solid
+
+
+def berry_bush(ripe=True):
+    """The leaf sheet, with a berry below it. Hidden pixels are a dark leaf green, so a distant
+    mip darkens the edge instead of greying it. A ripe bush has berries in its leaves too: its real
+    ones are too small to see from far off."""
+    r = rng("berry")
+    img = np.zeros((SIZE, SIZE, 3)) + (34, 70, 38)
+    alpha = np.zeros((SIZE, SIZE))
+    ys, xs = np.mgrid[0:BUSH_SHEET, 0:SIZE].astype(float)
+    sheet, solid = leaf_sheet(r, (70, 128, 66))
+    img[:BUSH_SHEET][solid] = sheet[solid]
     alpha[:BUSH_SHEET][solid] = 255
-    img[:BUSH_SHEET] = tint(sheet, smooth_noise(r, 8)[:BUSH_SHEET], 0.12)
     if ripe:
         for cx, cy in ((9, 8), (22, 11), (13, 18)):
             dist = np.hypot(xs - cx, ys - cy)
@@ -343,7 +357,7 @@ def main():
     save("boulder", rock())
     save("bark", bark())
     save("log_end", log_end())
-    save("canopy", canopy())
+    save("canopy", *canopy())
     save("berry_bush", *berry_bush())
     save("berry_bush_bare", *berry_bush(ripe=False))
     save("planks", planks())
