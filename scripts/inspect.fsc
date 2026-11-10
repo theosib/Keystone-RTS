@@ -41,7 +41,7 @@ fn inspect_at [viewer x y z] do
     end
 
     for f in factions do
-        if (f != nil) do
+        if {is_side f} do
             let slot {slot_at f x y z}
             if (slot != nil) do
                 set info.stack slot.amount

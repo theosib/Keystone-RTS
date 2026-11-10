@@ -48,6 +48,7 @@ return {
         {=key :rival_team_6 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 6}
         {=key :rival_team_7 =type :int =label "lobby.setting.rival_team" =default 2 =min 1 =max 8 =rival 7}
         {=key :fog =type :bool =label "lobby.setting.fog" =default true =manifest "fog_of_war"}
+        {=key :brigands =type :bool =label "lobby.setting.brigands" =default true}
         {=key :seed =type :int =label "lobby.setting.seed" =default 0 =min 0 =manifest "world_seed"}
     ]
     =player_settings [

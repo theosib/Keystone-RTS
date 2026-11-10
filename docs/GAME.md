@@ -23,9 +23,18 @@ Shelters give people beds, and a settlement grows only as far as it can house an
 you start to think about what's out there: a Pathfinder explores by itself, nearest unseen ground
 first, and a Watchtower lets you see further.
 
-Sooner or later someone comes. An idle settlement falls in about twelve minutes to the standard
-rival, so by then you want Militia and Shortbows, a Log Palisade across the way in, and a look at the
-ground, because height and walls matter here in a way they can't on a flat map.
+The bushes near home don't keep up with a growing town, and Hands go further for food. Out towards
+the middle of the map, each settlement has a grove thick with berry bushes and boulders, well worth
+the walk and hard to watch over. Soldiers eat too: each takes a ration from the yard every two
+minutes, and with none there it goes hungry, loses heart and soon breaks. An army costs food for as
+long as it stands.
+
+Sooner or later someone comes. Brigands come first, from about the seventh minute: a band from the
+edge of the map, bigger each time, going for whichever settlement has the fewest soldiers at home.
+They kill Hands and break buildings for a couple of minutes and then go, but they can't take a
+Keystone. A rival takes longer to arrive and means it, so by then you want Militia and Shortbows, a
+Log Palisade across the way in, and a look at the ground, because height and walls matter here in a
+way they can't on a flat map.
 
 To win, send soldiers into the enemy's Hall. With no defender there, they break its Keystone in 40
 soldier-seconds, so ten soldiers take four seconds and two take twenty. A bar over the Hall shows
@@ -66,6 +75,18 @@ The rival commanders develop, scout and attack by the same rules you do. They ha
 rival reacts only to what its own units have seen. If you hide your army behind a hill, it doesn't
 know that it's there. Up to seven of them can share a world.
 
+They differ in how well they play, not in what they're given. An **Apprentice** is slow to notice
+things, leaves its army wherever it was trained, and goes for you with everything at about ten
+minutes. A **Standard** rival keeps its army by its Keystone, gathers before it marches, attacks
+with at least as many as it has seen of yours, and pulls back from a fight it's losing. A
+**Veteran** does all that twice as fast, and strikes first. Once you've beaten off its attack it
+comes straight back while your army is still short, and once its own army is big it raids Hands
+working away from home.
+
+**Teams** are set in the lobby: everyone for themselves, every player against every rival, or each
+side's team chosen, a player picking their own and the host each rival's. Allies don't fight, see
+what each other sees, defend each other's Keystone, and win together.
+
 ## Two ways to see the world
 
 Overhead, it's a strategy game: select units, give orders, lay out buildings from the palette, drag
@@ -101,7 +122,8 @@ Combat works off the world's real shape:
 - **High ground matters.** Shooting from above gives you the advantage.
 - **Soldiers break.** Morale gives way, and a beaten force routs instead of dying to the last.
 - **Soldiers think a little for themselves.** They guard where you sent them, answer whoever hits
-  them, and go to an alarm in proportion to the raid, then back again.
+  them, and go to an alarm in proportion to the raid, then back again. On guard they let an enemy
+  come to them rather than run out to it alone, and a group goes for the same wounded enemy.
 - **Food heals.** A hurt Hand eats early and gets better for it. A soldier can't leave its post, so
   once it's out of the fight a Hand brings it a meal, and it mends over the next twenty seconds.
 

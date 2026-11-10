@@ -131,6 +131,16 @@ finescript traps that cost real time here:
 - `game_exit 0` later in the same tick overrides an earlier `game_exit 1`. See `failed` in `tests/hunt.fsc`.
 - `guard` fails about 1 run in 6 on unchanged code, "the wrong number answered the alarm" with
   nobody answering. The cause isn't known yet.
+- Brigands are a faction (`BRIGAND_ID`, 15) with no settlement, zone or Keystone. A loop over
+  `factions` that reads a zone, a Hall or the match has to go through `is_side`, and a scenario's
+  own loops too: `resume.fsc` once died on it.
+- `tools/duel.sh A B [SEEDS] [MINUTES]` plays two commanders headless, four games at a time.
+  `old_veteran` and the like are the commander from before this AI work, renamed by
+  `tools/old_commander.py`. The same seed plays differently each run (threads), so judge a change
+  on a dozen games or more, both ways round. From a copy of the tree, set `KEYSTONE_BUILD`.
+- Commanders fight with whatever combat the scripts have, so a combat rule changes the AI's results.
+  A set fight showed holders losing 6 v 6 to a group that marched in, till guards waited for enemies
+  to come near and soldiers went for the nearest wounded enemy.
 - `site_progress` counts cells that already match as done, so a site that's never been touched
   can read 44/140. Measure the gain from when it was placed.
 - `vision_can_see_ent` can drop out for a moment, even five blocks off. Don't end anything on one read.

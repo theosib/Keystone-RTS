@@ -1,0 +1,203 @@
+# What presses on a settlement besides a rival (GAME.md): soldiers who eat, the best of the land out
+# away from home, and brigands who come for whoever leaves their Hands undefended.
+
+# ---- Rations ------------------------------------------------------------------
+#
+# A soldier eats from the yard, wherever it is, one each RATION_SECONDS. Without, it goes hungry: it
+# loses heart, and soon breaks and goes home. An army is a cost for as long as it stands.
+
+fn update_rations [f] do
+    for s in f.army do
+        let left {s.get :ration}
+        if (left == nil) { set left {random_range 1 RATION_SECONDS} }
+        set left (left - 1)
+        if (left <= 0) do
+            if ({zone_take f.zone :provisions 1 f.x f.z} > 0) do
+                set left RATION_SECONDS
+                set s.hungry false
+            else do
+                set left RATION_RETRY_SECONDS
+                set s.hungry true
+            end
+        end
+        set s.ration left
+    end
+end
+
+fn hungry [s] { return ({s.get :hungry} == true) }
+
+# ---- Groves -------------------------------------------------------------------
+#
+# Out from each settlement towards the middle of the map, a patch thick with bushes and boulders.
+# Nearer ones run short as a town grows, and its Hands go further, to where they can be caught.
+
+fn plant_groves [] do
+    for f in factions do
+        if {is_side f} do
+            let d {sqrt ((f.x * f.x) + (f.z * f.z))}
+            if (d > (GROVE_OUT + 10)) {
+                plant_grove {floor (f.x - ((f.x / d) * GROVE_OUT))} {floor (f.z - ((f.z / d) * GROVE_OUT))}
+            }
+        end
+    end
+end
+
+fn plant_grove [cx cz] do
+    let bushes 0
+    let rocks 0
+    let tries 0
+    while (((bushes < GROVE_BUSHES) or (rocks < GROVE_BOULDERS)) and (tries < 600)) do
+        set tries (tries + 1)
+        let x (cx + {random_range (0 - GROVE_RADIUS) GROVE_RADIUS})
+        let z (cz + {random_range (0 - GROVE_RADIUS) GROVE_RADIUS})
+        let y {surface_y x z}
+        if ((y != nil) and ({block_at x y z} == :turf) and ({block_at x (y + 1) z} == :air)) do
+            if (bushes < GROVE_BUSHES) do
+                world_set_block x (y + 1) z :berry_bush
+                set bushes (bushes + 1)
+            else do
+                world_set_block x (y + 1) z :boulder
+                set rocks (rocks + 1)
+            end
+        end
+    end
+    log "grove at" cx cz "with" bushes "bushes and" rocks "boulders"
+end
+
+# ---- Brigands -----------------------------------------------------------------
+#
+# A side of their own, on no one's team, but not one that can win: it has no settlement, no Keystone
+# and no say in who's left standing. A band comes in from the edge of the map at whoever has the
+# fewest soldiers at home, bigger the longer the game goes on, takes what it can for a while, and
+# leaves. They can't break a Keystone, and don't count towards taking one.
+
+fn is_side [f] { return ((f != nil) and (not {f.has :brigands})) }
+
+fn brigand_unit [s] { return (s.faction == BRIGAND_ID) }
+
+fn make_brigands [] do
+    let f {=id BRIGAND_ID =x 0 =y 70 =z 0 =hands [] =buildings [] =sites [] =zone nil
+           =keystone nil =alive true =housing 0 =train_queue 0 =train_timer 0.0 =regrow [] =scaffold []
+           =army [] =muster [] =muster_timer 0.0 =capture 0 =commander nil =keystone_seen_by nil
+           =tidy_site nil =hall nil =canopy_repaired true =danger [] =owner nil =owner_name nil
+           =moniker 0 =team (SOLO_TEAM + BRIGAND_ID)
+           =brigands true =band nil =next_band (BRIGAND_FIRST_SECONDS * 30)}
+    while (factions.length <= BRIGAND_ID) do
+        factions.push nil
+    end
+    factions.set BRIGAND_ID f
+    vision_add_faction BRIGAND_ID
+    set_team f f.team
+    return f
+end
+
+# Soldiers away at home count for nothing: it's those by the Keystone that make a settlement a hard one
+fn home_guard [f] do
+    if (f.keystone == nil) { return 0 }
+    let n 0
+    for s in f.army do
+        if ((s.stats.role != :scout) and (s.last_pos != nil) and ({dist2 s.last_pos[0] s.last_pos[2] f.x f.z} < (40 * 40))) {
+            set n (n + 1)
+        }
+    end
+    return n
+end
+
+fn brigand_target [] do
+    let best nil
+    let best_guard nil
+    for f in factions do
+        if ({is_side f} and f.alive and (f.keystone != nil)) do
+            let guard ({home_guard f} + ({random_range 0 99} / 100.0))
+            if ((best == nil) or (guard < best_guard)) do
+                set best f
+                set best_guard guard
+            end
+        end
+    end
+    return best
+end
+
+fn band_size [tick] do
+    let minutes (tick / 1800)
+    return {min BRIGAND_MAX (BRIGAND_BASE + {floor (minutes / BRIGAND_GROWTH_MINUTES)})}
+end
+
+# In from the edge of the map on the target's side, to its yard
+fn send_band [b tick] do
+    let target {brigand_target}
+    if (target == nil) { return nil }
+    let d {sqrt ((target.x * target.x) + (target.z * target.z))}
+    let dx 1.0
+    let dz 0.0
+    if (d > 1.0) do
+        set dx (target.x / d)
+        set dz (target.z / d)
+    end
+    let edge ((WORLD_RADIUS * 16) - 16)
+    let start {spawn_point {floor (dx * edge)} {floor (dz * edge)} 4 70}
+    if (start == nil) { return nil }
+    set b.x {floor start[0]}
+    set b.y {floor start[1]}
+    set b.z {floor start[2]}
+
+    let ids []
+    let count {band_size tick}
+    for i in (0..count) do
+        let kind :militia
+        if ((i % 3) == 2) { set kind :shortbow }
+        let id {ent_spawn kind start =faction BRIGAND_ID}
+        let s {make_soldier b id kind}
+        set s.last_hp {ent_health id}
+        set s.post {ent_pos id}
+        b.army.push s
+        index_unit id b s
+        ids.push id
+    end
+    let yard [(target.x + 7) target.y (target.z - 6)]
+    order_units b {=units ids =x yard[0] =y yard[1] =z yard[2]}
+    set b.band {=target target.id =units ids =until (tick + (BRIGAND_STAY_SECONDS * 30)) =leaving false}
+    log "brigands," count "of them, set out for side" target.id
+    ui_publish {=news {=key "brigands" =count count}} =faction target.id
+end
+
+fn end_band [b] do
+    let band b.band
+    set band.leaving true
+    set band.until ({game_tick} + (60 * 30))
+    order_units b {=units band.units =x b.x =y b.y =z b.z}
+    log "brigands go"
+end
+
+fn tick_brigands [b tick] do
+    tick_army b tick
+    if ((tick % 30) != 11) { return nil }
+    let band b.band
+    if (band == nil) do
+        if (tick >= b.next_band) { send_band b tick }
+        return nil
+    end
+
+    let left []
+    for id in band.units do
+        if {ent_alive id} { left.push id }
+    end
+    set band.units left
+    let target factions[band.target]
+    let over ((left.length == 0) or (tick >= band.until) or (target == nil) or (not target.alive))
+    if (over and (not band.leaving) and (left.length > 0)) { return {end_band b} }
+
+    # Out of sight at the edge, or out of time, they're gone
+    if (band.leaving or (left.length == 0)) do
+        let gone true
+        for id in left do
+            let p {ent_pos id}
+            let away ((p == nil) or ({dist2 p[0] p[2] b.x b.z} < 64) or (tick >= band.until))
+            if away { ent_remove id } { set gone false }
+        end
+        if gone do
+            set b.band nil
+            set b.next_band (tick + (BRIGAND_EVERY_SECONDS * 30))
+        end
+    end
+end

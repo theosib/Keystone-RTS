@@ -155,6 +155,12 @@ fn hand_stack [f w] do
 end
 
 fn soldier_stack [s] do
+    let stack {soldier_doing s}
+    if {hungry s} { stack.push {=key "hungry"} }
+    return stack
+end
+
+fn soldier_doing [s] do
     if (s.state == :rout) { return [{=key "rout"}] }
     if (s.target != nil) { return [{=key "fight"}] }
     if (s.siege != nil) { return [{=key "break_keystone"}] }

@@ -126,6 +126,14 @@ end
 fn leaves_alone [s pos id] do
     let target_pos {ent_pos id}
     if {past_leash s target_pos} { return (not {in_range s pos target_pos}) }
+    # On guard, a soldier lets an enemy come to it. Run out to meet one, a guard strings out and is
+    # beaten one at a time by an attack that arrives together.
+    if ({keeping_post s} and (s.post != nil)) do
+        let near (GUARD_ENGAGE * GUARD_ENGAGE)
+        let from_post {dist2 s.post[0] s.post[2] target_pos[0] target_pos[2]}
+        let from_self {dist2 pos[0] pos[2] target_pos[0] target_pos[2]}
+        if ((from_post > near) and (from_self > near)) { return (not {in_range s pos target_pos}) }
+    end
     if (id != s.ignore) { return false }
     if ({game_tick} >= s.ignore_until) do
         set s.ignore nil
@@ -134,13 +142,27 @@ fn leaves_alone [s pos id] do
     return (not {in_range s pos target_pos})
 end
 
-# Enemies this unit can actually see, nearest first. Uses the faction's vision, so
-# the AI and the player play by the same rules.
+# The enemy to go for, of those this unit can actually see. Uses the faction's vision, so the AI and
+# the player play by the same rules. Of those about as near as the nearest, the most hurt: so a
+# group closes on one enemy together, and one that came in as a column doesn't get that for free.
 fn nearest_visible [s pos found] do
+    let best nil
+    let best_health nil
+    let reach nil
     for id in found do
-        if ((not {leaves_alone s pos id}) and {vision_can_see_ent s.faction id}) { return id }
+        if ((not {leaves_alone s pos id}) and {vision_can_see_ent s.faction id}) do
+            let d {dist3 pos {ent_pos id}}
+            if (reach == nil) { set reach (d + FOCUS_SLACK) }
+            if (d <= reach) do
+                let health {health_of id}
+                if ((best == nil) or (health < best_health)) do
+                    set best id
+                    set best_health health
+                end
+            end
+        end
     end
-    return nil
+    return best
 end
 
 # Soldiers answer to other soldiers first. A unit on the march won't peel off after
@@ -275,6 +297,7 @@ end
 # Once it's seen one, a soldier sticks to it: sight can drop out for a moment
 fn keystone_to_break [s pos] do
     if (contest.state != :playing) { return nil }
+    if {brigand_unit s} { return nil }
     if (s.siege != nil) do
         let k factions[s.siege].keystone
         if (k != nil) { return k }
@@ -507,6 +530,7 @@ fn wreck_building [s pos] do
 end
 
 fn update_morale [s pos] do
+    if {hungry s} { set s.morale (s.morale - (MORALE_LOSS_HUNGRY * THINK_SECONDS)) }
     let hp {ent_health s.id}
     if ((s.last_hp != nil) and (hp < s.last_hp)) {
         set s.morale (s.morale - MORALE_LOSS_HIT)

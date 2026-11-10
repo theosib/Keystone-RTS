@@ -389,6 +389,9 @@ set fence_button nil
 set lay_start nil
 set denied nil
 set denied_frames 0
+# What's happened that a player should know, for a while
+set news_text nil
+set news_frames 0
 set tool_buttons []
 
 fn tool_name [] { return BLOCK_TOOLS[tool_index] }
@@ -1005,6 +1008,7 @@ end
 
 fn side_label [side team] do
     if (side.id == my_faction) { return {loc "side.you"} }
+    if ({side.get :brigands} == true) { return {loc "side.brigands"} }
     let name {side_name side}
     if ((team != nil) and ({side.get :team} == team)) { set name {loc "side.ally" =name name} }
     if side.alive { return name }
@@ -1182,6 +1186,12 @@ on :state do
         move_pin went.units went.x went.y went.z
         return nil
     end
+    let news {msg.get :news}
+    if (news != nil) do
+        set news_text {loc "ui.news.{news.key}" =count {news.get :count}}
+        set news_frames 600
+        return nil
+    end
     if ({msg.get :taken} != nil) do
         set denied {loc "ui.taken"}
         set denied_frames 120
@@ -1299,6 +1309,7 @@ on :frame do
     end
 
     if (denied_frames > 0) { set denied_frames (denied_frames - 1) }
+    if (news_frames > 0) { set news_frames (news_frames - 1) }
 
     update_chat
     if (chat_panel != nil) do
@@ -1315,6 +1326,8 @@ on :frame do
         set hud_hint.text {loc "ui.keystone_danger" =percent going.percent}
     elif (going != nil) do
         set hud_hint.text {loc "ui.keystone_breaking" =percent going.percent}
+    elif (news_frames > 0) do
+        set hud_hint.text news_text
     elif (denied_frames > 0) do
         set hud_hint.text denied
     elif (view_mode == :embodied) do

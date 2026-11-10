@@ -1,0 +1,117 @@
+# Scenario: what presses on a settlement besides a rival. A grove is planted out from each side,
+# brigands come for whoever has the fewest soldiers at home, can't take a Keystone however long they
+# stand at one, and leave when their time's up. Soldiers eat from the yard, and without go hungry.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+fn expect [what got wanted] do
+    if (got != wanted) { fail {str_concat what " was " {to_str got}} }
+end
+
+set guards []
+set eater nil
+set lurker nil
+
+fn bushes_near [x z radius] do
+    let n 0
+    for dx in ((0 - radius)..=radius) do
+        for dz in ((0 - radius)..=radius) do
+            let y {surface_y (x + dx) (z + dz)}
+            if ((y != nil) and ({block_at (x + dx) y (z + dz)} == :berry_bush)) { set n (n + 1) }
+        end
+    end
+    return n
+end
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+    let rival factions[2]
+    let b factions[BRIGAND_ID]
+
+    if (tick == 5) do
+        set rival.commander nil
+        expect "brigands" ({b.get :brigands} == true) true
+        # A grove out from home towards the middle
+        let d {sqrt ((f.x * f.x) + (f.z * f.z))}
+        let gx {floor (f.x - ((f.x / d) * GROVE_OUT))}
+        let gz {floor (f.z - ((f.z / d) * GROVE_OUT))}
+        let n {bushes_near gx gz GROVE_RADIUS}
+        if (n < (GROVE_BUSHES - 2)) { fail "the grove has {n} bushes" }
+
+        # The rival has soldiers at home, so it's the first side they come for
+        for i in (0..3) do
+            guards.push {spawn_soldier rival :militia}
+        end
+        set b.next_band 60
+    end
+
+    if (tick == 120) do
+        if (b.band == nil) { fail "no band set out" }
+        expect "the band's target" b.band.target 1
+        expect "the band's size" b.band.units.length {band_size tick}
+        expect "the match" contest.state :playing
+    end
+
+    # One of them stands at the Keystone with nobody to defend it, and it's still there after
+    if (tick == 130) do
+        set lurker b.band.units[0]
+        let k f.keystone
+        ent_set_pos lurker [(k[0] + 2.5) k[1] (k[2] + 0.5)]
+        let entry {lookup_unit lurker}
+        set entry.record.post {ent_pos lurker}
+        for s in f.army do
+            ent_set_pos s.id [(f.x + 40) (f.y + 2) f.z]
+        end
+    end
+    if (tick == 700) do
+        expect "Keystone capture" f.capture 0
+        let k f.keystone
+        expect "the Keystone" {block_at k[0] k[1] k[2]} :keystone
+
+        # Their time's up
+        set b.band.until tick
+    end
+    if (tick == 2800) do
+        if (b.band != nil) { fail "the band never left" }
+        for s in b.army do
+            if {ent_alive s.id} { fail "a brigand is still here" }
+        end
+        if (b.next_band <= tick) { fail "no next band" }
+    end
+
+    # A soldier eats from the yard, and with nothing there goes hungry and loses heart
+    if (tick == 2810) do
+        set eater {spawn_soldier f :militia}
+        set eater.ration 1
+    end
+    if (tick == 2880) do
+        # Hands bring food in all the while, so the yard's count says nothing: the next ration's due
+        if (eater.ration < (RATION_SECONDS - 5)) { fail "no ration eaten: {eater.ration}" }
+        expect "fed" {hungry eater} false
+        # Nobody to bring more in
+        for w in f.hands do
+            ent_remove w.id
+        end
+        zone_take f.zone :provisions {stock_of f :provisions} f.x f.z
+        set eater.ration 1
+        set eater.morale 1.0
+        ent_set_pos eater.id [(f.x + 40) (f.y + 2) f.z]
+        set eater.post {ent_pos eater.id}
+    end
+    if (tick == 3300) do
+        expect "with an empty yard, hungry" {hungry eater} true
+        if (eater.morale >= 0.95) { fail "a hungry soldier kept its heart: {eater.morale}" }
+        if (not failed) do
+            log "brigands and rations work"
+            game_exit 0
+        end
+    end
+end

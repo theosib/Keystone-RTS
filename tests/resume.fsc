@@ -11,7 +11,7 @@ end
 fn summary [] do
     let lines ""
     for f in factions do
-        if (f != nil) do
+        if {is_side f} do
             let alive 0
             for w in f.hands do
                 if {ent_alive w.id} { set alive (alive + 1) }

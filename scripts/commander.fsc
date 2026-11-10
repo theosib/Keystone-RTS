@@ -3,17 +3,86 @@
 # Fair play is structural. This file's only knowledge of the enemy comes through
 # the faction's own vision, and its only levers are the commands and economy a
 # player has. It keeps its own notes of what its scouts saw.
+#
+# What makes it hard to beat, and the levels differ in how much of it they do:
+#   - An economy that keeps growing: Hands only as fast as food allows, food huts first, and more
+#     shelters as the army grows. Beds are what an army costs most: a shelter is 55 timber and 34 food
+#     for four, and more Hands than the land's bushes keep busy only take beds from soldiers.
+#   - An army with no fixed size, of what it's seen the enemy field: bows against swords, swords
+#     against bows.
+#   - Home is never left bare. A guard stays, and everyone comes back when home is attacked.
+#   - It attacks with an edge over what it's seen, gathers before it marches, and pulls back from a
+#     fight it's losing instead of feeding it.
+#   - A veteran raids Hands working away from home, and watches its approaches from towers.
 
 set DIFFICULTY {
-    =apprentice {=think 3.0 =hands 10 =strike 6 =first_strike 480 =units [:militia]}
-    =standard {=think 1.0 =hands 14 =strike 8 =first_strike 300 =units [:militia :shortbow]}
-    =veteran {=think 0.5 =hands 18 =strike 10 =first_strike 210 =units [:militia :shortbow]}
+    =apprentice {=think 3.0 =hands 8 =strike 6 =first_strike 600 =guard 0 =edge 0.0
+                 =retreat false =counter false =raids false =towers 0 =huts 1 =food_spare 0
+                 =punish false =units [:militia]
+                 =build_at 40 =spare_beds 0 =first_hut :sawpit =parallel false
+                 =station false =gather false =muster_queue 1}
+    =standard {=think 1.0 =hands 8 =strike 6 =first_strike 540 =guard 0 =edge 1.0
+               =retreat true =counter true =raids false =towers 0 =huts 1 =food_spare 0
+               =punish false =units [:militia :shortbow]
+               =build_at 40 =spare_beds 1 =first_hut :sawpit =parallel false
+               =station true =gather true =muster_queue 2}
+    =veteran {=think 0.5 =hands 8 =strike 6 =first_strike 400 =guard 0 =edge 1.0
+              =retreat true =counter true =raids true =towers 0 =huts 1 =food_spare 0
+              =punish true =units [:militia :shortbow]
+              =build_at 40 =spare_beds 1 =first_hut :sawpit =parallel false
+              =station true =gather true =muster_queue 2}
 }
 
+
+
+# After beating off an attack, a veteran goes straight back at them with this many, while they're short
+set PUNISH_SIZE 4
+set PUNISH_SECONDS 60
+
+
+# Seen enemy soldiers count for this long after they were last seen
+set SEEN_SECONDS 120
+# Enemies this near home are an attack on it
+set HOME_RADIUS 34
+# A gathered army sets off once this much of it is at the rally point, or after this long
+set GATHER_SHARE 0.75
+set GATHER_SECONDS 30
+set RALLY_DISTANCE 22
+# An attack is called off below this share of what set out, and isn't tried again for a while
+set RETREAT_SHARE 0.4
+set RETREAT_COOLDOWN 60
+# Stragglers are sent on again this often
+set RESEND_SECONDS 15
+set RAID_SIZE 3
+set RAID_SECONDS 45
+
 fn make_commander [f level] do
-    return {=faction f.id =level {DIFFICULTY.get level} =next_think 0
-            =enemy_at nil =scouted [] =next_waypoint 0 =attacking false
-            =passive false =last_strike 0}
+    let c {=faction f.id =level_name level =level {DIFFICULTY.get level} =next_think 0
+           =enemy_at nil =scouted [] =next_waypoint 0 =attacking false
+           =passive false =last_strike 0}
+    ready_commander c
+    return c
+end
+
+# Fields a commander made by an older version of the game doesn't have yet. Its level is looked up
+# again, so a saved game plays at the level as it's tuned now.
+fn ready_commander [c] do
+    if (not {c.has :level_name}) { set c.level_name :standard }
+    set c.level {DIFFICULTY.get c.level_name}
+    if (c.level == nil) { set c.level {DIFFICULTY.get :standard} }
+    if (not {c.has :seen}) { set c.seen {map} }
+    if (not {c.has :hands_seen}) { set c.hands_seen [] }
+    if (not {c.has :phase}) { set c.phase :build }
+    if (not {c.has :party}) { set c.party [] }
+    if (not {c.has :launched}) { set c.launched 0 }
+    if (not {c.has :phase_until}) { set c.phase_until 0 }
+    if (not {c.has :cooldown_until}) { set c.cooldown_until 0 }
+    if (not {c.has :resend_at}) { set c.resend_at 0 }
+    if (not {c.has :raid}) { set c.raid nil }
+    if (not {c.has :defending}) { set c.defending false }
+    if (not {c.has :guard_at}) { set c.guard_at 0 }
+    if (not {c.has :defended_at}) { set c.defended_at -100000 }
+    if (not {c.has :intel_at}) { set c.intel_at -100000 }
 end
 
 # The nearest enemy still standing
@@ -21,7 +90,7 @@ fn enemy_of [f] do
     let best nil
     let best_d nil
     for other in factions do
-        if ((other != nil) and {hostile f other} and other.alive) do
+        if ({is_side other} and {hostile f other} and other.alive) do
             let d (((other.x - f.x) * (other.x - f.x)) + ((other.z - f.z) * (other.z - f.z)))
             if ((best == nil) or (d < best_d)) do
                 set best other
@@ -38,42 +107,119 @@ fn scout_waypoints [f] do
     return [[(0 - f.x) (0 - f.z)] [0 r] [0 (0 - r)] [r 0] [(0 - r) 0] [(0 - f.x) 0] [0 0]]
 end
 
-# Remember where our own eyes last found the enemy. Newest sighting wins: an army
-# marching on a stale report arrives at nothing.
-fn note_sightings [c f] do
+fn fighters_of [f] do
+    let out []
     for s in f.army do
-        let pos s.last_pos
-        if (pos != nil) do
-            let seen {ent_find pos[0] pos[1] pos[2] 40 =enemy_of f.id =max 6}
-            for id in seen do
-                if {vision_can_see_ent f.id id} do
-                    let p {ent_pos id}
-                    if (c.enemy_at == nil) { log "commander" f.id "found the enemy at" p }
-                    set c.enemy_at [p[0] p[1] p[2]]
-                    return nil
-                end
-            end
+        if ((s.stats.role != :scout) and (s.state != :rout)) { out.push s }
+    end
+    return out
+end
+
+fn alive_ids [ids] do
+    let out []
+    for id in ids do
+        if {ent_alive id} { out.push id }
+    end
+    return out
+end
+
+fn record_of [f id] do
+    for s in f.army do
+        if (s.id == id) { return s }
+    end
+    return nil
+end
+
+# ---- What it has seen ---------------------------------------------------------
+
+fn note_enemy [c f id tick] do
+    if (not {vision_can_see_ent f.id id}) { return nil }
+    let p {ent_pos id}
+    if (p == nil) { return nil }
+    let entry {lookup_unit id}
+    if ((entry == nil) or (entry.faction == BRIGAND_ID)) { return nil }
+    let record entry.record
+    let far ({dist2 p[0] p[2] f.x f.z} >= (60 * 60))
+    if {record.has :stats} do
+        if (record.stats.role != :scout) do
+            c.seen.set {to_sym id} {=kind record.kind =pos p =tick tick}
+            # A look at their soldiers away from here: what it knows of their army is fresh
+            if far { set c.intel_at tick }
         end
+    else do
+        c.hands_seen.push {=pos p =tick tick}
+    end
+    # Where they live, not where their scouts wander: a sighting near home says nothing of that
+    if (not far) { return nil }
+    if (c.enemy_at == nil) { log "commander" f.id "found the enemy at" p }
+    set c.enemy_at [p[0] p[1] p[2]]
+end
+
+fn look_around [c f pos radius tick] do
+    let seen {ent_find pos[0] pos[1] pos[2] radius =enemy_of f.id =max 12}
+    for id in seen do
+        note_enemy c f id tick
     end
 end
 
-fn plan_economy [c f] do
-    if ((f.hands.length < c.level.hands) and (f.train_queue == 0) and ({population f} < f.housing)) {
-        set f.train_queue 1
-    }
-
-    # Housing before it's needed, then the gather bonuses
-    if ((f.sites.length == 0) and ({stock_of f :timber} > 30)) do
-        # Room for the workforce and the army it means to raise
-        if (f.housing < (c.level.hands + c.level.strike + 4)) do
-            ai_place f :shelter
-        elif (not {has_building f :sawpit}) do
-            ai_place f :sawpit
-        elif (not {has_building f :forager_hut}) do
-            ai_place f :forager_hut
-        end
+# Its own eyes only: around its soldiers, its home, and some of its Hands
+fn note_sightings [c f tick] do
+    for s in f.army do
+        if (s.last_pos != nil) { look_around c f s.last_pos 30 tick }
     end
+    look_around c f [f.x f.y f.z] HOME_RADIUS tick
+    let i 0
+    for w in f.hands do
+        if ((i % 4) == 0) do
+            let p {ent_pos w.id}
+            if (p != nil) { look_around c f p 20 tick }
+        end
+        set i (i + 1)
+    end
+
+    # What it hasn't seen for a while it stops counting on, and what it can see isn't there any more
+    # it knows is gone
+    let kept {map}
+    for key in c.seen.keys do
+        let e {c.seen.get key}
+        let fresh ((tick - e.tick) < (SEEN_SECONDS * 30))
+        let gone ((not {ent_alive {to_int {sym_name key}}}) and {vision_can_see f.id e.pos[0] e.pos[2]})
+        if (fresh and (not gone)) { kept.set key e }
+    end
+    set c.seen kept
+    let recent []
+    for h in c.hands_seen do
+        if ((tick - h.tick) < (60 * 30)) { recent.push h }
+    end
+    while (recent.length > 24) do
+        recent.remove 0
+    end
+    set c.hands_seen recent
 end
+
+# How many soldiers it believes the enemy has, and what share of them are bows
+fn enemy_strength [c] do
+    let total 0
+    let bows 0
+    for key in c.seen.keys do
+        let e {c.seen.get key}
+        set total (total + 1)
+        if (e.kind == :shortbow) { set bows (bows + 1) }
+    end
+    return {=total total =bows bows}
+end
+
+# Enemy soldiers it can see right now near a place
+fn enemies_near [c pos radius tick] do
+    let out []
+    for key in c.seen.keys do
+        let e {c.seen.get key}
+        if (((tick - e.tick) < 150) and ({dist2 e.pos[0] e.pos[2] pos[0] pos[2]} < (radius * radius))) { out.push e }
+    end
+    return out
+end
+
+# ---- Economy ------------------------------------------------------------------
 
 fn has_building [f name] do
     for b in f.buildings do
@@ -85,6 +231,17 @@ fn has_building [f name] do
     return false
 end
 
+fn count_buildings [f name] do
+    let n 0
+    for b in f.buildings do
+        if (b.name == name) { set n (n + 1) }
+    end
+    for b in f.sites do
+        if (b.name == name) { set n (n + 1) }
+    end
+    return n
+end
+
 # Try a few spots around the hall, away from the yard
 fn ai_place [f name] do
     let count (f.buildings.length + f.sites.length)
@@ -93,16 +250,81 @@ fn ai_place [f name] do
         let radius (16 + (i * 3))
         let x {floor (f.x - 4 + (radius * {cos angle}))}
         let z {floor (f.z + (radius * {sin angle}))}
-        if ({place_building f name x z 0} != nil) { return nil }
+        if ({place_building f name x z 0} != nil) { return true }
+    end
+    return false
+end
+
+# Out towards somewhere, a few tries either side of the line to it
+fn ai_place_toward [f name pos distance] do
+    let angle {atan2 (pos[2] - f.z) (pos[0] - f.x)}
+    for i in (0..AI_PLACE_TRIES) do
+        let swing ((i % 2) * 2 - 1)
+        let turn (angle + (swing * 0.25 * {floor ((i + 1) / 2)}))
+        let x {floor (f.x + ((distance + i) * {cos turn}))}
+        let z {floor (f.z + ((distance + i) * {sin turn}))}
+        if ({place_building f name x z 0} != nil) { return true }
+    end
+    return {ai_place f name}
+end
+
+fn food_of [f] { return {stock_of f :provisions} }
+
+fn plan_economy [c f] do
+    let level c.level
+    let reserve (FOOD_RESERVE + level.food_spare)
+    let room ({population f} < f.housing)
+    if ((f.hands.length < level.hands) and (f.train_queue == 0) and room and ({food_of f} >= (reserve + HAND_COST.provisions))) {
+        set f.train_queue 1
+    }
+
+    # A veteran keeps two sites going once it can afford to: beds are what hold an army back
+    let timber {stock_of f :timber}
+    let sites_at_once 1
+    if (level.parallel and (timber >= 80)) { set sites_at_once 2 }
+    if (f.sites.length >= sites_at_once) { return nil }
+    if (timber < level.build_at) { return nil }
+    let spare_beds (f.housing - {population f} - f.muster.length - f.train_queue)
+    let shelter_queued false
+    for b in f.sites do
+        if (b.name == :shelter) { set shelter_queued true }
+    end
+    if ((spare_beds <= level.spare_beds) and (not shelter_queued)) do
+        ai_place f :shelter
+    elif (not {has_building f level.first_hut}) do
+        ai_place f level.first_hut
+    elif (not {has_building f :forager_hut}) do
+        ai_place f :forager_hut
+    elif (not {has_building f :sawpit}) do
+        ai_place f :sawpit
+    elif ((not shelter_queued) and (f.housing < (level.hands + (level.strike * 2) + 4))) do
+        ai_place f :shelter
+    elif (({count_buildings f :forager_hut} < level.huts) and ({stock_of f :timber} >= 120)) do
+        ai_place f :forager_hut
+    elif ((c.enemy_at != nil) and ({count_buildings f :watchtower} < level.towers) and ({stock_of f :timber} >= 160)) do
+        # A tower is 102 timber: only once there's plenty
+        ai_place_toward f :watchtower c.enemy_at 20
     end
 end
 
-fn plan_army [c f tick] do
-    if ((f.army.length + f.muster.length) >= ({population f} + 2)) { return nil }
-    let wanted (c.level.strike + 2)
-    if ((f.army.length + f.muster.length) >= wanted) { return nil }
+# ---- Army ---------------------------------------------------------------------
 
-    # Always one scout out before anything else
+# Militia are the army: twice a bow's health, and over twice its blows close up. Bows are a quarter of
+# it, to wear an enemy down as it closes, and none at all against an enemy that's mostly bows, which
+# militia run down.
+fn next_unit [c] do
+    let units c.level.units
+    if (units.length == 1) { return units[0] }
+    if c.level.counter do
+        let strength {enemy_strength c}
+        if ((strength.total >= 3) and ((strength.bows * 2) > strength.total)) { return :militia }
+    end
+    if ({random_range 1 4} <= 3) { return :militia }
+    return :shortbow
+end
+
+fn plan_army [c f] do
+    # Always one scout out
     let scouts 0
     for s in f.army do
         if (s.kind == :scout) { set scouts (scouts + 1) }
@@ -115,11 +337,17 @@ fn plan_army [c f tick] do
         return nil
     end
 
-    if (({stock_of f :provisions} > 24) and (f.muster.length < 2)) do
-        let units c.level.units
-        queue_unit f units[{random_range 0 (units.length - 1)}]
-    end
+    if (f.muster.length >= c.level.muster_queue) { return nil }
+    if (({population f} + f.muster.length) >= f.housing) { return nil }
+    let kind {next_unit c}
+    let cost {UNITS.get kind}.cost
+    # Hands eat first: a soldier only out of what's spare
+    if ({food_of f} < (FOOD_RESERVE + {cost.get :provisions})) { return nil }
+    if (not {can_afford f cost}) { return nil }
+    queue_unit f kind
 end
+
+# ---- Scouting -----------------------------------------------------------------
 
 # Once the enemy is located, the question becomes where their Keystone is. Scouts
 # circle the last sighting, widening, until their own eyes find it.
@@ -148,48 +376,321 @@ fn plan_scouting [c f] do
     end
 end
 
+# ---- Orders -------------------------------------------------------------------
+
+# As a player's would go: a formation, and a Keystone or building there means going for it
+fn send_group [f records x y z] do
+    if (records.length == 0) { return nil }
+    let ids []
+    for s in records do
+        ids.push s.id
+    end
+    order_units f {=units ids =x x =y y =z z}
+end
+
+fn send_ids [f ids x y z] do
+    let records []
+    for id in ids do
+        let s {record_of f id}
+        if (s != nil) { records.push s }
+    end
+    send_group f records x y z
+end
+
+fn home_spot [f] { return [f.x f.y (f.z + 10)] }
+
+# Where a defender counts as defending: just outside the Hall's door, still in reach of the Keystone.
+# Inside, they'd have to come out through the door to fight, and meet an attack there.
+fn keystone_spot [f] do
+    let k f.keystone
+    if (k == nil) { return {home_spot f} }
+    return [k[0] k[1] (k[2] + 6)]
+end
+
+fn near_keystone [f s] do
+    let k f.keystone
+    if ((k == nil) or (s.last_pos == nil)) { return true }
+    return ({dist2 s.last_pos[0] s.last_pos[2] k[0] k[2]} < ((KEYSTONE_RADIUS - 2) * (KEYSTONE_RADIUS - 2)))
+end
+
+# Everyone not out on an attack or a raid waits by the Keystone, where an attack has to come and where
+# a defender counts. Spread out at their posts, they'd run in one at a time and be beaten one at a time.
+fn post_guard [c f tick] do
+    if (tick < {c.get :guard_at}) { return nil }
+    set c.guard_at (tick + (RESEND_SECONDS * 30))
+    let out c.party
+    if (c.raid != nil) { set out c.raid.units }
+    let away []
+    for s in {fighters_of f} do
+        let busy ({out.contains s.id} and (c.phase != :build))
+        if ((c.raid != nil) and {c.raid.units.contains s.id}) { set busy true }
+        if ((not busy) and (not {near_keystone f s}) and (s.order == nil) and (s.target == nil)) { away.push s }
+    end
+    let spot {keystone_spot f}
+    send_group f away spot[0] spot[1] spot[2]
+end
+
+# Where the army gathers: out from home on the way to the enemy
+fn rally_point [c f] do
+    let to c.enemy_at
+    let dx (to[0] - f.x)
+    let dz (to[2] - f.z)
+    let d {sqrt ((dx * dx) + (dz * dz))}
+    if (d < 1.0) { return {home_spot f} }
+    let x {floor (f.x + ((dx / d) * RALLY_DISTANCE))}
+    let z {floor (f.z + ((dz / d) * RALLY_DISTANCE))}
+    let y {ground_y x z}
+    if (y == nil) { set y f.y }
+    return [x (y + 1) z]
+end
+
+fn target_of [c f] do
+    let enemy {enemy_of f}
+    if ((enemy != nil) and (enemy.keystone != nil) and (enemy.keystone_seen_by == f.id)) { return enemy.keystone }
+    return c.enemy_at
+end
+
+# The guard: the fighters nearest home, who stay
+fn split_guard [c f fighters] do
+    let raiding []
+    if (c.raid != nil) { set raiding c.raid.units }
+    let free []
+    for s in fighters do
+        if (not {raiding.contains s.id}) { free.push s }
+    end
+    let guard []
+    let wanted {min c.level.guard {floor (fighters.length / 4)}}
+    while ((guard.length < wanted) and (free.length > 0)) do
+        let best 0
+        let best_d nil
+        let i 0
+        for s in free do
+            let p s.last_pos
+            let d 1000000
+            if (p != nil) { set d {dist2 p[0] p[2] f.x f.z} }
+            if ((best_d == nil) or (d < best_d)) do
+                set best i
+                set best_d d
+            end
+            set i (i + 1)
+        end
+        guard.push free[best]
+        free.remove best
+    end
+    return {=guard guard =free free}
+end
+
+# ---- Defence ------------------------------------------------------------------
+
+# Enemy soldiers near home bring everyone back, raiders and attackers alike
+fn plan_defence [c f tick] do
+    let threats {enemies_near c [f.x f.y f.z] HOME_RADIUS tick}
+    if (threats.length == 0) do
+        if c.defending { set c.defended_at tick }
+        set c.defending false
+        return false
+    end
+    # An apprentice only answers with what's at home, as the alarm brings
+    if (not c.level.retreat) { return false }
+    if (not c.defending) do
+        log "commander" f.id "defends home against" threats.length
+        set c.defending true
+        if (c.phase != :build) do
+            set c.phase :build
+            set c.cooldown_until (tick + (RETREAT_COOLDOWN * 30))
+        end
+        set c.raid nil
+        set c.resend_at 0
+    end
+    # Everyone to the Keystone, which is where an attack has to come, so they meet it together instead
+    # of arriving one at a time. Those already in a fight carry on.
+    if (tick >= c.resend_at) do
+        set c.resend_at (tick + (RESEND_SECONDS * 30))
+        let spot {keystone_spot f}
+        let free []
+        for s in {fighters_of f} do
+            if ((s.target == nil) and (not {near_keystone f s})) { free.push s }
+        end
+        send_group f free spot[0] spot[1] spot[2]
+    end
+    return true
+end
+
+# ---- Attack -------------------------------------------------------------------
+
+fn pull_back [c f tick why] do
+    log "commander" f.id "pulls back:" why
+    let home {home_spot f}
+    send_ids f {alive_ids c.party} home[0] home[1] home[2]
+    set c.party []
+    set c.phase :build
+    set c.attacking false
+    set c.cooldown_until (tick + (RETREAT_COOLDOWN * 30))
+end
+
+fn party_centre [c] do
+    let sx 0.0
+    let sz 0.0
+    let n 0
+    for id in c.party do
+        let p {ent_pos id}
+        if (p != nil) do
+            set sx (sx + p[0])
+            set sz (sz + p[2])
+            set n (n + 1)
+        end
+    end
+    if (n == 0) { return nil }
+    return [(sx / n) 0 (sz / n)]
+end
+
 fn plan_attack [c f tick] do
     if c.passive { return nil }
     if (c.enemy_at == nil) { return nil }
-    if ((tick / 30) < c.level.first_strike) { return nil }
+    let level c.level
 
-    let fighters []
-    for s in f.army do
-        if ((s.kind != :scout) and (s.state != :rout)) { fighters.push s }
+    if (c.phase == :build) do
+        let fighters {fighters_of f}
+        let split {split_guard c f fighters}
+        let seen {enemy_strength c}.total
+        # Without a recent look at their army, a careful commander assumes it's as big as its own
+        if ((level.edge > 0) and ((tick - c.intel_at) > (90 * 30))) { set seen {max seen fighters.length} }
+        # Straight after beating off an attack, while the enemy's army is what it lost
+        let punishing (level.punish and ((tick - c.defended_at) < (PUNISH_SECONDS * 30)) and (split.free.length >= PUNISH_SIZE) and (split.free.length >= (seen * level.edge)))
+        if (not punishing) do
+            if ((tick / 30) < level.first_strike) { return nil }
+            if (tick < c.cooldown_until) { return nil }
+            let needed level.strike
+            if (level.edge > 0) { set needed {min {max needed {floor ((seen * level.edge) + 0.99)}} (level.strike * 2)} }
+            if (split.free.length < needed) { return nil }
+        end
+
+        set c.party []
+        for s in split.free do
+            c.party.push s.id
+        end
+        set c.launched c.party.length
+        set c.phase :gather
+        set c.phase_until (tick + (GATHER_SECONDS * 30))
+        # An apprentice sets off from wherever everyone is
+        if (not level.gather) { set c.phase_until tick }
+        let rally {rally_point c f}
+        set c.rally rally
+        log "commander" f.id "gathers" c.launched "against" seen "seen"
+        send_ids f c.party rally[0] rally[1] rally[2]
+        return nil
     end
-    # Launching takes a full force; keeping up the pressure doesn't
-    let needed c.level.strike
-    if c.attacking { set needed (needed / 2) }
-    if (fighters.length < needed) { return nil }
-    if ((tick - c.last_strike) < 1200) { return nil }
 
-    if (not c.attacking) { log "commander" f.id "strikes with" fighters.length "at" c.enemy_at }
-    set c.attacking true
-    set c.last_strike tick
-    let enemy {enemy_of f}
-    if (enemy == nil) { return nil }
-    for s in fighters do
-        # March on what we saw; if the Keystone is known and still stands, go for it
-        if ((enemy.keystone != nil) and (enemy.keystone_seen_by == f.id)) do
-            order_soldier s enemy.keystone[0] enemy.keystone[1] enemy.keystone[2]
-        else do
-            order_soldier s c.enemy_at[0] c.enemy_at[1] c.enemy_at[2]
+    set c.party {alive_ids c.party}
+    if (c.party.length == 0) do
+        set c.phase :build
+        set c.cooldown_until (tick + (RETREAT_COOLDOWN * 30))
+        return nil
+    end
+
+    if (c.phase == :gather) do
+        let there 0
+        for id in c.party do
+            let p {ent_pos id}
+            if ((p != nil) and ({dist2 p[0] p[2] c.rally[0] c.rally[2]} < 100)) { set there (there + 1) }
+        end
+        if (((there * 1.0) < (c.party.length * GATHER_SHARE)) and (tick < c.phase_until)) { return nil }
+        let target {target_of c f}
+        log "commander" f.id "strikes with" c.party.length "at" target
+        set c.phase :march
+        set c.attacking true
+        set c.last_strike tick
+        set c.resend_at (tick + (RESEND_SECONDS * 30))
+        send_ids f c.party target[0] target[1] target[2]
+        return nil
+    end
+
+    if (c.phase == :march) do
+        if level.retreat do
+            if ((c.party.length * 1.0) < (c.launched * RETREAT_SHARE)) {
+                return {pull_back c f tick "lost too many"}
+            }
+            let centre {party_centre c}
+            if (centre != nil) do
+                let facing {enemies_near c centre 20 tick}.length
+                if ((facing * 1.0) > (c.party.length * level.edge)) {
+                    return {pull_back c f tick "outnumbered"}
+                }
+            end
+        end
+        # Those who got where they were going and found nothing go on to the Keystone
+        if (tick >= c.resend_at) do
+            set c.resend_at (tick + (RESEND_SECONDS * 30))
+            let target {target_of c f}
+            let idle []
+            for id in c.party do
+                let s {record_of f id}
+                if ((s != nil) and (s.order == nil) and (s.target == nil)) { idle.push s }
+            end
+            send_group f idle target[0] target[1] target[2]
         end
     end
 end
 
+# ---- Raids --------------------------------------------------------------------
+
+# Hands seen working well away from their home, the most recent first
+fn raid_target [c f] do
+    let enemy {enemy_of f}
+    if (enemy == nil) { return nil }
+    let i (c.hands_seen.length - 1)
+    while (i >= 0) do
+        let h c.hands_seen[i]
+        if ({dist2 h.pos[0] h.pos[2] enemy.x enemy.z} > (28 * 28)) { return h.pos }
+        set i (i - 1)
+    end
+    return nil
+end
+
+fn plan_raid [c f tick] do
+    if (not c.level.raids) { return nil }
+    if c.passive { return nil }
+    if (c.raid != nil) do
+        set c.raid.units {alive_ids c.raid.units}
+        if ((tick >= c.raid.until) or (c.raid.units.length < 2)) do
+            let home {home_spot f}
+            send_ids f c.raid.units home[0] home[1] home[2]
+            set c.raid nil
+        end
+        return nil
+    end
+    if (c.phase != :build) { return nil }
+    let target {raid_target c f}
+    if (target == nil) { return nil }
+    let split {split_guard c f {fighters_of f}}
+    if (split.free.length < (RAID_SIZE + c.level.strike)) { return nil }
+    let units []
+    for s in split.free do
+        if ((units.length < RAID_SIZE) and (s.kind == :militia)) { units.push s.id }
+    end
+    if (units.length < 2) { return nil }
+    log "commander" f.id "raids Hands at" target
+    set c.raid {=units units =until (tick + (RAID_SECONDS * 30))}
+    send_ids f units target[0] target[1] target[2]
+end
+
 fn commander_tick [c tick] do
     if (tick < c.next_think) { return nil }
+    ready_commander c
     set c.next_think (tick + (c.level.think * 30))
 
     let f factions[c.faction]
     if (not f.alive) { return nil }
 
+    note_sightings c f tick
     plan_economy c f
-    plan_army c f tick
+    plan_army c f
     plan_scouting c f
-    note_sightings c f
-    plan_attack c f tick
+    if (not {plan_defence c f tick}) do
+        if c.level.station { post_guard c f tick }
+        plan_attack c f tick
+        plan_raid c f tick
+    end
 end
 
 # Called when the player asks for peace after a match

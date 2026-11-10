@@ -81,6 +81,28 @@ set BUILDINGS {
 
 set BASE_HOUSING 8
 
+# ---- Pressures (scripts/pressures.fsc) ----------------------------------------
+# A soldier eats one food from the yard this often, and when there's none tries again after the next
+set RATION_SECONDS 120
+set RATION_RETRY_SECONDS 10
+# Hungry, a soldier loses this much heart a second, and soon breaks
+set MORALE_LOSS_HUNGRY 0.04
+# A grove this far out from a settlement towards the middle of the map, this wide either way
+set GROVE_OUT 50
+set GROVE_RADIUS 7
+set GROVE_BUSHES 18
+set GROVE_BOULDERS 6
+# Brigands: the side's id, when the first band comes and how long between, and how long a band stays.
+# A band is BRIGAND_BASE strong, one more each BRIGAND_GROWTH_MINUTES of the game, up to BRIGAND_MAX.
+set BRIGAND_ID 15
+set BRIGAND_FIRST_SECONDS 420
+set BRIGAND_EVERY_SECONDS 270
+set BRIGAND_STAY_SECONDS 120
+set BRIGAND_BASE 2
+set BRIGAND_GROWTH_MINUTES 5
+set BRIGAND_MAX 8
+set BRIGAND_COLOR [0.45 0.36 0.28]
+
 # A building does its job while this much of it stands. Hands mend anything less than whole.
 set BUILDING_WORKS_AT 0.75
 
@@ -135,6 +157,11 @@ set CHASE_FORGET_SECONDS 20.0
 
 # A soldier guards the spot it was last sent to, and goes this far from it after an enemy
 set POST_LEASH 24
+# A soldier on guard takes on an enemy that comes this near its post or itself, and leaves one further
+# off alone unless it's in reach or hitting it
+set GUARD_ENGAGE 10
+# Of enemies no more than this further off than the nearest, a soldier goes for the most hurt
+set FOCUS_SLACK 3.0
 # How long a blow counts as just now. Longer than a bow takes to draw.
 set STRUCK_SECONDS 2.5
 

@@ -56,7 +56,7 @@ end
 fn alive_factions [] do
     let out []
     for f in factions do
-        if ((f != nil) and f.alive) { out.push f }
+        if ({is_side f} and f.alive) { out.push f }
     end
     return out
 end

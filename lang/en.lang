@@ -75,6 +75,7 @@ work.fight: Fighting
 work.break_keystone: Breaking the Keystone
 work.wreck: Breaking down a {name}
 work.rout: Routed, running for home
+work.hungry: Hungry: there's no food in the yard
 ui.muster: Muster
 unit.hand: Hand
 unit.hand.other: Hands
@@ -93,6 +94,8 @@ match.continue: Continue in Open-Ended World
 match.pacify: Make Rivals Passive
 ui.keystone_danger: The Keystone is under attack! {percent}% broken
 ui.keystone_breaking: Breaking the rival Keystone: {percent}%
+ui.news.brigands.one: A brigand is coming for your Hands!
+ui.news.brigands.other: {count} brigands are coming for your Hands!
 ui.paused: Paused. Press Space to carry on. You can still give orders.
 
 block.banner_blue: Blue Banner
@@ -220,6 +223,7 @@ lobby.setting.rivals: Rivals
 lobby.setting.rival_level: Rivals' skill
 lobby.setting.fog: Fog of war
 lobby.setting.teams: Teams
+lobby.setting.brigands: Brigands
 lobby.teams.ffa: Everyone for themselves
 lobby.teams.versus: Players against rivals
 lobby.teams.custom: Choose each side's
@@ -264,6 +268,7 @@ side.you: You
 side.player: Player {id}
 side.fallen: {name} (fallen)
 side.ally: {name} (ally)
+side.brigands: Brigands
 
 # Made-up names: one of each, for a game or a rival nobody named. Single words, split at spaces.
 names.made_up: {adjective} {noun}

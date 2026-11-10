@@ -11,6 +11,7 @@ source "scripts/faction.fsc"
 source "scripts/combat.fsc"
 source "scripts/commander.fsc"
 source "scripts/match.fsc"
+source "scripts/pressures.fsc"
 source "scripts/inspect.fsc"
 source "scripts/tasks.fsc"
 source "scripts/catalog.fsc"
@@ -31,6 +32,7 @@ fn tick_hands [f tick] do
 end
 
 fn tick_faction [f tick] do
+    if {f.has :brigands} { return {tick_brigands f tick} }
     tick_hands f tick
     tick_army f tick
     if (f.commander != nil) { commander_tick f.commander tick }
@@ -43,6 +45,7 @@ fn tick_faction [f tick] do
         forget_danger f
         update_training f
         update_muster f
+        update_rations f
     end
 end
 
@@ -96,7 +99,9 @@ end
 fn publish_sides [] do
     let sides []
     for f in factions do
-        if (f != nil) do
+        if ((f != nil) and {f.has :brigands}) do
+            sides.push {=id f.id =color BRIGAND_COLOR =alive true =rival false =brigands true =moniker 0 =team f.team}
+        elif (f != nil) do
             let color FACTION_COLORS[(f.id - 1) % FACTION_COLORS.length]
             # Saves from before sides had names
             if (not {f.has :moniker}) { set f.moniker {random_range 0 999999} }
@@ -112,7 +117,7 @@ end
 fn human_factions [] do
     let out []
     for f in factions do
-        if ((f != nil) and (f.commander == nil)) { out.push f }
+        if ({is_side f} and (f.commander == nil)) { out.push f }
     end
     return out
 end
@@ -214,7 +219,7 @@ end
 
 fn building_at [x y z] do
     for f in factions do
-        if (f != nil) do
+        if {is_side f} do
             let b {structure_at f x y z}
             if ((b != nil) and (not {b.has :laid})) { return b }
         end
@@ -510,6 +515,9 @@ on :start do
         end
     end
 
+    plant_groves
+    let brigands {SETTINGS.get :brigands}
+    if (brigands != false) { make_brigands }
     log "settlements:" {alive_factions}.length
 end
 

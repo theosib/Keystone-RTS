@@ -86,7 +86,7 @@ end
 fn all_plots [] do
     let plots []
     for f in factions do
-        if (f != nil) { add_plots plots f }
+        if {is_side f} { add_plots plots f }
     end
     return plots
 end
@@ -96,7 +96,7 @@ fn plots_seen_by [f] do
     let plots []
     add_plots plots f
     for other in factions do
-        if ((other != nil) and (other.id != f.id)) do
+        if ({is_side other} and (other.id != f.id)) do
             let theirs []
             add_plots theirs other
             for p in theirs do

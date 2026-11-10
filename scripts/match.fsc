@@ -17,9 +17,21 @@ fn note_keystone_sightings [] do
     end
 end
 
+# Soldiers of a side that could win. Brigands take what they can carry, not Keystones.
+fn count_capturers [pos radius faction] do
+    let total 0
+    for kind in [:militia :shortbow] do
+        for id in {ent_find pos[0] pos[1] pos[2] radius =enemy_of faction =type kind =max 16} do
+            let entry {lookup_unit id}
+            if ((entry != nil) and (entry.faction != BRIGAND_ID)) { set total (total + 1) }
+        end
+    end
+    return total
+end
+
 fn tick_capture [f] do
     if (f.keystone == nil) { return nil }
-    let attackers {count_armed f.keystone KEYSTONE_RADIUS f.id true}
+    let attackers {count_capturers f.keystone KEYSTONE_RADIUS f.id}
     let defenders {count_armed f.keystone KEYSTONE_RADIUS f.id false}
 
     if ((attackers > 0) and (defenders == 0)) do
@@ -63,7 +75,7 @@ fn conquer [f] do
     let winner nil
     let divided false
     for other in factions do
-        if ((other != nil) and other.alive) do
+        if ({is_side other} and other.alive) do
             if (winner == nil) do
                 set winner other.id
             elif (factions[winner].team != other.team) do

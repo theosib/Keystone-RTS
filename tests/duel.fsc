@@ -1,0 +1,65 @@
+# Not a test: two commanders play each other, for measuring them (tools/duel.sh). The first side
+# plays at LEVEL_A and the second at LEVEL_B, and every game minute each says how it's doing. A level
+# named old_<level> is the commander from an earlier commit, which tools/duel.sh loads renamed.
+
+set duel_started false
+
+fn duel_level [name] do
+    if (name == nil) { return :standard }
+    return {to_sym name}
+end
+
+fn duel_report [f] do
+    let fighters 0
+    for s in f.army do
+        if (s.kind != :scout) { set fighters (fighters + 1) }
+    end
+    let stock "timber {zone_count f.zone :timber} stone {zone_count f.zone :stone} food {zone_count f.zone :provisions}"
+    let sites []
+    for b in f.sites do
+        sites.push b.name
+    end
+    log "DUEL minute" ({game_tick} / 1800) "side" f.id "alive" f.alive "hands" f.hands.length "fighters" fighters "buildings" f.buildings.length stock "housing" f.housing "sites" sites
+end
+
+# The old commander isn't the game's, so the game doesn't drive it: this does
+fn duel_seat [f name] do
+    if ((name != nil) and ({str_find name "old_"} == 0)) do
+        set f.commander nil
+        set f.old_commander {old_make_commander f {to_sym {str_substr name 4}}}
+    else do
+        set f.commander {make_commander f {duel_level name}}
+    end
+end
+
+on :tick do
+    let tick {game_tick}
+    if (not duel_started) do
+        set duel_started true
+        duel_seat factions[1] LEVEL_A
+        duel_seat factions[2] LEVEL_B
+    end
+    for f in factions do
+        if ((f != nil) and {f.has :old_commander} and f.alive) { old_commander_tick f.old_commander tick }
+    end
+    if ((DUEL_WATCH != "") and ((tick % 150) == 0)) do
+        for f in factions do
+            if ({is_side f} and f.alive and (f.keystone != nil)) do
+                let k f.keystone
+                let near {count_armed k KEYSTONE_RADIUS f.id false}
+                let foes {count_armed k 30 f.id true}
+                let c f.commander
+                log "WATCH t" (tick / 30) "side" f.id "capture" f.capture "defending keystone" near "enemies within 30" foes "phase" c.phase "defending" c.defending "army" f.army.length
+            end
+        end
+    end
+    if ((tick % 1800) == 0) do
+        for f in factions do
+            if {is_side f} { duel_report f }
+        end
+    end
+    if (contest.state == :over) do
+        log "DUEL over at minute" (tick / 1800) "winner" contest.winner
+        game_exit 0
+    end
+end
