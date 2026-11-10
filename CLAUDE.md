@@ -149,6 +149,9 @@ finescript traps that cost real time here:
   mesh that reads a block's own cell can see it dark for a few frames after it turned solid.
 - Loading relights the whole world, so a light bug only exists in a game in progress and a
   reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
+- The other way round too: the engine's column heightmap counts any block as stopping the sky, so
+  in a new or loaded world the top bush, boulder or leaf of a column has sky 0 in its own cell,
+  and the ground under a canopy starts shaded. One placed in play gets 15, and no shade.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
   `--validation` turns on Vulkan validation, `--stats` prints render counts each second.
 
