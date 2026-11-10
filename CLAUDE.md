@@ -162,7 +162,9 @@ finescript traps that cost real time here:
   `built=` is mesh builds a second, never 0 in a live game: Hands keep changing blocks.
 - Canopy is drawn with tufts close up and plain further out, switching where a block is
   `detail_pixels` tall (`game.conf`). A UI script's `detail_pixels n` changes it in a running game,
-  0 drawing everything in full, and returns the distance in blocks.
+  0 drawing everything in full, and returns the distance in blocks. Why 24: at 1920x1080 on the
+  N100, tufts everywhere cost 10fps at the usual camera distance (65 to 55), and 24 gave the
+  cubes' 64-65 while reaching 40 blocks. 16 reached 61 and cost the same as tufts everywhere.
 
 ## Multiplayer
 
