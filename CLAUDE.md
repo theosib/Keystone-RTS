@@ -149,9 +149,10 @@ finescript traps that cost real time here:
   mesh that reads a block's own cell can see it dark for a few frames after it turned solid.
 - Loading relights the whole world, so a light bug only exists in a game in progress and a
   reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
-- The other way round too: the engine's column heightmap counts any block as stopping the sky, so
-  in a new or loaded world the top bush, boulder or leaf of a column has sky 0 in its own cell,
-  and the ground under a canopy starts shaded. One placed in play gets 15, and no shade.
+- Tree shade comes from `blocks-sky-light: true` on `canopy`: see-through, but the sky stops there.
+  Without it, sky light falls straight past a non-opaque block, as it does past bushes.
+- A block shape can follow what's above it: `connect_up_*` faces show with one of its `connects`
+  group on top, `open_up_*` without. That's how a boulder under another is flat on top.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.
   `--validation` turns on Vulkan validation, `--stats` prints render counts each second.
 

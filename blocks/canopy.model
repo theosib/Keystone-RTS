@@ -3,4 +3,6 @@ texture: blocks/canopy
 collision: none
 hit: full
 opaque: false
+# Lets light through, but shades the ground under a tree
+blocks-sky-light: true
 hardness: 0.3
