@@ -1170,6 +1170,11 @@ on :state do
         show_inspect inspected
         return nil
     end
+    let carried {msg.get :carry}
+    if (carried != nil) do
+        hear_carry carried
+        return nil
+    end
     let tasks {msg.get :tasks}
     if (tasks != nil) do
         set unit_tasks tasks

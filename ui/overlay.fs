@@ -2,7 +2,8 @@
 # units something is hiding, and pins where units were sent.
 #
 # Each of these is a setting (ui/settings.fs). All of it runs on the client and asks the server for
-# nothing: a pin is the order as this player gave it, and it goes when the units get there.
+# nothing: a pin is the order as this player gave it, and it goes when the units get there. The one
+# exception is what Hands carry, a debugging aid, which only the server knows.
 
 set HEALTH_BAR_WIDTH 0.7
 set HEALTH_BAR_HEIGHT 2.05
@@ -22,6 +23,15 @@ set PIN_MOST_SCALE 3.0
 set PIN_REACHED 2.5
 # Or when they've all stood still for this long: as near as they could get
 set PIN_STALL_SECONDS 3.0
+
+# What a Hand carries: a cube over its head in the colour of the material, dark when empty, and a bar
+# for how full a load it is. A ring at its feet while it waits for someone to get out of its way.
+set CARRY_HEIGHT 2.35
+set CARRY_SIZE 0.3
+# A key to the colours sits in the corner while they're shown.
+set CARRY_COLORS {=timber [0.6 0.33 0.1] =stone [0.42 0.48 0.62] =provisions [0.95 0.8 0.2]}
+set CARRY_EMPTY [0.12 0.12 0.12]
+set CARRY_WAITING [1.0 0.2 0.15 0.95]
 
 set ui_clock 0.0
 set faction_colors {map}
@@ -58,6 +68,73 @@ fn draw_unit_marks [] do
                     marker_bar p[0] (p[1] + HEALTH_BAR_HEIGHT) p[2] HEALTH_BAR_WIDTH health
                 }
             end
+        end
+    end
+end
+
+# ---- What Hands carry
+
+set carry_shown false
+set carry_seen nil
+set carry_key nil
+set carry_key_id nil
+
+fn hear_carry [carried] { set carry_seen carried }
+
+fn key_line [c text] {ui.text_colored [c[0] c[1] c[2] 1.0] text}
+
+fn show_carry_key [] do
+    let rows [{ui.text {loc "carry.title"}}]
+    for kind in [:timber :stone :provisions] do
+        let name {sym_name kind}
+        rows.push {key_line {CARRY_COLORS.get kind} {loc "carry.{name}"}}
+    end
+    rows.push {key_line [0.55 0.55 0.55] {loc "carry.empty"}}
+    rows.push {key_line CARRY_WAITING {loc "carry.waiting"}}
+    set carry_key {ui.window "##carry_key"
+        =window_pos_x 0 =window_pos_y 0 =window_pivot_x 1.0 =window_pivot_y 1.0
+        =window_flags [:no_title_bar :no_resize :no_move :always_auto_resize :no_saved_settings :no_focus_on_appearing :no_inputs]
+        =children rows}
+    set carry_key_id {ui_show carry_key}
+end
+
+fn hide_carry_key [] do
+    if (carry_key_id != nil) { ui_hide carry_key_id }
+    set carry_key_id nil
+    set carry_key nil
+end
+
+# The server only sends it to whoever asked, so it's asked again whenever the setting changes
+fn draw_carry_marks [] do
+    let want {pref :carry_marks false}
+    if (want != carry_shown) do
+        set carry_shown want
+        set carry_seen nil
+        send_command {=name :watch_carry =show want}
+        if want { show_carry_key } { hide_carry_key }
+    end
+    if (carry_key != nil) do
+        let size {window_size}
+        set carry_key.window_pos_x (size[0] - 8)
+        set carry_key.window_pos_y (size[1] - 8)
+    end
+    if ((not want) or (carry_seen == nil)) { return nil }
+    for hand in carry_seen.hands do
+        let p {entity_pos hand.id}
+        if (p != nil) do
+            let k {pin_scale p}
+            let size (CARRY_SIZE * k)
+            let y (p[1] + CARRY_HEIGHT)
+            let c CARRY_EMPTY
+            if (hand.n > 0) do
+                let named {CARRY_COLORS.get hand.kind}
+                if (named != nil) { set c named }
+            end
+            marker_box (p[0] - (size / 2)) y (p[2] - (size / 2)) size size size c[0] c[1] c[2] 0.95
+            marker_bar p[0] (y + size + (0.1 * k)) p[2] (0.7 * k) {min 1.0 ((hand.n * 1.0) / carry_seen.cap)}
+            if hand.waiting {
+                marker_ring p[0] (p[1] + 0.05) p[2] (0.5 * k) CARRY_WAITING[0] CARRY_WAITING[1] CARRY_WAITING[2] CARRY_WAITING[3]
+            }
         end
     end
 end
@@ -271,4 +348,5 @@ fn draw_overlay [] do
     update_orders dt
     draw_orders
     draw_unit_marks
+    draw_carry_marks
 end

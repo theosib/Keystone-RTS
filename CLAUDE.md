@@ -91,6 +91,10 @@ finescript traps that cost real time here:
   with nobody near, even the owner's `inspect_at` on one reads as stale.
 - Path searches are the main CPU cost: never re-issue `ent_goto` every think. See the
   backoff in `give_up` and the re-search rule in `chase`.
+- A Hand that squats about 3s at an empty cell and walks off is in `wait_for_room`. `cell_occupied`
+  counts any body that crosses into the cell: a Hand in the next cell within 0.3 of the edge, or a
+  head from the cell below. Placing never checks the load, and Hand scaffolding is free. The
+  `carry_marks` setting shows each Hand's load over its head, and a red ring while it waits.
 
 ## Testing
 

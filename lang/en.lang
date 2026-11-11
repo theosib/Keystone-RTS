@@ -280,6 +280,13 @@ settings.done: Done
 settings.health_bars: Health bars
 settings.halos: Show units behind things
 settings.pins: Pins where units are sent
+settings.carry_marks: What Hands carry (for debugging)
 settings.choice.damaged: When hurt
 settings.choice.always: Always
 settings.choice.never: Never
+carry.title: Over each Hand, what it carries
+carry.timber: timber (planks, palisade)
+carry.stone: stone
+carry.provisions: provisions (thatch, food)
+carry.empty: nothing
+carry.waiting: red ring: waiting for room to build

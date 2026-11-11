@@ -7,6 +7,7 @@ set SETTINGS [
     {=key :health_bars =label "settings.health_bars" =choices [:damaged :always :never]}
     {=key :halos =label "settings.halos" =choices [true false]}
     {=key :pins =label "settings.pins" =choices [true false]}
+    {=key :carry_marks =label "settings.carry_marks" =choices [false true]}
 ]
 
 fn setting_choice_label [value] do

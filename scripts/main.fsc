@@ -95,6 +95,28 @@ fn publish_state [f] do
                 =alive f.alive} =faction f.id
 end
 
+# What each Hand has in hand, for a player who asked to see it (a debugging aid). Waiting means it's
+# at a cell it can't fill yet, for someone being in the way.
+set carry_watchers {map}
+
+fn watch_carry [player wanted] do
+    if wanted { carry_watchers.set {to_sym player} player } { carry_watchers.remove {to_sym player} }
+end
+
+fn publish_carry [] do
+    for player in carry_watchers.values do
+        let f {faction_of player}
+        if (f != nil) do
+            let hands []
+            for w in f.hands do
+                let waits {w.get :place_waits}
+                hands.push {=id w.id =kind w.carry_kind =n w.carry_n =waiting ((waits != nil) and (waits > 0))}
+            end
+            ui_publish {=carry {=cap CARRY_CAP =hands hands}} =to player
+        end
+    end
+end
+
 # Who else is out there, for everyone: colours for their units, and a line each in the HUD
 fn publish_sides [] do
     let sides []
@@ -663,6 +685,7 @@ fn publish_all [tick] do
         for f in {human_factions} do
             publish_ghosts f
         end
+        publish_carry
     }
 end
 
@@ -704,6 +727,7 @@ on :command do
         :tasks { ui_publish {=tasks {tasks_of cmd.units}} =to sender }
         :catalog { ui_publish {=catalog {catalog_of}} =to sender }
         :inspect { ui_publish {=inspect {inspect_at f.id cmd.x cmd.y cmd.z}} =to sender }
+        :watch_carry { watch_carry sender cmd.show }
         _ { log "unknown command" cmd.name }
     end
 end
