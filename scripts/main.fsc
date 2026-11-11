@@ -68,17 +68,20 @@ end
 fn update_training [f] do
     if (f.train_queue <= 0) do
         set f.train_timer HAND_TRAIN_SECONDS
+        note_wait f :training_wait nil nil
         return nil
     end
-    if ({population f} >= f.housing) { return nil }
-    set f.train_timer (f.train_timer - 1.0)
-    if (f.train_timer > 0.0) { return nil }
-    if ({zone_take f.zone :provisions HAND_COST.provisions f.x f.z} < HAND_COST.provisions) {
-        return nil
-    }
+    if ({population f} >= f.housing) { return note_wait f :training_wait "no_bed" {=population {population f} =housing f.housing} }
+    set f.train_timer {max 0.0 (f.train_timer - 1.0)}
+    if (f.train_timer > 0.0) { return note_wait f :training_wait "training" {=queued f.train_queue} }
+    let short {short_for f HAND_COST}
+    if (short != nil) { return note_wait f :training_wait "short" {=needs short =cost {HAND_COST.get short} =yard {stock_of f short}} }
+    pay f HAND_COST
     set f.train_queue (f.train_queue - 1)
     set f.train_timer HAND_TRAIN_SECONDS
-    spawn_hand f
+    let w {spawn_hand f}
+    trace :training "side" f.id "spawned hand" w.id "queued" f.train_queue
+    note_wait f :training_wait nil nil
 end
 
 fn publish_state [f] do

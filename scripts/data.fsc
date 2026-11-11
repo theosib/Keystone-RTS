@@ -124,6 +124,8 @@ set LEVEL_HEIGHT 24
 # Hands run from raiders this close, for home
 set FLEE_RADIUS 9
 set FLEE_CHECK_SECONDS 1.0
+# How far a Hand runs, when home's no safer
+set FLEE_DISTANCE 20
 # Clear of them, a Hand runs on this long. Everyone then keeps this far from where they were seen,
 # for this long after they last were.
 set FLEE_CALM_SECONDS 5

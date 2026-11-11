@@ -134,6 +134,7 @@ fn place_building [f name x z turns] do
            =complete false =faction f.id}
     f.sites.push b
     log "faction" f.id "started" name "at" x y z
+    trace :build "side" f.id "started" name "at" [x y z]
     return b
 end
 
@@ -213,6 +214,7 @@ fn finish_building [f b] do
     f.buildings.push b
     take_down_scaffold f b
     log "faction" f.id "finished" b.name
+    trace :build "side" f.id "finished" b.name "at" [b.x b.y b.z]
 end
 
 # ---- Damage and repair ------------------------------------------------------

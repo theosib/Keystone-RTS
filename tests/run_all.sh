@@ -86,6 +86,8 @@ run fence 6000
 run heal 2800
 run room 4100
 run scaffold 3100
+run scaffold_stock 3100
+run flee_hall 400
 run tasks 9000
 run economy 9100
 run light 9100

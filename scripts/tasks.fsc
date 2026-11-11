@@ -97,13 +97,20 @@ fn work_queue [f] do
         add b.site
     end
 
+    # What a unit is waiting on, so a queue that doesn't move says why
     if (f.train_queue > 0) do
-        rows.push {=key "train" =count f.train_queue =housed ({population f} < f.housing)}
+        rows.push {=key "train" =count f.train_queue =housed ({population f} < f.housing) =needs {short_name f HAND_COST}}
     end
     for kind in f.muster do
-        rows.push {=key "muster" =unit {sym_name kind} =housed ({population f} < f.housing)}
+        rows.push {=key "muster" =unit {sym_name kind} =housed ({population f} < f.housing) =needs {short_name f {UNITS.get kind}.cost}}
     end
     return {fold_rows rows}
+end
+
+fn short_name [f cost] do
+    let kind {short_for f cost}
+    if (kind == nil) { return nil }
+    return {sym_name kind}
 end
 
 fn hand_step [w] do

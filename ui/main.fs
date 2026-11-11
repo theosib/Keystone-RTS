@@ -236,9 +236,15 @@ fn queue_row_text [row] do
         else do
             set line {loc "work.muster" =count row.times =name {noun "unit" row.unit row.times}}
         end
-        if row.housed { return line }
-        let no_room {loc "work.no_room"}
-        return "{line} {no_room}"
+        if (not row.housed) do
+            let no_room {loc "work.no_room"}
+            return "{line} {no_room}"
+        end
+        let needs {row.get :needs}
+        if (needs == nil) { return line }
+        let kind {loc "kind.{needs}"}
+        let extra {loc "work.needs" =kind kind}
+        return "{line} {extra}"
     end
     let line {frame_text row row.times}
     let needs {row.get :needs}

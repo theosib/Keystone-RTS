@@ -34,6 +34,7 @@ fn go_build_near [w x y z next] do
 end
 
 fn try_scaffolding [w] do
+    trace :path "hand" w.id "side" w.faction "scaffolding up to" [w.build_x w.build_y w.build_z]
     set w.scaffolding true
     ent_goto w.id (w.build_x + 0.5) w.build_y (w.build_z + 0.5) =range 2.0 =max_nodes 16000 =place true
 end
@@ -60,6 +61,9 @@ end
 # once would spend the whole search budget on the same dead end, so they wait, for
 # longer each time it keeps happening.
 fn give_up [w] do
+    let c "-"
+    if (w.cell != nil) { set c [w.cell.x w.cell.y w.cell.z] }
+    trace :path "hand" w.id "side" w.faction "gave up" w.job w.after "cell" c "scaffolding" w.scaffolding "failures" (w.failures + 1)
     drop_job w
     set w.failures (w.failures + 1)
     set w.state :resting
@@ -298,9 +302,7 @@ end
 # Take this load to wherever it's wanted. A site that needs it is nearer than the yard and back.
 fn start_carry [w] do
     let f factions[w.faction]
-    # Eating and mustering draw on the yard, so what they're short of goes there first, unless it
-    # was gathered for a site that had none
-    if (((w.supplying != nil) or (not {yard_short_of f w.carry_kind})) and {take_task w}) do
+    if ((not {load_for_yard f w}) and {take_task w}) do
         set w.load_waits 0
         return nil
     end
@@ -345,15 +347,39 @@ fn queue_spot [f kind] do
     return nil
 end
 
-# Eating and mustering can only draw on the yard, so sites mustn't take all that's coming in. A
-# unit with no bed to go to can wait: it may be the site that's building the bed.
-fn yard_short_of [f kind] do
-    let stock {stock_of f kind}
-    if ((kind == :provisions) and (stock < FOOD_RESERVE)) { return true }
-    if ((f.muster.length == 0) or ({population f} >= f.housing)) { return false }
-    let cost {UNITS.get f.muster[0]}.cost
-    return ({cost.has kind} and (stock < {cost.get kind}))
+# Training and mustering can only draw on the yard, so the yard keeps back the cost of the next of
+# each, ahead of any building, however the queue is ordered. A unit with no bed to go to can wait:
+# it may be the site that's building the bed.
+fn unit_reserve [f kind] do
+    if ({population f} >= f.housing) { return 0 }
+    let held 0
+    if (f.muster.length > 0) do
+        let cost {UNITS.get f.muster[0]}.cost
+        if {cost.has kind} { set held (held + {cost.get kind}) }
+    end
+    if ((f.train_queue > 0) and {HAND_COST.has kind}) { set held (held + {HAND_COST.get kind}) }
+    return held
 end
+
+# Eating draws on the yard too
+fn yard_reserve [f kind] do
+    let held {unit_reserve f kind}
+    if (kind == :provisions) { set held (held + FOOD_RESERVE) }
+    return held
+end
+
+fn yard_short_of [f kind] { return ({stock_of f kind} < {yard_reserve f kind}) }
+
+# What the yard is short of goes there first. A load gathered for a site that had none goes to it
+# even with food short, or thatch would wait on a full larder, but never ahead of a unit.
+fn load_for_yard [f w] do
+    if (w.carry_n <= 0) { return false }
+    if ((w.supplying != nil) and ({stock_of f w.carry_kind} >= {unit_reserve f w.carry_kind})) { return false }
+    return {yard_short_of f w.carry_kind}
+end
+
+# What a builder may take from the yard: what's over the reserve
+fn yard_spare [f kind] { return ({stock_of f kind} - {yard_reserve f kind}) }
 
 # ---- The task board ---------------------------------------------------------
 #
@@ -433,7 +459,7 @@ end
 
 fn board_update [f w] do
     let b {board_of f}
-    if (not {board_available w}) do
+    if ((not {board_available w}) or {load_for_yard f w}) do
         board_drop b w.id
         return nil
     end
@@ -448,14 +474,21 @@ end
 fn solve_board [f] do
     let b {board_of f}
     board_sites b {board_site_list f}
+    # Nothing is fetched that the yard is holding for food, or for the next unit with a bed to go to.
+    # Builders gather it instead. Queued first or not, a unit waits on nothing but its bed and cost.
     for kind in MATERIALS do
-        let slot {find_take_slot f.zone kind f.x f.z}
+        let slot nil
+        if ({yard_spare f kind} > 0) { set slot {find_take_slot f.zone kind f.x f.z} }
         if (slot == nil) { board_sources b kind [] } { board_sources b kind [[(slot.x + 0.5) slot.y (slot.z + 0.5)]] }
     end
     for w in f.hands do
         board_update f w
     end
     set f.board_stats {board_solve b}
+    let solves {f.get :board_solves}
+    if (solves == nil) { set solves 0 }
+    set f.board_solves (solves + 1)
+    if ((solves % 20) == 0) { trace :board "side" f.id f.board_stats }
 end
 
 # Work from the board, if it has any for this Hand
@@ -658,7 +691,7 @@ fn begin_task [w t] do
     end
     let pos {worker_pos w}
     let slot nil
-    if (pos != nil) { set slot {find_take_slot {zone_of w} material pos[0] pos[2]} }
+    if ((pos != nil) and ({yard_spare factions[w.faction] material} > 0)) { set slot {find_take_slot {zone_of w} material pos[0] pos[2]} }
     if (slot == nil) do
         board_release b w.id
         set w.job nil
@@ -674,7 +707,9 @@ end
 
 fn finish_fetch [w] do
     let pos {worker_pos w}
-    let got {zone_take {zone_of w} w.kind CARRY_CAP pos[0] pos[2]}
+    let spare {yard_spare factions[w.faction] w.kind}
+    let got 0
+    if (spare > 0) { set got {zone_take {zone_of w} w.kind {min CARRY_CAP spare} pos[0] pos[2]} }
     if (got == 0) { return drop_job w }
     set w.carry_kind w.kind
     set w.carry_n got
@@ -708,6 +743,10 @@ fn finish_place [w] do
         if {wait_for_room w cell.x cell.y cell.z} do
             if (w.place_waits < PLACE_WAIT_TRIES) { return wait_for w 0.3 :placed :build }
             set w.place_waits 0
+            let by {cell_occupied cell.x cell.y cell.z =except w.id}
+            let what "nobody now"
+            if (by != nil) { set what {ent_type by} }
+            trace :place "hand" w.id "side" w.faction "gave up on" [cell.x cell.y cell.z] cell.block "in the way" what by
             return drop_job w
         end
     end
@@ -866,7 +905,10 @@ fn check_danger [w] do
     if (pos == nil) { return false }
     let threat {threat_to w pos}
     if (threat == nil) do
-        if ((w.state == :fleeing) and ({game_tick} >= w.calm_at)) { set w.state :idle }
+        if ((w.state == :fleeing) and ({game_tick} >= w.calm_at)) do
+            set w.state :idle
+            set w.flee_to nil
+        end
         return false
     end
     let f factions[w.faction]
@@ -875,12 +917,42 @@ fn check_danger [w] do
     if (at == nil) { set at pos }
     note_danger f at[0] at[2]
     set w.calm_at ({game_tick} + (FLEE_CALM_SECONDS * 30))
-    if (w.state != :fleeing) do
+    # Away, if where it was running to is where the raiders are now
+    let to {w.get :flee_to}
+    let unsafe ((to != nil) and ({dist2 at[0] at[2] to[0] to[2]} < (DANGER_RADIUS * DANGER_RADIUS)))
+    if ((w.state != :fleeing) or unsafe) do
         drop_job w
+        ent_stop w.id
         set w.state :fleeing
-        ent_goto w.id f.x f.y (f.z + 1) =range 3.0 =partial true =max_nodes 6000
+        let spot {flee_spot f pos at}
+        set w.flee_to spot
+        ent_goto w.id spot[0] spot[1] spot[2] =range 3.0 =partial true =max_nodes 6000
+        trace :flee "hand" w.id "side" w.faction "from" {ent_type threat} threat "at" {floor at[0]} {floor at[2]} "to" spot[3] {floor spot[0]} {floor spot[2]}
     end
     return true
+end
+
+# Home, where the soldiers come, unless the raiders are there or on the way. Then straight away from
+# them: the Hall is no place to hide from raiders at the Hall.
+fn flee_spot [f pos at] do
+    let home [(f.x + 0.5) f.y (f.z + 1.5) "home"]
+    let to_home {dist2 at[0] at[2] home[0] home[2]}
+    if ((to_home > (DANGER_RADIUS * DANGER_RADIUS)) and (to_home >= {dist2 at[0] at[2] pos[0] pos[2]})) { return home }
+    let dx (pos[0] - at[0])
+    let dz (pos[2] - at[2])
+    let d {sqrt ((dx * dx) + (dz * dz))}
+    if (d < 0.5) do
+        # On top of it: away from home, which is where it came from
+        set dx (pos[0] - home[0])
+        set dz (pos[2] - home[2])
+        set d {max 0.5 {sqrt ((dx * dx) + (dz * dz))}}
+    end
+    let x (pos[0] + ((dx / d) * FLEE_DISTANCE))
+    let z (pos[2] + ((dz / d) * FLEE_DISTANCE))
+    let g {ground_y {floor x} {floor z}}
+    let y pos[1]
+    if (g != nil) { set y (g + 1) }
+    return [x y z "away"]
 end
 
 fn think [w] do

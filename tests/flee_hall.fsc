@@ -1,0 +1,68 @@
+# Scenario: raiders at the Hall send Hands away from the Hall, not to it. Hands used to run home from
+# any raider, so a raid on the Hall gathered them there to be killed.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set raider nil
+set start {map}
+set ran {map}
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+        set f.train_queue 0
+    end
+
+    # A raider stands at the Hall, with nothing to do but stand. Everyone near enough to see it
+    # runs, and whoever's nearest home has the most reason to run the wrong way.
+    if (t == 120) do
+        let at [(f.x + 0.5) f.y (f.z + 1.5)]
+        let sides [[7 0] [-7 0] [0 8]]
+        let i 0
+        for side in sides do
+            let w f.hands[i]
+            drop_job w
+            ent_stop w.id
+            let x (f.x + side[0])
+            let z (f.z + side[1])
+            ent_set_pos w.id (x + 0.5) ({ground_y x z} + 1) (z + 0.5)
+            set i (i + 1)
+        end
+        set raider {ent_spawn :hand at =faction 2}
+        for w in f.hands do
+            let p {ent_pos w.id}
+            start.set {to_sym w.id} {sqrt {dist2 p[0] p[2] at[0] at[2]}}
+        end
+    end
+    if (t <= 120) { return nil }
+
+    # The raider stays put
+    ent_set_pos raider [(f.x + 0.5) f.y (f.z + 1.5)]
+
+    for w in f.hands do
+        if (w.state == :fleeing) { ran.set {to_sym w.id} true }
+    end
+
+    # A couple of seconds into running, each of the three is further from the raider than it was
+    if (t == 200) do
+        let i 0
+        while (i < 3) do
+            let w f.hands[i]
+            let was {start.get {to_sym w.id}}
+            let p {ent_pos w.id}
+            let now {sqrt {dist2 p[0] p[2] (f.x + 0.5) (f.z + 1.5)}}
+            if ({ran.get {to_sym w.id}} == nil) { return fail "Hand {w.id}, {was} blocks from the raider, never ran" }
+            if (now < (was + 2)) { return fail "Hand {w.id} ran toward the raider at the Hall, or nowhere: {was} to {now} blocks" }
+            set i (i + 1)
+        end
+        log "PASS"
+        game_exit 0
+    end
+end

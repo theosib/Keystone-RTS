@@ -848,11 +848,21 @@ fn tick_army [f tick] do
     end
 end
 
-fn can_afford [f cost] do
+# The first material the yard has too little of for this, or nil
+fn short_for [f cost] do
     for kind in KIND_NAMES do
-        if ({cost.has kind} and ({stock_of f kind} < {cost.get kind})) { return false }
+        if ({cost.has kind} and ({stock_of f kind} < {cost.get kind})) { return kind }
     end
-    return true
+    return nil
+end
+
+fn can_afford [f cost] { return ({short_for f cost} == nil) }
+
+# Why a queue isn't moving, in the trace: once each time the reason changes
+fn note_wait [f key what detail] do
+    if ({f.get key} == what) { return nil }
+    f.set key what
+    if (what != nil) { trace key "side" f.id what detail }
 end
 
 fn pay [f cost] do
@@ -883,17 +893,21 @@ end
 fn update_muster [f] do
     if (f.muster.length == 0) do
         set f.muster_timer TRAIN_SECONDS
+        note_wait f :muster_wait nil nil
         return nil
     end
-    if ({population f} >= f.housing) { return nil }
-    set f.muster_timer (f.muster_timer - 1.0)
-    if (f.muster_timer > 0.0) { return nil }
-
     let kind f.muster[0]
+    if ({population f} >= f.housing) { return note_wait f :muster_wait "no_bed" {=unit kind =population {population f} =housing f.housing} }
+    set f.muster_timer {max 0.0 (f.muster_timer - 1.0)}
+    if (f.muster_timer > 0.0) { return note_wait f :muster_wait "training" {=unit kind =queued f.muster.length} }
+
     let stats {UNITS.get kind}
-    if (not {can_afford f stats.cost}) { return nil }
+    let short {short_for f stats.cost}
+    if (short != nil) { return note_wait f :muster_wait "short" {=unit kind =needs short =cost {stats.cost.get short} =yard {stock_of f short}} }
     pay f stats.cost
     f.muster.remove 0
     set f.muster_timer TRAIN_SECONDS
-    spawn_soldier f kind
+    let s {spawn_soldier f kind}
+    trace :muster "side" f.id "spawned" kind "at" {ent_pos s.id} "queued" f.muster.length
+    note_wait f :muster_wait nil nil
 end

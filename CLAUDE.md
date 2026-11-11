@@ -106,7 +106,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2360 + 187 + 45 = 2592 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2361 + 187 + 45 = 2593 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -196,6 +196,17 @@ finescript traps that cost real time here:
 - `scripts/lobby.fsc` declares the pre-game: settings, who can launch. A `=manifest` on a setting
   or a choice reaches into `game.conf`, which is how a map type changes generation.
 - Keep `world_biomes` in `game.conf`, or the new biomes join a default world and every seed changes.
+
+## Tracing
+
+- `trace :category ...` writes a line to `logs/game-<date>-<time>-<pid>.log` (newest 20 kept), with
+  the tick: the game's own account of why it did things. A headless run writes none unless given
+  `--trace FILE`. With `--mcp` the lines go to the `logs` tool too. Ask a player for the newest
+  file when they report something that already happened.
+- Categories so far: `muster_wait`/`training_wait` (why a queue isn't moving, once per change),
+  `muster`/`training` (spawns), `flee`, `path` (gave up, scaffolding), `place` (gave up, who was in
+  the way), `board` (a summary every 20 solves), `build`. Trace a decision when it changes, not
+  every tick.
 
 ## Live inspection (MCP)
 
