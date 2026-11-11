@@ -150,6 +150,13 @@ finescript traps that cost real time here:
   `old_veteran` and the like are the commander from before this AI work, renamed by
   `tools/old_commander.py`. The same seed plays differently each run (threads), so judge a change
   on a dozen games or more, both ways round. From a copy of the tree, set `KEYSTONE_BUILD`.
+- Duels only measure commanders against commanders, and they reward an early army. A player who
+  opens with five shelters and grows to 20+ Hands beat the veteran easily (2026-11-11). Measured
+  against today's veteran, over 16 games each, 15 minutes: `parallel true` changed nothing, since
+  timber seldom reaches 80 with 8 Hands, and 12 or 16 Hands lost 3-7 and 1-10. They had 20-24 beds
+  by minute 12 to its 16, but 3 fighters to its 5 when its first strike came. A level can be
+  trialled without editing the tree: a `--script` that sets `DIFFICULTY.set :name {...}` on its
+  first tick, since a commander looks its level up on every think.
 - Commanders fight with whatever combat the scripts have, so a combat rule changes the AI's results.
   A set fight showed holders losing 6 v 6 to a group that marched in, till guards waited for enemies
   to come near and soldiers went for the nearest wounded enemy.
@@ -209,6 +216,10 @@ finescript traps that cost real time here:
   once per change), `muster`/`training` (spawns), `flee`, `path` (gave up, scaffolding), `place`
   (gave up, who was in the way), `board` (a summary every 20 solves), `build`. Trace a decision
   when it changes, not every tick.
+- A game hosted from the lobby saves to `saves/hosted`, not `autosave`. To see its end state, copy
+  the tree and run `finevox_headless --game-root COPY --resume COPY/saves/hosted --script peek.fsc`
+  with a script that logs what you want and exits. `finevox_run --server --continue` waits in
+  the lobby and never runs the game.
 - An entity id says whose it was: look for the `muster`/`training` line that spawned it. One no
   side spawned is a brigand.
 
