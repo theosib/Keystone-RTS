@@ -1,0 +1,55 @@
+# Scenario: a block out of reach gets scaffolding up to it, and the Hand who climbs it places the
+# block when it gets there. Once, the scaffold step overwrote what the Hand was going there to do:
+# it arrived, went idle, and took its load back to the yard.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set spot nil
+set climbed false
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    # Nobody to run from
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
+
+    # A pillar with a block to go on top, out of reach from the ground even where it slopes up
+    if (t == 30) do
+        endow f 60 0 60
+        let x (f.x + 6)
+        let z (f.z + 16)
+        let g {ground_y x z}
+        for dy in (1..7) do
+            world_set_block x (g + dy) z :dressed_stone
+        end
+        set spot [x (g + 7) z]
+        let site {site_create}
+        site_add site x (g + 7) z :planks
+        queue_laid f site [[x z]]
+        if (f.sites.length == 0) { return fail "no site was laid" }
+    end
+    if (t <= 30) { return nil }
+
+    for w in f.hands do
+        if (w.after == :scaffolded) do
+            set climbed true
+            if (w.state == :idle) { return fail "Hand {w.id} got there by scaffolding and forgot why" }
+        end
+    end
+
+    if ({block_at spot[0] spot[1] spot[2]} == :planks) do
+        if (not climbed) { return fail "built without scaffolding, so this tested nothing" }
+        log "built at" (t / 30) "s"
+        log "PASS"
+        game_exit 0
+    end
+
+    if (t == 3000) { fail "the block on the pillar was never built" }
+end

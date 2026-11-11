@@ -135,6 +135,8 @@ finescript traps that cost real time here:
 - `game_exit 0` later in the same tick overrides an earlier `game_exit 1`. See `failed` in `tests/hunt.fsc`.
 - `guard` fails about 1 run in 6 on unchanged code, "the wrong number answered the alarm" with
   nobody answering. The cause isn't known yet.
+- `explore` failed once in a dozen runs (2026-11-11), "it left over a sixth of the map" with 109 dead
+  ends, and passed twice straight after. Same: cause unknown, rerun first.
 - Brigands are a faction (`BRIGAND_ID`, 15) with no settlement, zone or Keystone. A loop over
   `factions` that reads a zone, a Hall or the match has to go through `is_side`, and a scenario's
   own loops too: `resume.fsc` once died on it.

@@ -323,8 +323,10 @@ fn start_carry [w] do
     start_haul w
 end
 
+# Only the layer being built counts. A load for the roof waits in the yard, not on the floor of the
+# house, where it's in the way of the Hands building the walls.
 fn site_needs [site kind] do
-    let left {site_remaining site}
+    let left {site_remaining site =now true}
     for block in left.keys do
         if ({BLOCK_MATERIAL.get block} == kind) { return true }
     end
@@ -690,7 +692,12 @@ fn on_work_done [w] do
     match w.after
         :harvested { finish_harvest w }
         :placed { finish_place w }
-        :scaffolded { ent_nav_resume w.id; set w.state :moving }
+        :scaffolded do
+            # Only a route to a block takes scaffolding. Without this, it gets there and forgets why.
+            set w.after :place_block
+            ent_nav_resume w.id
+            set w.state :moving
+        end
         _ { set w.state :idle }
     end
 end
