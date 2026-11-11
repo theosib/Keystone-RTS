@@ -832,6 +832,24 @@ fn on_soldier_lost [f s] do
     end
 end
 
+# Who went down, where, and to whom, in the trace. A unit is gone the tick after it dies, so who
+# last hit it is kept each tick while it can still be read.
+fn trace_death [f what id pos by] do
+    let killer nil
+    let side nil
+    let entry nil
+    if ((by != nil) and (by > 0)) { set entry {lookup_unit by} }
+    if (entry != nil) do
+        let r entry.record
+        set side entry.faction
+        set killer {r.get :kind}
+        if (killer == nil) { set killer :hand }
+    end
+    let at nil
+    if (pos != nil) { set at [{floor pos[0]} {floor pos[2]}] }
+    trace :death "side" f.id what id "at" at "by" killer by "of side" side
+end
+
 fn tick_army [f tick] do
     let i 0
     while (i < f.army.length) do
@@ -839,9 +857,12 @@ fn tick_army [f tick] do
         if {ent_alive s.id} do
             let p {ent_pos s.id}
             if (p != nil) { set s.last_pos p }
+            set s.hit_by {ent_last_attacker s.id}
             if (((s.id + tick) % THINK_INTERVAL) == 0) { think_soldier s }
             set i (i + 1)
         else do
+            # Brigands who leave are taken off the map, not killed
+            if (not {s.get :gone}) { trace_death f s.kind s.id s.last_pos {s.get :hit_by} }
             on_soldier_lost f s
             f.army.remove i
         end

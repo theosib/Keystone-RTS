@@ -107,6 +107,7 @@ run flee 2400
 run hunt 1500
 run teams 700
 run brigands 3400
+run brigand_defence 4700
 run loads 5500
 run shelters 12000
 run siege 3900

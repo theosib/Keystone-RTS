@@ -1,0 +1,82 @@
+# Scenario: brigands at a commander's home bring its army back from an attack, as a rival's soldiers
+# there would. They're nobody's army, so they don't count towards what it thinks the enemy has.
+
+# A later game_exit 0 in the same tick would win, so the last word has to know
+set failed false
+
+fn fail [why] do
+    log "FAIL:" why
+    set failed true
+    game_exit 1
+end
+
+set party []
+set defended_at nil
+
+fn home_count [rival] do
+    let n 0
+    for s in {fighters_of rival} do
+        if ((s.last_pos != nil) and ({dist2 s.last_pos[0] s.last_pos[2] rival.x rival.z} < (HOME_RADIUS * HOME_RADIUS))) {
+            set n (n + 1)
+        }
+    end
+    return n
+end
+
+on :tick do
+    let tick {game_tick}
+    let f factions[1]
+    let rival factions[2]
+    let b factions[BRIGAND_ID]
+    let c rival.commander
+
+    if (tick == 5) do
+        set c.level_name :veteran
+        ready_commander c
+        # Side 1 keeps soldiers at home, so the band comes for the rival
+        for i in (0..3) do
+            spawn_soldier f :militia
+        end
+        # The rival's army is out on an attack, halfway to side 1
+        let mx {floor ((f.x + rival.x) / 2)}
+        let mz {floor ((f.z + rival.z) / 2)}
+        let y {ground_y mx mz}
+        for i in (0..4) do
+            let s {spawn_soldier rival :militia}
+            ent_set_pos s.id [(mx + i + 0.5) (y + 1) (mz + 0.5)]
+            set s.post {ent_pos s.id}
+            party.push s.id
+        end
+        set c.enemy_at [f.x f.y f.z]
+        set c.party party
+        set c.launched party.length
+        set c.phase :march
+        set c.attacking true
+        set b.next_band 60
+    end
+
+    if (tick == 120) do
+        if (b.band == nil) { fail "no band set out" }
+        if (b.band.target != 2) { fail "the band went for side {b.band.target}" }
+    end
+
+    if ((tick > 120) and (defended_at == nil) and c.defending) do
+        set defended_at tick
+        log "defending at" tick
+        if (c.phase != :build) { fail "still on the attack while defending: {c.phase}" }
+        let strength {enemy_strength c}
+        if (strength.total != 0) { fail "brigands counted as the enemy's army: {strength.total}" }
+    end
+
+    if ((tick == 3000) and (defended_at == nil)) { fail "never defended against the brigands at home" }
+    if (tick == 4600) { fail "never finished" }
+
+    if ((defended_at != nil) and (tick == (defended_at + 1500))) do
+        let home {home_count rival}
+        if (home < 3) { fail "only {home} of the army came home" }
+        if (not failed) do
+            log "brigands at home bring the army back"
+            game_exit 0
+        end
+    end
+end

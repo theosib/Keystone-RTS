@@ -21,9 +21,12 @@ fn tick_hands [f tick] do
     while (i < f.hands.length) do
         let w f.hands[i]
         if {ent_alive w.id} do
+            set w.last_pos {ent_pos w.id}
+            set w.hit_by {ent_last_attacker w.id}
             if (((w.id + tick) % THINK_INTERVAL) == 0) { think w }
             set i (i + 1)
         else do
+            trace_death f :hand w.id {w.get :last_pos} {w.get :hit_by}
             release_claims w.id
             f.hands.remove i
         end
@@ -499,6 +502,7 @@ on :start do
     let count (humans + rivals)
     if (count == 1) { set count 2 }
     let teams {SETTINGS.get :teams}
+    trace :setup "seed" WORLD_SEED "rivals" rivals "level" level "teams" teams "brigands" {SETTINGS.get :brigands}
 
     for i in (0..humans) do
         let spot {settlement_spot i count}
@@ -508,6 +512,7 @@ on :start do
         if (i < PLAYERS.length) do
             set f.owner PLAYERS[i].id
             set f.owner_name PLAYERS[i].name
+            trace :setup "side" f.id "player" PLAYERS[i].name
             player_bind PLAYERS[i].id f.id =at {steward_home f}
         end
         if (teams == :versus) do
@@ -528,6 +533,7 @@ on :start do
         vision_add_faction rival.id
         endow_new rival
         set rival.commander {make_commander rival level}
+        trace :setup "side" rival.id "rival" level
         if (teams == :versus) do
             set_team rival 2
         elif (teams == :custom) do

@@ -157,7 +157,7 @@ fn send_band [b tick] do
     let yard [(target.x + 7) target.y (target.z - 6)]
     order_units b {=units ids =x yard[0] =y yard[1] =z yard[2]}
     set b.band {=target target.id =units ids =until (tick + (BRIGAND_STAY_SECONDS * 30)) =leaving false}
-    log "brigands," count "of them, set out for side" target.id
+    trace :brigands count "set out for side" target.id "with" {home_guard target} "soldiers at home"
     ui_publish {=news {=key "brigands" =count count}} =faction target.id
 end
 
@@ -166,7 +166,7 @@ fn end_band [b] do
     set band.leaving true
     set band.until ({game_tick} + (60 * 30))
     order_units b {=units band.units =x b.x =y b.y =z b.z}
-    log "brigands go"
+    trace :brigands "leave side" band.target "with" band.units.length "left"
 end
 
 fn tick_brigands [b tick] do
@@ -193,7 +193,13 @@ fn tick_brigands [b tick] do
         for id in left do
             let p {ent_pos id}
             let away ((p == nil) or ({dist2 p[0] p[2] b.x b.z} < 64) or (tick >= band.until))
-            if away { ent_remove id } { set gone false }
+            if away do
+                let entry {lookup_unit id}
+                if (entry != nil) { set entry.record.gone true }
+                ent_remove id
+            else do
+                set gone false
+            end
         end
         if gone do
             set b.band nil

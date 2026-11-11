@@ -203,10 +203,14 @@ finescript traps that cost real time here:
   the tick: the game's own account of why it did things. A headless run writes none unless given
   `--trace FILE`. With `--mcp` the lines go to the `logs` tool too. Ask a player for the newest
   file when they report something that already happened.
-- Categories so far: `muster_wait`/`training_wait` (why a queue isn't moving, once per change),
-  `muster`/`training` (spawns), `flee`, `path` (gave up, scaffolding), `place` (gave up, who was in
-  the way), `board` (a summary every 20 solves), `build`. Trace a decision when it changes, not
-  every tick.
+- Categories so far: `setup` (seed, each side's player or rival level), `commander` (a rival's
+  decisions: defend, gather, strike, pull back, raid), `brigands` (a band's target and leaving),
+  `death` (who, where, and who hit it last), `muster_wait`/`training_wait` (why a queue isn't moving,
+  once per change), `muster`/`training` (spawns), `flee`, `path` (gave up, scaffolding), `place`
+  (gave up, who was in the way), `board` (a summary every 20 solves), `build`. Trace a decision
+  when it changes, not every tick.
+- An entity id says whose it was: look for the `muster`/`training` line that spawned it. One no
+  side spawned is a brigand.
 
 ## Live inspection (MCP)
 

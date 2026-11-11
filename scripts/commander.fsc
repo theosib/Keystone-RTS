@@ -137,21 +137,23 @@ fn note_enemy [c f id tick] do
     let p {ent_pos id}
     if (p == nil) { return nil }
     let entry {lookup_unit id}
-    if ((entry == nil) or (entry.faction == BRIGAND_ID)) { return nil }
+    if (entry == nil) { return nil }
     let record entry.record
     let far ({dist2 p[0] p[2] f.x f.z} >= (60 * 60))
+    # Brigands are a fight like any other where they are, but they say nothing of a rival's army or home
+    let brigand (entry.faction == BRIGAND_ID)
     if {record.has :stats} do
         if (record.stats.role != :scout) do
-            c.seen.set {to_sym id} {=kind record.kind =pos p =tick tick}
+            c.seen.set {to_sym id} {=kind record.kind =pos p =tick tick =brigand brigand}
             # A look at their soldiers away from here: what it knows of their army is fresh
-            if far { set c.intel_at tick }
+            if (far and (not brigand)) { set c.intel_at tick }
         end
     else do
         c.hands_seen.push {=pos p =tick tick}
     end
     # Where they live, not where their scouts wander: a sighting near home says nothing of that
-    if (not far) { return nil }
-    if (c.enemy_at == nil) { log "commander" f.id "found the enemy at" p }
+    if (brigand or (not far)) { return nil }
+    if (c.enemy_at == nil) { trace :commander "side" f.id "found the enemy at" p }
     set c.enemy_at [p[0] p[1] p[2]]
 end
 
@@ -197,14 +199,16 @@ fn note_sightings [c f tick] do
     set c.hands_seen recent
 end
 
-# How many soldiers it believes the enemy has, and what share of them are bows
+# How many soldiers it believes the enemy has, and what share of them are bows. Brigands come and go.
 fn enemy_strength [c] do
     let total 0
     let bows 0
     for key in c.seen.keys do
         let e {c.seen.get key}
-        set total (total + 1)
-        if (e.kind == :shortbow) { set bows (bows + 1) }
+        if (not {e.get :brigand}) do
+            set total (total + 1)
+            if (e.kind == :shortbow) { set bows (bows + 1) }
+        end
     end
     return {=total total =bows bows}
 end
@@ -486,14 +490,18 @@ end
 fn plan_defence [c f tick] do
     let threats {enemies_near c [f.x f.y f.z] HOME_RADIUS tick}
     if (threats.length == 0) do
-        if c.defending { set c.defended_at tick }
+        if c.defending do
+            set c.defended_at tick
+            let left {fighters_of f}
+            trace :commander "side" f.id "home is clear, with" left.length "fighters"
+        end
         set c.defending false
         return false
     end
     # An apprentice only answers with what's at home, as the alarm brings
     if (not c.level.retreat) { return false }
     if (not c.defending) do
-        log "commander" f.id "defends home against" threats.length
+        trace :commander "side" f.id "defends home against" threats.length
         set c.defending true
         if (c.phase != :build) do
             set c.phase :build
@@ -519,7 +527,7 @@ end
 # ---- Attack -------------------------------------------------------------------
 
 fn pull_back [c f tick why] do
-    log "commander" f.id "pulls back:" why
+    trace :commander "side" f.id "pulls back:" why
     let home {home_spot f}
     send_ids f {alive_ids c.party} home[0] home[1] home[2]
     set c.party []
@@ -576,7 +584,7 @@ fn plan_attack [c f tick] do
         if (not level.gather) { set c.phase_until tick }
         let rally {rally_point c f}
         set c.rally rally
-        log "commander" f.id "gathers" c.launched "against" seen "seen"
+        trace :commander "side" f.id "gathers" c.launched "against" seen "seen"
         send_ids f c.party rally[0] rally[1] rally[2]
         return nil
     end
@@ -596,7 +604,7 @@ fn plan_attack [c f tick] do
         end
         if (((there * 1.0) < (c.party.length * GATHER_SHARE)) and (tick < c.phase_until)) { return nil }
         let target {target_of c f}
-        log "commander" f.id "strikes with" c.party.length "at" target
+        trace :commander "side" f.id "strikes with" c.party.length "at" target
         set c.phase :march
         set c.attacking true
         set c.last_strike tick
@@ -653,6 +661,7 @@ fn plan_raid [c f tick] do
     if (c.raid != nil) do
         set c.raid.units {alive_ids c.raid.units}
         if ((tick >= c.raid.until) or (c.raid.units.length < 2)) do
+            trace :commander "side" f.id "raid over with" c.raid.units.length "left"
             let home {home_spot f}
             send_ids f c.raid.units home[0] home[1] home[2]
             set c.raid nil
@@ -669,7 +678,7 @@ fn plan_raid [c f tick] do
         if ((units.length < RAID_SIZE) and (s.kind == :militia)) { units.push s.id }
     end
     if (units.length < 2) { return nil }
-    log "commander" f.id "raids Hands at" target
+    trace :commander "side" f.id "raids Hands at" target
     set c.raid {=units units =until (tick + (RAID_SECONDS * 30))}
     send_ids f units target[0] target[1] target[2]
 end
