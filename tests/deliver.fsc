@@ -126,12 +126,13 @@ on :tick do
         set leftover_at t
     end
 
-    # Two blocks over the one the site took. The yard's own timber keeps moving, so this watches
-    # the Hand: it must end up empty-handed, and by way of the yard.
+    # Two blocks over the one the site took, or all three if the board gave that cell to a Hand
+    # better placed. The yard's own timber keeps moving, so this watches the Hand: it must end up
+    # empty-handed, and by way of the yard.
     if ((leftover_at != nil) and (stage == 1)) do
         if (leftover_hand.job == :haul) do
             set stage 2
-            if (leftover_hand.carry_n != 2) { fail "it lost what it had left: {leftover_hand.carry_n}" }
+            if (leftover_hand.carry_n < 2) { fail "it lost what it had left: {leftover_hand.carry_n}" }
         end
         if (t == (leftover_at + 1500)) { fail "its leftovers never went to the yard" }
     end

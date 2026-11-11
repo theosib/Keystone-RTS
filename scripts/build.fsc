@@ -384,11 +384,3 @@ fn publish_ghosts [f] do
     end
     site_show_ghosts ids =faction f.id
 end
-
-# The most urgent thing to build. Floors count: without room the economy stalls.
-fn next_site [f] do
-    if (f.zone.expanding != nil) { return f.zone.expanding }
-    if (f.tidy_site != nil) { return f.tidy_site }
-    if (f.sites.length > 0) { return f.sites[0].site }
-    return nil
-end

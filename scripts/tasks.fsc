@@ -62,7 +62,7 @@ fn same_work [a b] do
 end
 
 # Work of the same kind in a row reads as one line with a number on it. Only neighbours fold, or
-# the order next_site works through would stop being the order shown.
+# the order the board ranks them in would stop being the order shown.
 fn fold_rows [rows] do
     let folded []
     for row in rows do
@@ -84,7 +84,7 @@ fn fold_rows [rows] do
     return folded
 end
 
-# Everything waiting to be done, most urgent first: the order next_site takes it in
+# Everything waiting to be done, most urgent first: the order the board ranks it in
 fn work_queue [f] do
     let rows []
     fn add [site] do

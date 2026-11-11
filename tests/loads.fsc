@@ -13,9 +13,27 @@ end
 
 set worst 0
 
+# A site whose layer being built wants timber
+fn short_of_timber [f] do
+    for b in f.sites do
+        let left {site_remaining b.site =now true}
+        for block in left.keys do
+            if ({BLOCK_MATERIAL.get block} == :timber) { return true }
+        end
+    end
+    return false
+end
+
 on :tick do
     let tick {game_tick}
     let f factions[1]
+
+    # Nobody to run from: Hands fleeing a raid near the end take their loads to the yard, as they
+    # should, and this measured that instead of where loads go
+    if (tick == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
 
     if (tick == 40) do
         zone_take f.zone :timber 60 f.x f.z
@@ -25,7 +43,7 @@ on :tick do
         end
     end
 
-    if ((tick > 900) and ((tick % 30) == 0) and {sites_need f :timber}) {
+    if ((tick > 900) and ((tick % 30) == 0) and {short_of_timber f}) {
         set worst {max worst {stock_of f :timber}}
     }
 

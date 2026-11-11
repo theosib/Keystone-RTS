@@ -91,6 +91,11 @@ finescript traps that cost real time here:
   with nobody near, even the owner's `inspect_at` on one reads as stale.
 - Path searches are the main CPU cost: never re-issue `ent_goto` every think. See the
   backoff in `give_up` and the re-search rule in `chase`.
+- Hands get building work from a task board per side ("The task board" in `jobs.fsc`, and the
+  engine's `docs/systems/task-board.md`), not from `site_claim`. It re-solves every `BOARD_INTERVAL`
+  ticks and can move a Hand to another cell: anything that sends a Hand somewhere on its own must
+  `drop_job` (which does `board_release`) or the board still counts it for its old cell. A Hand that
+  walks with a load checks the board as it goes (`lost_task`, `answer_board`).
 - A Hand that squats about 3s at an empty cell and walks off is in `wait_for_room`. `cell_occupied`
   counts any body that crosses into the cell: a Hand in the next cell within 0.3 of the edge, or a
   head from the cell below. Placing never checks the load, and Hand scaffolding is free. The
@@ -101,7 +106,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2313 + 183 + 45 = 2541 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2360 + 187 + 45 = 2592 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.

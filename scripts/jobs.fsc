@@ -8,7 +8,7 @@ fn make_worker [f id] do
             =carry_kind nil =carry_n 0 =timer 0.0 =hunger 1.0
             =target nil =site nil =cell nil =retry 0 =failures 0 =after nil =danger_check 0.0
             =calm_at 0 =load_waits 0
-            =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil =queue_at nil
+            =build_x 0 =build_y 0 =build_z 0 =scaffolding false =supplying nil
             =place_waits 0}
 end
 
@@ -16,6 +16,7 @@ fn worker_pos [w] {ent_pos w.id}
 
 fn go_to [w x y z range next] do
     set w.state :moving
+    set w.scaffolding false
     set w.after next
     ent_goto w.id x y z =range range =max_nodes 16000
 end
@@ -45,7 +46,7 @@ fn wait_for [w seconds next anim] do
 end
 
 fn drop_job [w] do
-    if (w.site != nil) { site_release w.site w.id }
+    if ({factions[w.faction].get :board} != nil) { board_release factions[w.faction].board w.id }
     release_claims w.id
     set w.job nil
     set w.site nil
@@ -121,11 +122,7 @@ fn pick_job [w] do
 
     set w.supplying nil
 
-    let site {next_site f}
-    if ((site != nil) and {is_builder w}) do
-        start_build w site
-        return nil
-    end
+    if ({is_builder w} and {take_task w}) { return nil }
 
     let move {find_defrag_move f.zone}
     if ((move != nil) and ((w.id % 5) == 0)) do
@@ -300,65 +297,52 @@ end
 
 # Take this load to wherever it's wanted. A site that needs it is nearer than the yard and back.
 fn start_carry [w] do
-    if {start_delivery w} do
+    let f factions[w.faction]
+    # Eating and mustering draw on the yard, so what they're short of goes there first, unless it
+    # was gathered for a site that had none
+    if (((w.supplying != nil) or (not {yard_short_of f w.carry_kind})) and {take_task w}) do
         set w.load_waits 0
         return nil
     end
     # A cell comes free every few seconds, which is sooner than the yard and back. The wait is spent
-    # by the site, not wherever the load was picked up.
-    let f factions[w.faction]
-    if ((w.load_waits < LOAD_WAIT_TRIES) and (not {yard_short_of f w.carry_kind}) and {sites_need f w.carry_kind}) do
-        set w.load_waits (w.load_waits + 1)
-        let pos {worker_pos w}
-        let at w.queue_at
-        if ((at != nil) and (pos != nil) and ({dist2 at[0] at[2] pos[0] pos[2]} > (QUEUE_NEAR * QUEUE_NEAR))) do
-            go_to w (at[0] + 0.5) at[1] (at[2] + 0.5) QUEUE_NEAR :queued
+    # beside the site, out of the way of those building it, and on the board, to be given the next.
+    if ((w.load_waits < LOAD_WAIT_TRIES) and (not {yard_short_of f w.carry_kind})) do
+        let at {queue_spot f w.carry_kind}
+        if (at != nil) do
+            set w.load_waits (w.load_waits + 1)
+            let pos {worker_pos w}
+            if ((pos != nil) and ({dist2 at[0] at[2] pos[0] pos[2]} > (QUEUE_NEAR * QUEUE_NEAR))) do
+                go_to w (at[0] + 0.5) at[1] (at[2] + 0.5) 1.5 :queued
+                return nil
+            end
+            set w.state :resting
+            set w.timer LOAD_WAIT_SECONDS
+            board_update f w
             return nil
         end
-        set w.state :resting
-        set w.timer LOAD_WAIT_SECONDS
-        return nil
     end
     set w.load_waits 0
     start_haul w
 end
 
-# Only the layer being built counts. A load for the roof waits in the yard, not on the floor of the
-# house, where it's in the way of the Hands building the walls.
-fn site_needs [site kind] do
-    let left {site_remaining site =now true}
+# Whether a site wants this sooner or later
+fn needs_later [site kind] do
+    let left {site_remaining site}
     for block in left.keys do
         if ({BLOCK_MATERIAL.get block} == kind) { return true }
     end
     return false
 end
 
-fn sites_need [f kind] do
-    if ((f.zone.expanding != nil) and {site_needs f.zone.expanding kind}) { return true }
+# Just outside the first site in line that will want this: near, and not on its floor
+fn queue_spot [f kind] do
     for b in f.sites do
-        if {site_needs b.site kind} { return true }
-    end
-    return false
-end
-
-fn start_delivery [w] do
-    let f factions[w.faction]
-    set w.queue_at nil
-    # What was gathered for a site goes to it
-    if ((w.supplying != nil) and {try_deliver w w.supplying}) { return true }
-    if {yard_short_of f w.carry_kind} { return false }
-    if ((f.zone.expanding != nil) and {try_deliver w f.zone.expanding}) { return true }
-    for b in f.sites do
-        if {site_needs b.site w.carry_kind} do
-            if {try_deliver w b.site} { return true }
-            # First in line waits for its turn, or a load a site down leaves everything half built
-            if (w.load_waits < LOAD_WAIT_TRIES) do
-                set w.queue_at [b.x b.y b.z]
-                return false
-            end
+        if {needs_later b.site kind} do
+            let plot {plot_of b}
+            return [(plot[0] - 2) b.y (plot[1] - 2)]
         end
     end
-    return false
+    return nil
 end
 
 # Eating and mustering can only draw on the yard, so sites mustn't take all that's coming in. A
@@ -371,44 +355,157 @@ fn yard_short_of [f kind] do
     return ({cost.has kind} and (stock < {cost.get kind}))
 end
 
-fn try_deliver [w site] do
+# ---- The task board ---------------------------------------------------------
+#
+# Who builds what is settled for the whole side at once, by the engine's task board
+# (docs/systems/task-board.md there). Its tasks are the cells of each site's layer being built,
+# and its agents the builders, who may fetch from the yard, and anyone with a load in hand. The cost
+# is the walk, by way of the yard for a Hand with nothing in hand yet. So a Hand at a cell with
+# the block gets it ahead of one far off, and nobody waits on a site with another one free.
+
+fn board_of [f] do
+    if (({f.get :board} == nil) or (not {board_alive f.board})) do
+        set f.board {board_create}
+        board_resources f.board BLOCK_MATERIAL
+        board_options f.board =stick BOARD_STICK
+    end
+    return f.board
+end
+
+set MATERIALS [:timber :stone :provisions]
+
+# In the order they're queued, the first worth walking furthest for. Not where raiders were just seen.
+# A later site gets a material only once there's more of it, in the yard and in hand, than the sites
+# ahead need for their layers being built. Spread over every site, the little there is finishes none of them, and a
+# half-built Shelter houses nobody.
+fn board_site_list [f] do
+    let order []
+    if (f.zone.expanding != nil) { order.push f.zone.expanding }
+    if (f.tidy_site != nil) { order.push f.tidy_site }
+    for b in f.sites do
+        if (not {in_danger f b.x b.z}) { order.push b.site }
+    end
+    let out []
+    let ahead {map}
+    let stock {map}
+    for kind in MATERIALS do
+        ahead.set kind 0
+        stock.set kind {stock_of f kind}
+    end
+    for w in f.hands do
+        if ((w.carry_n > 0) and {stock.has w.carry_kind}) { stock.set w.carry_kind ({stock.get w.carry_kind} + w.carry_n) }
+    end
+    let i 0
+    for site in order do
+        let allowed []
+        for kind in MATERIALS do
+            if (({ahead.get kind} == 0) or ({stock.get kind} > {ahead.get kind})) { allowed.push kind }
+        end
+        out.push [site (BOARD_SITE_PRIORITY * (order.length - i)) allowed]
+        let left {site_remaining site =now true}
+        for block in left.keys do
+            let kind {BLOCK_MATERIAL.get block}
+            if (kind != nil) { ahead.set kind ({ahead.get kind} + {left.get block}) }
+        end
+        set i (i + 1)
+    end
+    return out
+end
+
+# Out of it when it's off doing something else, or resting after a path it couldn't find
+fn board_available [w] do
+    if (w.state == :fleeing) { return false }
+    if (w.state == :resting) { return ((w.carry_n > 0) and (w.load_waits > 0)) }
+    if ((w.job == nil) or (w.job == :build) or (w.job == :haul)) { return ((w.carry_n > 0) or {is_builder w}) }
+    return false
+end
+
+# Too far into placing its block to change: at it, climbing to it, or nearly there
+fn committed_to_cell [w] do
+    if ((w.job != :build) or (w.cell == nil)) { return false }
+    if (w.state == :working) { return true }
+    if (w.after != :place_block) { return false }
+    if w.scaffolding { return true }
     let pos {worker_pos w}
     if (pos == nil) { return false }
-    let cell {site_claim site w.id pos[0] pos[1] pos[2]}
-    if (cell == nil) { return false }
-    # Layers go bottom-up, so a site's foundations stand between a load and where it's going
-    let material {BLOCK_MATERIAL.get cell.block}
-    let usable ((material == w.carry_kind) or ((material == nil) and {site_needs site w.carry_kind}))
-    if ((not usable) or {in_danger factions[w.faction] cell.x cell.z}) do
-        site_release site w.id
-        return false
+    return ({dist2 pos[0] pos[2] (w.cell.x + 0.5) (w.cell.z + 0.5)} < (BOARD_NEAR * BOARD_NEAR))
+end
+
+fn board_update [f w] do
+    let b {board_of f}
+    if (not {board_available w}) do
+        board_drop b w.id
+        return nil
     end
-    set w.job :build
-    set w.site site
-    set w.cell cell
-    set w.supplying nil
-    go_build_near w cell.x cell.y cell.z :place_block
+    let holds nil
+    if (w.carry_n > 0) { set holds w.carry_kind }
+    # A gatherer brings its load to a cell that needs it, and goes back to gathering. Foundations and
+    # the like are the builders' work.
+    let builder {is_builder w}
+    board_agent b w.id =holds holds =fetches ((w.carry_n == 0) and builder) =only_holds (not builder) =committed {committed_to_cell w}
+end
+
+fn solve_board [f] do
+    let b {board_of f}
+    board_sites b {board_site_list f}
+    for kind in MATERIALS do
+        let slot {find_take_slot f.zone kind f.x f.z}
+        if (slot == nil) { board_sources b kind [] } { board_sources b kind [[(slot.x + 0.5) slot.y (slot.z + 0.5)]] }
+    end
+    for w in f.hands do
+        board_update f w
+    end
+    set f.board_stats {board_solve b}
+end
+
+# Work from the board, if it has any for this Hand
+fn take_task [w] do
+    let f factions[w.faction]
+    board_update f w
+    let b {board_of f}
+    let t {board_take b w.id}
+    if (t == nil) do
+        # A site queued since the last solve isn't on the board yet
+        board_sites b {board_site_list f}
+        set t {board_take b w.id}
+    end
+    if (t == nil) { return false }
+    begin_task w t
     return true
 end
 
-# A Hand is on a later site because the ones before it had no cell free. As soon as one has, what's
-# left of the load goes back there: sites get finished in the order they're queued.
-fn deliver_ahead_of [w site] do
+fn same_cell [w t] {
+    return ((w.cell != nil) and (t.site == w.site) and (t.x == w.cell.x) and (t.y == w.cell.y) and (t.z == w.cell.z))
+}
+
+# A Hand taking its load to the yard, or to wait by a site, is on the board, and goes to the cell the
+# board gives it. Otherwise it holds that cell all the way to the yard.
+fn answer_board [w] do
+    if (w.carry_n <= 0) { return false }
+    if ((w.job != :haul) and (w.after != :queued)) { return false }
+    let t {board_task {board_of factions[w.faction]} w.id}
+    if (t == nil) { return false }
+    ent_stop w.id
+    set w.load_waits 0
+    begin_task w t
+    return true
+end
+
+# The board gave this Hand's cell to someone better placed, or the cell was built. Whatever it was on
+# its way to do goes, for what the board has for it now.
+fn lost_task [w] do
+    if ((w.job != :build) or (w.cell == nil) or w.scaffolding) { return false }
+    if ((w.after != :place_block) and (w.after != :fetched)) { return false }
     let f factions[w.faction]
-    if (site == f.zone.expanding) { return false }
-    let queue []
-    if (f.zone.expanding != nil) { queue.push f.zone.expanding }
-    for b in f.sites do
-        queue.push b.site
-    end
-    for ahead in queue do
-        if (ahead == site) { return false }
-        if ({site_needs ahead w.carry_kind} and {try_deliver w ahead}) do
-            site_release site w.id
-            return true
-        end
-    end
-    return false
+    let t {board_task {board_of f} w.id}
+    if ((t != nil) and {same_cell w t}) { return false }
+    ent_stop w.id
+    set w.job nil
+    set w.site nil
+    set w.cell nil
+    set w.state :idle
+    if (t != nil) { begin_task w t }
+    return true
 end
 
 fn start_haul [w] do
@@ -537,48 +634,40 @@ end
 
 # ---- Building ---------------------------------------------------------------
 
-fn start_build [w site] do
-    let pos {worker_pos w}
-    if (pos == nil) { return nil }
-    let cell {site_claim site w.id pos[0] pos[1] pos[2]}
-    if ((cell != nil) and {in_danger factions[w.faction] cell.x cell.z}) do
-        site_release site w.id
-        set cell nil
-    end
-    if (cell == nil) do
-        # Everything's claimed by others. Do something useful meanwhile.
-        if (w.carry_n > 0) { return start_carry w }
-        return start_gather w {wanted_kind factions[w.faction]}
-    end
-
+# A task from the board: a cell to fill, or to clear
+fn begin_task [w t] do
     set w.job :build
-    set w.site site
-    set w.cell cell
+    set w.site t.site
+    set w.cell {=x t.x =y t.y =z t.z =block t.block}
 
-    let material {BLOCK_MATERIAL.get cell.block}
+    let material {BLOCK_MATERIAL.get t.block}
     if ((material == nil) or ((w.carry_kind == material) and (w.carry_n > 0))) do
-        go_build_near w cell.x cell.y cell.z :place_block
+        go_build_near w t.x t.y t.z :place_block
         return nil
     end
 
-    # Fetch materials first. If there are none, the claim goes back.
-    if ((w.carry_n > 0) and (w.carry_kind != material)) do
-        site_release site w.id
+    # Fetch it first. With none in the yard, it gathers some, and the cell goes to whoever has one.
+    let b {board_of factions[w.faction]}
+    if (w.carry_n > 0) do
+        # The board doesn't send a Hand with the wrong load, but a load can change between solves
+        board_release b w.id
+        set w.job nil
         set w.site nil
         set w.cell nil
-        set w.job nil
-        return start_carry w
+        return start_haul w
     end
-
-    let slot {find_take_slot {zone_of w} material pos[0] pos[2]}
+    let pos {worker_pos w}
+    let slot nil
+    if (pos != nil) { set slot {find_take_slot {zone_of w} material pos[0] pos[2]} }
     if (slot == nil) do
-        site_release site w.id
-        set w.site nil
-        set w.cell nil
+        board_release b w.id
         set w.job nil
-        set w.supplying site
+        set w.cell nil
+        set w.supplying w.site
+        set w.site nil
         return start_gather w material
     end
+    # It keeps the task while it fetches, and loses it to anyone better placed with a block in hand
     set w.kind material
     go_to w (slot.x + 0.5) slot.y (slot.z + 0.5) 1.5 :fetched
 end
@@ -589,8 +678,9 @@ fn finish_fetch [w] do
     if (got == 0) { return drop_job w }
     set w.carry_kind w.kind
     set w.carry_n got
-    let cell w.cell
-    go_build_near w cell.x cell.y cell.z :place_block
+    # Its cell, if it still has it, or now it has the block, whatever's best
+    if {take_task w} { return nil }
+    start_carry w
 end
 
 fn begin_place [w] do
@@ -632,19 +722,15 @@ fn finish_place [w] do
             set w.carry_kind nil
         end
     end
-    let site w.site
     set w.cell nil
     set w.site nil
-    # A gatherer who brought a load goes back for more, or nobody's keeping materials coming. A
-    # builder who was only dropping one off goes back to the front of the line.
-    if ((w.carry_n == 0) and ((not {is_builder w}) or (site != {next_site factions[w.faction]}))) do
-        site_release site w.id
-        set w.job nil
-        set w.state :idle
-        return nil
-    end
-    if ((w.carry_n > 0) and {deliver_ahead_of w site}) { return nil }
-    start_build w site
+    set w.job nil
+    board_release {board_of factions[w.faction]} w.id
+    # What's left of the load goes on. A gatherer with nothing left goes back for more, or nobody's
+    # keeping materials coming.
+    if (w.carry_n > 0) { return start_carry w }
+    if ({is_builder w} and {take_task w}) { return nil }
+    set w.state :idle
 end
 
 # ---- Quartermaster defrag ---------------------------------------------------
@@ -806,6 +892,7 @@ fn think [w] do
     match w.state
         :idle { pick_job w }
         :moving do
+            if ({lost_task w} or {answer_board w}) { return nil }
             let nav {ent_nav w.id}
             match nav
                 :arrived do
@@ -834,6 +921,14 @@ fn think [w] do
         end
         :resting do
             set w.timer (w.timer - THINK_SECONDS)
+            # Waiting with a load, it goes as soon as the board has a cell for it
+            if ((w.carry_n > 0) and (w.load_waits > 0)) do
+                let t {board_task {board_of factions[w.faction]} w.id}
+                if (t != nil) do
+                    set w.load_waits 0
+                    return begin_task w t
+                end
+            end
             if (w.timer <= 0.0) { set w.state :idle }
         end
         _ { nil }

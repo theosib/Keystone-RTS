@@ -22,7 +22,15 @@ set SCAFFOLD_REACH 3
 # Thinks a Hand waits for someone to step out of where a block goes, before it gives that up
 set PLACE_WAIT_TRIES 8
 # How near a site a Hand waiting on it stands
-set QUEUE_NEAR 5.0
+set QUEUE_NEAR 3.0
+# Who builds what is solved for a whole side this often, in ticks
+set BOARD_INTERVAL 15
+# A site this many blocks' walk ahead of the next in line: earlier sites come first, unless much further
+set BOARD_SITE_PRIORITY 25.0
+# A Hand moves to another cell only if it's this many blocks better
+set BOARD_STICK 3.0
+# This near its cell, a Hand keeps it
+set BOARD_NEAR 3.0
 
 # What a block costs to place. Blocks not listed are free.
 set BLOCK_MATERIAL {

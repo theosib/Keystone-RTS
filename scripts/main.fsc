@@ -25,7 +25,6 @@ fn tick_hands [f tick] do
             set i (i + 1)
         else do
             release_claims w.id
-            if (w.site != nil) { site_release w.site w.id }
             f.hands.remove i
         end
     end
@@ -34,6 +33,7 @@ end
 fn tick_faction [f tick] do
     if {f.has :brigands} { return {tick_brigands f tick} }
     tick_hands f tick
+    if ((tick % BOARD_INTERVAL) == ((f.id * 5) % BOARD_INTERVAL)) { solve_board f }
     tick_army f tick
     if (f.commander != nil) { commander_tick f.commander tick }
 
@@ -560,6 +560,8 @@ end
 # Paths, work claims, and shots in flight aren't saved, so whatever units were in the
 # middle of is gone. Hands choose new work and keep what they carry; soldiers keep orders.
 fn settle_after_resume [f] do
+    # Boards aren't saved, and an id from the save could be another side's board now
+    set f.board nil
     for w in f.hands do
         set w.state :idle
         set w.job nil
@@ -573,7 +575,6 @@ fn settle_after_resume [f] do
         set w.supplying nil
         set w.calm_at 0
         set w.load_waits 0
-        set w.queue_at nil
         ent_anim w.id :idle
     end
     if (not {f.has :danger}) { set f.danger [] }

@@ -25,17 +25,19 @@ set sawpit nil
 set stage 0
 set housing_then 0
 
-# A load on a later site goes back to an earlier one as soon as there's a cell free
-fn check_load_goes_back [f] do
+# A load goes to the first site in line, even from beside a later one
+fn check_load_goes_first [f] do
     let w f.hands[0]
     drop_job w
+    ent_stop w.id
+    ent_set_pos w.id (second.x + 0.5) (second.y + 1) (second.z - 4.5)
     set w.carry_kind :timber
     set w.carry_n 2
-    let p {worker_pos w}
-    site_claim second.site w.id p[0] p[1] p[2]
-    if (not {deliver_ahead_of w second.site}) { return fail "a load stayed on the later site" }
+    solve_board f
+    if (not {take_task w}) { return fail "the board had nothing for a load of timber" }
     if (w.site != sawpit.site) { return fail "the load should have gone to the first site" }
     drop_job w
+    ent_stop w.id
     set w.carry_n 0
     set w.carry_kind nil
 end
@@ -57,7 +59,7 @@ on :tick do
         set second {spot_near f 12}
         if ((sawpit == nil) or (first == nil) or (second == nil)) { return fail "no room to build" }
 
-        check_load_goes_back f
+        check_load_goes_first f
 
         update_sites f
         if (f.sites[0] != sawpit) { return fail "the queue moved with nobody waiting on a bed" }
