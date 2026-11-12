@@ -165,8 +165,8 @@ fn nearest_visible [s pos found] do
     return best
 end
 
-# Soldiers answer to other soldiers first. A unit on the march won't peel off after
-# a farmer it can't already reach, or an attack dissolves into chasing workers.
+# Soldiers answer to other soldiers first. A unit on the march, or at a Keystone it could break,
+# won't peel off after a farmer it can't already reach, or an attack dissolves into chasing workers.
 fn find_enemy [s pos radius] do
     let f s.faction
     for kind in [:militia :shortbow] do
@@ -176,8 +176,19 @@ fn find_enemy [s pos radius] do
     end
 
     let reach radius
-    if (s.order == :move) { set reach (s.stats.range + 1.0) }
+    if ((s.order == :move) or {at_keystone s pos}) { set reach (s.stats.range + 1.0) }
     return {nearest_visible s pos {ent_find pos[0] pos[1] pos[2] reach =enemy_of f =max 8}}
+end
+
+# Besieging a Keystone, or with one in sight to go for
+fn at_keystone [s pos] do
+    if ((contest.state != :playing) or {brigand_unit s}) { return false }
+    return ((s.siege != nil) or ({keystone_in_sight s pos} != nil))
+end
+
+fn is_soldier [id] do
+    let entry {lookup_unit id}
+    return ((entry != nil) and {entry.record.has :stats})
 end
 
 # Whoever just hurt this unit. Bows reach further than a soldier looks, so waiting to spot them
@@ -649,6 +660,10 @@ fn think_soldier [s] do
     # Keep fighting what's in front of you
     if ((s.target != nil) and (not {ent_alive s.target})) { lose_target s }
     if ((s.target != nil) and (s.hunting == nil) and (not {vision_can_see_ent s.faction s.target})) { lose_target s }
+    # A Hand it's after, with a Keystone to break instead
+    if ((s.target != nil) and (s.hunting == nil) and (not {is_soldier s.target}) and {at_keystone s pos}) {
+        if (not {in_range s pos {ent_pos s.target}}) { lose_target s }
+    }
 
     # On the march it keeps going, but on guard it answers whoever's hitting it
     if ((not at_peace) and {keeping_post s}) do

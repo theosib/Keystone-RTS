@@ -120,7 +120,8 @@ finescript traps that cost real time here:
 - `tests/run_ui.sh` wants the machine to itself. Beside another window its frame-timed input
   misses, and a dozen checks fail with nothing wrong. Clicks in it are pixel positions, so anything
   that moves the palette moves them, and 720 tall is about all the palette has room for. The menu
-  clicks are pixels too.
+  clicks are pixels too. On 2026-11-12 its four menu checks (Done, New Game, Cancel, Resume)
+  failed on the Mac at unchanged code too: on their own they say nothing about a change.
 - A window run always goes through the lobby. Until 2026-11, the lobby's random seed beat `--seed`,
   so `run_ui.sh` and `run_mcp.sh` played a new world every time. A check that fails on some runs
   and not others could have been that, so if one turns out flaky, check the world is the same first.
@@ -135,6 +136,7 @@ finescript traps that cost real time here:
   any script error fails the run. Assert on stalls as well as outcomes: a warehouse test
   once passed while the whole economy was frozen at 32ms a tick.
 - Enemies spawned near home for a look at them count as raiders: Hands drop their work and flee.
+  Only armed ones (militia, bows) or one that hit them: a scout or a Hand can't hurt anyone.
 - `place_building` returns nil on taken ground (`plot_of`, `yard_plot`), which takes in the Hall and
   the yard, so place relative to `f.x`, not to a Hand that may be standing by them.
 - `game_exit 0` later in the same tick overrides an earlier `game_exit 1`. See `failed` in `tests/hunt.fsc`.
@@ -146,17 +148,21 @@ finescript traps that cost real time here:
 - Brigands are a faction (`BRIGAND_ID`, 15) with no settlement, zone or Keystone. A loop over
   `factions` that reads a zone, a Hall or the match has to go through `is_side`, and a scenario's
   own loops too: `resume.fsc` once died on it.
-- `tools/duel.sh A B [SEEDS] [MINUTES]` plays two commanders headless, four games at a time.
-  `old_veteran` and the like are the commander from before this AI work, renamed by
-  `tools/old_commander.py`. The same seed plays differently each run (threads), so judge a change
-  on a dozen games or more, both ways round. From a copy of the tree, set `KEYSTONE_BUILD`.
-- Duels only measure commanders against commanders, and they reward an early army. A player who
-  opens with five shelters and grows to 20+ Hands beat the veteran easily (2026-11-11). Measured
-  against today's veteran, over 16 games each, 15 minutes: `parallel true` changed nothing, since
-  timber seldom reaches 80 with 8 Hands, and 12 or 16 Hands lost 3-7 and 1-10. They had 20-24 beds
-  by minute 12 to its 16, but 3 fighters to its 5 when its first strike came. A level can be
-  trialled without editing the tree: a `--script` that sets `DIFFICULTY.set :name {...}` on its
-  first tick, since a commander looks its level up on every think.
+- `tools/duel.sh A B [SEEDS] [MINUTES]` plays two commanders headless and prints `SCORE`.
+  `old_veteran` and the like are the commander at `OLD_COMMIT`, renamed by `tools/old_commander.py`.
+  `DUEL_SWAP=1` plays every seed both ways round, and always use it: side 2's home on the default
+  map is much harder to take, and one side's games alone mislead. `DUEL_JOBS=8` suits the Mac.
+  The same seed plays differently each run (threads): 12 games swung a level from 5-1 to 2-5, so
+  judge on 32 (16 seeds both ways). That's about 3 minutes of 20-minute games.
+- Levels to try go in `tests/strategies.fsc` (`DUEL_SCRIPT`), as the veteran with numbers changed,
+  so nothing in the tree changes. `tools/tune.py` hill-climbs a level's numbers by playing it
+  against itself. A duel reads scripts as each game starts, so editing the tree mid-run mixes
+  versions: play from a copy (`rsync` the tree, set `KEYSTONE_BUILD`, and `GIT_DIR` for `old_`).
+- What duels measured, and why the veteran is what it is: `docs/AI.md`. In short, the economy
+  matters most (20 Hands on two sites beat 8 Hands 22-4), bows are poor value for what they cost,
+  and a held-back guard, racing home attacks and Keystone raids measured neutral or worse.
+- Duels only measure commanders against commanders. A player who opens with five shelters and grows
+  to 20+ Hands beat the old 8-Hand veteran easily (2026-11-11), which is what led to the above.
 - Commanders fight with whatever combat the scripts have, so a combat rule changes the AI's results.
   A set fight showed holders losing 6 v 6 to a group that marched in, till guards waited for enemies
   to come near and soldiers went for the nearest wounded enemy.
@@ -214,7 +220,8 @@ finescript traps that cost real time here:
   decisions: defend, gather, strike, pull back, raid), `brigands` (a band's target and leaving),
   `death` (who, where, and who hit it last), `muster_wait`/`training_wait` (why a queue isn't moving,
   once per change), `muster`/`training` (spawns), `flee`, `path` (gave up, scaffolding), `place`
-  (gave up, who was in the way), `board` (a summary every 20 solves), `build`. Trace a decision
+  (gave up, who was in the way), `board` (a summary every 20 solves), `build`, `match` (a Keystone
+  under attack, held, fallen, and the winner). Trace a decision
   when it changes, not every tick.
 - A game hosted from the lobby saves to `saves/hosted`, not `autosave`. To see its end state, copy
   the tree and run `finevox_headless --game-root COPY --resume COPY/saves/hosted --script peek.fsc`

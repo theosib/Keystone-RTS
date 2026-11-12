@@ -883,10 +883,13 @@ fn forget_danger [f] do
     end
 end
 
-# Who's near, or who hurt this Hand: a bow reaches further than it looks
+# Who's near and armed, or who hurt this Hand: a bow reaches further than it looks. A scout or a Hand
+# can't hurt anyone, and running from them would let one scout stop a whole economy.
 fn threat_to [w pos] do
-    let near {ent_find pos[0] pos[1] pos[2] FLEE_RADIUS =enemy_of w.faction =max 1}
-    if (near.length > 0) { return near[0] }
+    for kind in [:militia :shortbow] do
+        let near {ent_find pos[0] pos[1] pos[2] FLEE_RADIUS =enemy_of w.faction =type kind =max 1}
+        if (near.length > 0) { return near[0] }
+    end
     if ({ent_since_damage w.id} <= STRUCK_SECONDS) do
         let id {ent_last_attacker w.id}
         if {ent_alive id} { return id }

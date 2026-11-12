@@ -35,7 +35,7 @@ on :tick do
             ent_set_pos w.id (x + 0.5) ({ground_y x z} + 1) (z + 0.5)
             set i (i + 1)
         end
-        set raider {ent_spawn :hand at =faction 2}
+        set raider {ent_spawn :militia at =faction 2}
         for w in f.hands do
             let p {ent_pos w.id}
             start.set {to_sym w.id} {sqrt {dist2 p[0] p[2] at[0] at[2]}}

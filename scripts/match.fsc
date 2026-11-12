@@ -34,11 +34,14 @@ fn tick_capture [f] do
     let attackers {count_capturers f.keystone KEYSTONE_RADIUS f.id}
     let defenders {count_armed f.keystone KEYSTONE_RADIUS f.id false}
 
+    let was f.capture
     if ((attackers > 0) and (defenders == 0)) do
         set f.capture (f.capture + attackers)
     elif (f.capture > 0) do
         set f.capture (f.capture - 1)
     end
+    if ((was == 0) and (f.capture > 0)) { trace :match "side" f.id "Keystone under attack by" attackers }
+    if ((was > 0) and (f.capture == 0)) { trace :match "side" f.id "Keystone held" }
 
     if (f.capture >= KEYSTONE_CAPTURE_POINTS) { conquer f }
 end
@@ -65,6 +68,7 @@ fn conquer [f] do
     world_set_block f.keystone[0] f.keystone[1] f.keystone[2] :air
     set f.keystone nil
     log "faction" f.id "has fallen"
+    trace :match "side" f.id "has fallen"
 
     # Losing the Keystone breaks a civilization's nerve
     for s in f.army do
@@ -88,6 +92,7 @@ fn conquer [f] do
         set contest.winner winner
         if (winner != nil) { set contest.team factions[winner].team }
         log "match over, winner" winner
+        trace :match "over, winner" winner
     end
 end
 

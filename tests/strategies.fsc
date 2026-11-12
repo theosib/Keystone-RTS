@@ -1,0 +1,34 @@
+# Not a test: levels for tools/duel.sh and tools/tune.py to try, each the veteran with a few things
+# changed. What they measured is in docs/AI.md.
+#   DUEL_SCRIPT=tests/strategies.fsc DUEL_SWAP=1 tools/duel.sh rush veteran 8 20
+
+fn variant [base changes] do
+    let out {map}
+    for k in base.keys do
+        out.set k {base.get k}
+    end
+    for k in changes.keys do
+        out.set k {changes.get k}
+    end
+    return out
+end
+
+set strategies_ready false
+
+on :tick do
+    if strategies_ready { return nil }
+    set strategies_ready true
+    let v {DIFFICULTY.get :veteran}
+    # The veteran's economy before these duels: 8 Hands, one site at a time
+    DIFFICULTY.set :small {variant v {=hands 8 =parallel false =spare_beds 1 =huts 1 =strike 6 =first_strike 400}}
+    # A quarter of the army bows, as before
+    DIFFICULTY.set :mixed {variant v {=units [:militia :shortbow] =counter true}}
+    # Out later with more
+    DIFFICULTY.set :boom {variant v {=strike 10 =first_strike 660}}
+    # Small and early, before the other side has an army
+    DIFFICULTY.set :rush {variant v {=hands 6 =strike 4 =first_strike 240 =edge 0.0}}
+    # Sit at home behind a big guard and only go out with a clear edge
+    DIFFICULTY.set :turtle {variant v {=guard 4 =strike 10 =edge 1.5 =towers 1}}
+    # Two kept at home whatever happens
+    DIFFICULTY.set :guarded {variant v {=guard 2}}
+end

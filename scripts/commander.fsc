@@ -7,9 +7,10 @@
 # What makes it hard to beat, and the levels differ in how much of it they do:
 #   - An economy that keeps growing: Hands only as fast as food allows, food huts first, and more
 #     shelters as the army grows. Beds are what an army costs most: a shelter is 55 timber and 34 food
-#     for four, and more Hands than the land's bushes keep busy only take beds from soldiers.
+#     for four. Even so, a veteran grows to 20 Hands on two sites at once, which won more duels
+#     than 8 Hands did (docs/AI.md).
 #   - An army with no fixed size, of what it's seen the enemy field: bows against swords, swords
-#     against bows.
+#     against bows. A veteran fields swords only, since for what they cost bows lose to them.
 #   - Home is never left bare. A guard stays, and everyone comes back when home is attacked.
 #   - It attacks with an edge over what it's seen, gathers before it marches, and pulls back from a
 #     fight it's losing instead of feeding it.
@@ -26,10 +27,10 @@ set DIFFICULTY {
                =punish false =units [:militia :shortbow]
                =build_at 40 =spare_beds 1 =first_hut :sawpit =parallel false
                =station true =gather true =muster_queue 2}
-    =veteran {=think 0.5 =hands 8 =strike 6 =first_strike 400 =guard 0 =edge 1.0
-              =retreat true =counter true =raids true =towers 0 =huts 1 =food_spare 0
-              =punish true =units [:militia :shortbow]
-              =build_at 40 =spare_beds 1 =first_hut :sawpit =parallel false
+    =veteran {=think 0.5 =hands 20 =strike 7 =first_strike 420 =guard 0 =edge 1.0
+              =retreat true =counter false =raids true =towers 0 =huts 3 =food_spare 0
+              =punish true =units [:militia]
+              =build_at 40 =spare_beds 2 =first_hut :sawpit =parallel true
               =station true =gather true =muster_queue 2}
 }
 
@@ -486,9 +487,20 @@ end
 
 # ---- Defence ------------------------------------------------------------------
 
-# Enemy soldiers near home bring everyone back, raiders and attackers alike
+# Enemy soldiers near home bring everyone back, raiders and attackers alike. Brigands can't take a
+# Keystone, but they can empty a yard: they bring the army back if they outnumber the guard, and
+# keep it there till they're gone. Otherwise the army home would outnumber them and send itself off.
 fn plan_defence [c f tick] do
-    let threats {enemies_near c [f.x f.y f.z] HOME_RADIUS tick}
+    let threats []
+    let brigands []
+    for e in {enemies_near c [f.x f.y f.z] HOME_RADIUS tick} do
+        if e.brigand { brigands.push e } { threats.push e }
+    end
+    if (c.defending or (brigands.length > {home_guard f})) {
+        for e in brigands do
+            threats.push e
+        end
+    }
     if (threats.length == 0) do
         if c.defending do
             set c.defended_at tick
@@ -534,6 +546,8 @@ fn pull_back [c f tick why] do
     set c.phase :build
     set c.attacking false
     set c.cooldown_until (tick + (RETREAT_COOLDOWN * 30))
+    # Beaten back, it's in no state to punish anyone
+    set c.defended_at -100000
 end
 
 fn party_centre [c] do

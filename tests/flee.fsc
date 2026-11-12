@@ -40,7 +40,7 @@ on :tick do
             if ((tree == nil) and (w.job == :gather) and (w.target != nil)) { set tree w.target }
         end
         if (tree == nil) { fail "nobody went out for anything" }
-        set raider {ent_spawn :hand [(tree[0] + 1.5) (tree[1] + 0.0) (tree[2] + 0.5)] =faction 2}
+        set raider {ent_spawn :militia [(tree[0] + 1.5) (tree[1] + 0.0) (tree[2] + 0.5)] =faction 2}
         ent_set_pos raider [(tree[0] + 1.5) (tree[1] + 0.0) (tree[2] + 0.5)]
     end
 
