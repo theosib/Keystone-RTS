@@ -93,6 +93,13 @@ The level without a guard or racing became the veteran. Against it, at the final
 
 It beats everything tried but boom, which it trails within the noise.
 
+`tools/tune.py` then took 8 steps from it, over strike, first strike, Hands and spare beds, with 16
+games a step and `--against small`. It ended at strikes of 6 from minute 9 with 18 Hands, but that's
+noise: one challenger, strike 6, played 6-6-4 and then 9-5-2 on the next step, and the veteran went
+7-7 and 7-9 against `small` in two of its checks. So the veteran's numbers stayed. Near its best,
+one number moves a result by less than 16 games can see. A tuner there needs 32 games or more a
+step, and a change is only worth keeping once it holds on a fresh 32.
+
 ## What it says
 
 - **The economy decides most games.** Hands compound: more Hands, more timber, more beds, a bigger
