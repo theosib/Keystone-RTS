@@ -50,11 +50,11 @@ finescript traps that cost real time here:
 - `random_range` is inclusive at both ends.
 - Maths is plain functions: `{sqrt x}`, `{max a b}`, `{abs x}`. There's no `math.` map.
 - `on` is a keyword, so it can't name a parameter.
-- `if (x) { ... }` takes one statement. For more, or for `a.push b`, use `do ... end`, and the same
-  goes for a `match` arm.
+- `if (x) { ... }` takes one statement (`a.push b` and `a.set i v` are fine there). For more, use
+  `do ... end`, and the same goes for a `match` arm.
 - `{}` is an empty block, not an empty map.
-- A method can't be called on a call's result: `{{loc "x"}.split " "}` and `{f x}.push y` don't
-  parse. Put the result in a `let` first. A field is fine: `{UNITS.get k}.cost` works.
+- A method can be called on a call's result since finescript b7ea438: `{{loc "x"}.split " "}`.
+  A field always worked: `{UNITS.get k}.cost`.
 - `set a[i] v` doesn't assign: it silently replaces `a` with the array `[i]`. Use `a.set i v`.
 - A closure made in a `for` loop shares the loop's variable: every button built that way acts
   on the last value. Make the closure in a function that takes the value as a parameter. That
