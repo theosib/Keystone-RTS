@@ -108,7 +108,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2405 + 188 + 47 = 2640 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2408 + 189 + 47 = 2644 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -147,6 +147,8 @@ finescript traps that cost real time here:
 - `explore` failed once in a dozen runs (2026-11-11), "it left over a sixth of the map" with 109 dead
   ends, and passed twice straight after. Same: cause unknown, rerun first. So does `hunt`, "the order
   fell behind its quarry", about 1 run in 5 on unchanged code.
+- `chase` failed once in a full `run_all.sh` (2026-11-14), "it stood by while an enemy walked
+  past", then passed 25 runs straight on its own. Rerun before suspecting a change.
 - Brigands are a faction (`BRIGAND_ID`, 15) with no settlement, zone or Keystone. A loop over
   `factions` that reads a zone, a Hall or the match has to go through `is_side`, and a scenario's
   own loops too: `resume.fsc` once died on it.
