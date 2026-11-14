@@ -48,6 +48,8 @@ finescript traps that cost real time here:
 - A statement ends at the newline. Named args can't wrap to the next line.
 - `match` and `source` are keywords, so they can't be variable names.
 - `random_range` is inclusive at both ends.
+- Two integers divide as integers: `(102 / 200)` is 0. A fraction (a UV, a share) needs a
+  float on one side: `(102 / 200.0)`.
 - Maths is plain functions: `{sqrt x}`, `{max a b}`, `{abs x}`. There's no `math.` map.
 - `on` is a keyword, so it can't name a parameter.
 - `if (x) { ... }` takes one statement (`a.push b` and `a.set i v` are fine there). For more, use
@@ -106,7 +108,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline: 2361 + 187 + 45 = 2593 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline: 2405 + 188 + 47 = 2640 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
