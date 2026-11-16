@@ -28,7 +28,8 @@ drives engine development. See [docs/DESIGN.md](docs/DESIGN.md), [docs/PLAN.md](
   expect, and the two-machine test. macOS, Linux and Windows all work.
 - Engine repo and deps are siblings: `../FineStructureVoxel`, `../game-language` (finescript),
   `../finegui`, `../finenet`, `../FineStructureVK`. The engine links their prebuilt libraries, so a
-  change to `finenet` or `finegui` needs `make` in that repo's `build/` before `ninja` sees it.
+  change to `finenet`, `finegui` or `FineStructureVK` needs `make` in that repo's `build/` before
+  `ninja` sees it.
 - `--game-root` means a source tree, and saves go there. With none it's an installed copy, using
   the game it shipped with and a per-user folder. Releases: see the end of `docs/PLATFORMS.md`.
 - Build dir: `../fv-keystone` (Ninja, Release with symbols). A fresh configure needs
