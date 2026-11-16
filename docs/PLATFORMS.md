@@ -274,8 +274,8 @@ What Windows turned up, which applies to anything added from here on:
   sleep with nothing to poll, `SO_REUSEADDR` lets a second server take a port in use (so a listener
   uses `SO_EXCLUSIVEADDRUSE`), and UDP needs `SIO_UDP_CONNRESET` off or one ICMP "port unreachable"
   fails the next receive. Sockets are made uninheritable, so a restarted game doesn't hold the port.
-- **No exec, no SIGTERM.** `finevox_run` restarts with `CreateProcessW` and exits. A server stops and
-  saves on Ctrl+C, Ctrl+Break, its console closing, logoff and shutdown.
+- **No SIGTERM.** A server stops and saves on Ctrl+C, Ctrl+Break, its console closing, logoff and
+  shutdown. (Nothing needs exec: going back to the menu or into a new game stays in the process.)
 - **Paths.** The content cache is `%LOCALAPPDATA%\finevox\cache`, and an installed game's own folder
   is `%APPDATA%\.keystone`. A path written into a script string
   needs forward slashes, or `\U` and the like read as escapes.
