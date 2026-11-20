@@ -1,0 +1,111 @@
+# A red deer: long legs, a pale rump, and antlers
+skeleton: deer
+anim:idle: deer_idle
+anim:walk: deer_walk
+anim:graze: deer_graze
+
+part: body
+bone: body
+offset: 0 0.1 0
+size: 0.42 0.42 1.0
+color: 0.46 0.27 0.13
+part: belly
+bone: body
+offset: 0 -0.08 0
+size: 0.3 0.1 0.8
+color: 0.62 0.55 0.44
+part: rump
+bone: body
+offset: 0 0.12 -0.5
+size: 0.36 0.3 0.06
+color: 0.62 0.55 0.44
+part: neck
+bone: neck
+offset: 0 0.2 0.06
+size: 0.2 0.42 0.22
+color: 0.46 0.27 0.13
+part: head
+bone: neck
+offset: 0 0.44 0.2
+size: 0.2 0.2 0.34
+color: 0.46 0.27 0.13
+part: muzzle
+bone: neck
+offset: 0 0.37 0.4
+size: 0.12 0.12 0.08
+color: 0.14 0.1 0.07
+part: ear_l
+bone: neck
+offset: -0.13 0.56 0.1
+size: 0.08 0.12 0.04
+color: 0.46 0.27 0.13
+part: ear_r
+bone: neck
+offset: 0.13 0.56 0.1
+size: 0.08 0.12 0.04
+color: 0.46 0.27 0.13
+part: antler_l
+bone: neck
+offset: -0.06 0.72 0.12
+size: 0.04 0.3 0.04
+color: 0.62 0.55 0.44
+part: antler_r
+bone: neck
+offset: 0.06 0.72 0.12
+size: 0.04 0.3 0.04
+color: 0.62 0.55 0.44
+part: tine_l
+bone: neck
+offset: -0.11 0.78 0.18
+size: 0.1 0.04 0.04
+color: 0.62 0.55 0.44
+part: tine_r
+bone: neck
+offset: 0.11 0.78 0.18
+size: 0.1 0.04 0.04
+color: 0.62 0.55 0.44
+part: tail
+bone: tail
+offset: 0 -0.02 -0.03
+size: 0.08 0.12 0.06
+color: 0.62 0.55 0.44
+part: leg_fl
+bone: leg_fl
+offset: 0 -0.33999999999999997 0
+size: 0.08 0.6799999999999999 0.08
+color: 0.46 0.27 0.13
+part: leg_fl_hoof
+bone: leg_fl
+offset: 0 -0.69 0.01
+size: 0.14 0.1 0.16
+color: 0.14 0.1 0.07
+part: leg_fr
+bone: leg_fr
+offset: 0 -0.33999999999999997 0
+size: 0.08 0.6799999999999999 0.08
+color: 0.46 0.27 0.13
+part: leg_fr_hoof
+bone: leg_fr
+offset: 0 -0.69 0.01
+size: 0.14 0.1 0.16
+color: 0.14 0.1 0.07
+part: leg_bl
+bone: leg_bl
+offset: 0 -0.33999999999999997 0
+size: 0.08 0.6799999999999999 0.08
+color: 0.46 0.27 0.13
+part: leg_bl_hoof
+bone: leg_bl
+offset: 0 -0.69 0.01
+size: 0.14 0.1 0.16
+color: 0.14 0.1 0.07
+part: leg_br
+bone: leg_br
+offset: 0 -0.33999999999999997 0
+size: 0.08 0.6799999999999999 0.08
+color: 0.46 0.27 0.13
+part: leg_br_hoof
+bone: leg_br
+offset: 0 -0.69 0.01
+size: 0.14 0.1 0.16
+color: 0.14 0.1 0.07

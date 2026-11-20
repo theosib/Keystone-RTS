@@ -12,6 +12,7 @@ end
 
 set party []
 set defended_at nil
+set most_home 0
 
 fn home_count [rival] do
     let n 0
@@ -71,8 +72,11 @@ on :tick do
     if ((tick == 3000) and (defended_at == nil)) { fail "never defended against the brigands at home" }
     if (tick == 4600) { fail "never finished" }
 
+    # Home at any time since, as many as there were: once the band's beaten, the army can be off
+    # again before this looks
+    if ((defended_at != nil) and ((tick % 30) == 0)) { set most_home {max most_home {home_count rival}} }
     if ((defended_at != nil) and (tick == (defended_at + 1500))) do
-        let home {home_count rival}
+        let home most_home
         if (home < 3) { fail "only {home} of the army came home" }
         if (not failed) do
             log "brigands at home bring the army back"

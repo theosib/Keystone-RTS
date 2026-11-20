@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Generate fill-stage resource blocks, the palisade, the berry bush, the boulder and the canopy:
-their .model files and shapes.
+"""Generate fill-stage resource blocks, the palisade, the berry bush, the boulder, the canopy and the
+carcass: their .model files and shapes.
 
 Each resource block holds 1..UNITS units and shows how full it is, a half-size cube for each. The
 last stage is a plain cube, because cube blocks must not declare geometry. The others have
@@ -396,6 +396,33 @@ def boulder_geometry():
     return clump("Boulder", [(name, box, (0, 0, 1, 1), slope) for name, box, slope in ROCKS])
 
 
+# ---- Carcass -----------------------------------------------------------------------------
+# What a hunted animal leaves, eaten down a load at a time: carcass_N has N loads left. The body
+# shrinks with each, and the last is only bones. The tile is hide above and bone below.
+
+HIDE_UV = (0, 0, 1, 0.5)
+BONE_UV = (0, 0.5, 1, 1)
+CARCASS_LOADS = 4  # the most a carcass has: CARCASS_LOADS in scripts/data.fsc
+
+
+def carcass_parts(loads):
+    if loads == 1:
+        return [("spine", (0.18, 0.00, 0.44, 0.82, 0.08, 0.56), BONE_UV, 0),
+                ("rib0", (0.30, 0.00, 0.28, 0.36, 0.12, 0.72), BONE_UV, 0),
+                ("rib1", (0.46, 0.00, 0.30, 0.52, 0.12, 0.70), BONE_UV, 0),
+                ("rib2", (0.62, 0.00, 0.32, 0.68, 0.10, 0.68), BONE_UV, 0),
+                ("skull", (0.04, 0.00, 0.40, 0.16, 0.10, 0.60), BONE_UV, 0)]
+    grow = (loads - 2) * 0.05
+    return [("body", (0.18 - grow, 0.00, 0.30 - grow, 0.84 + grow, 0.26 + grow * 2, 0.72 + grow), HIDE_UV, 0.06),
+            ("head", (0.03, 0.00, 0.40, 0.14, 0.16, 0.60), HIDE_UV, 0.03),
+            ("leg0", (0.30, 0.00, 0.74 + grow, 0.38, 0.08, 0.92), HIDE_UV, 0),
+            ("leg1", (0.64, 0.00, 0.74 + grow, 0.72, 0.08, 0.94), HIDE_UV, 0)]
+
+
+def carcass_geometry(loads):
+    return clump(f"Carcass, {loads} of {CARCASS_LOADS} loads left", carcass_parts(loads))
+
+
 # ---- Canopy ------------------------------------------------------------------------------
 # A tree's leaves. Close up, each side of a block with no leaves beyond it has rounded tufts
 # sticking out of it, over a plain leaf face; from far off it has only the face (see detail_pixels
@@ -542,7 +569,10 @@ def main():
         "hardness: 2.0\n"
         "texture: blocks/boulder\n"
     )
-    print("wrote fill-stage blocks, the palisade, the berry bush, the boulder and the canopy")
+    for loads in range(1, CARCASS_LOADS + 1):
+        (shapes / f"carcass_{loads}_faces.geom").write_text(carcass_geometry(loads))
+        (blocks / f"carcass_{loads}.model").write_text(bush_model(f"carcass_{loads}_faces", "carcass"))
+    print("wrote fill-stage blocks, the palisade, the berry bush, the boulder, the canopy and the carcass")
 
 
 if __name__ == "__main__":

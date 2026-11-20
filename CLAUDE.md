@@ -153,6 +153,9 @@ finescript traps that cost real time here:
   past", then passed 25 runs straight on its own. Rerun before suspecting a change.
 - `flee` failed once in a full `run_all.sh` run beside other headless games (2026-11-16), "Hands
   kept coming back: 10 frights", then passed 5 runs straight on its own.
+- Game (deer, boar: `wild.fsc`) is faction 0, nobody's enemy, so `ent_find =enemy_of` never finds
+  it and arrows do hit it. Animals aren't in `unit_index`: `is_game id` says whether an id is one,
+  and `game_after` finds a boar that's going for a side, which soldiers treat as an enemy.
 - Brigands are a faction (`BRIGAND_ID`, 15) with no settlement, zone or Keystone. A loop over
   `factions` that reads a zone, a Hall or the match has to go through `is_side`, and a scenario's
   own loops too: `resume.fsc` once died on it.
@@ -237,7 +240,7 @@ finescript traps that cost real time here:
   `death` (who, where, and who hit it last), `muster_wait`/`training_wait` (why a queue isn't moving,
   once per change), `muster`/`training` (spawns), `flee`, `path` (gave up, scaffolding), `place`
   (gave up, who was in the way), `board` (a summary every 20 solves), `build`, `match` (a Keystone
-  under attack, held, fallen, and the winner). Trace a decision
+  under attack, held, fallen, and the winner), `hunt` (game that fell, where, and to whom). Trace a decision
   when it changes, not every tick.
 - A game hosted from the lobby saves to `saves/hosted`, not `autosave`. To see its end state, copy
   the tree and run `finevox_headless --game-root COPY --resume COPY/saves/hosted --script peek.fsc`

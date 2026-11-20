@@ -169,6 +169,7 @@ end
 
 fn soldier_doing [s] do
     if (s.state == :rout) { return [{=key "rout"}] }
+    if ((s.hunting != nil) and {is_game s.hunting}) { return [{=key "hunt_game"}] }
     if (s.target != nil) { return [{=key "fight"}] }
     if (s.siege != nil) { return [{=key "break_keystone"}] }
     if ({s.get :wreck} != nil) { return [{=key "wreck" =building {sym_name s.wreck.name}}] }

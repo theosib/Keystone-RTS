@@ -48,8 +48,16 @@ set HARVEST {
     =timber_log {=kind :timber =units 2 =seconds 1.4 =anim :chop}
     =boulder {=kind :stone =units 2 =seconds 1.8 =anim :quarry}
     =berry_bush {=kind :provisions =units 3 =seconds 1.0 =anim :forage}
+    =carcass_4 {=kind :provisions =units 4 =seconds 1.2 =anim :forage}
+    =carcass_3 {=kind :provisions =units 4 =seconds 1.2 =anim :forage}
+    =carcass_2 {=kind :provisions =units 4 =seconds 1.2 =anim :forage}
+    =carcass_1 {=kind :provisions =units 4 =seconds 1.2 =anim :forage}
 }
 set HARVEST_BLOCKS {=timber [:timber_log] =stone [:boulder] =provisions [:berry_bush]}
+# Looked for first, this near, before the nearest of the rest: a carcass won't keep. Further off it's
+# one of the rest: a Hunter carries its own kill home.
+set HARVEST_FIRST {=provisions [:carcass_4 :carcass_3 :carcass_2 :carcass_1]}
+set HARVEST_FIRST_RADIUS 32
 
 set SEARCH_RADIUS 72
 # The generator never sets a leaf further than this from its trunk
@@ -150,6 +158,8 @@ set UNITS {
                =cost {=timber 8 =provisions 6}}
     =scout {=role :scout =damage 0.0 =range 0.0 =cooldown 1.0 =aggro 0 =strike_anim :work
             =cost {=provisions 8}}
+    =hunter {=role :hunter =damage 8.0 =range 16.0 =cooldown 1.5 =aggro 0 =strike_anim :shoot
+             =cost {=timber 2 =provisions 6}}
 }
 set TRAIN_SECONDS 8.0
 # The most one order can queue
@@ -229,3 +239,26 @@ set WRECK_REACH 3.0
 set WRECK_HEIGHT 3
 set WRECK_TRIES 3
 set WRECK_RETRY_SECONDS 10.0
+
+# ---- Game ---------------------------------------------------------------------
+# Deer and boar belong to nobody (faction 0). Herds keep to their own ground, and grow back while
+# two or more of one are alive. What's killed leaves a carcass, carcass_N with N loads, which a
+# Hand takes as provisions, a load at a time; left alone, it rots.
+#   flee: anyone this close sets a deer running, this far.  temper: how long a boar stays angry
+set ANIMALS {
+    =deer {=herd [4 6] =loads 3 =wander 10 =amble 0.35 =flee 12 =flee_to 14.0}
+    =boar {=herd [1 2] =loads 4 =wander 6 =amble 0.3 =damage 7.0 =reach 1.9 =cooldown 1.3
+           =temper_seconds 25.0 =give_up 30.0}
+}
+# Herds for a map of WORLD_RADIUS 12, more or fewer by its area. None nearer a settlement than this.
+set DEER_HERDS 10
+set BOAR_HERDS 4
+set HERD_FROM_HOME 28
+set HERD_SPACING 28
+set HERD_GROWTH_SECONDS 90
+set CARCASS_LOADS 4
+set CARCASS_ROT_SECONDS 360
+# A Hunter looks for game this far from home, and with none in sight looks around this long
+# before trying somewhere else
+set HUNT_RANGE 60
+set HUNT_LOOK_SECONDS 4.0

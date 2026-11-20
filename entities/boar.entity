@@ -1,0 +1,14 @@
+# Wild boar: slow to anger, and dangerous once it is
+name: boar
+half_extents: 0.35 0.45 0.35
+personal_space: 0.5
+max_speed: 4.6
+max_health: 90
+ai: none
+death_seconds: 1.4
+model: boar
+vision: 16
+anim:idle: 0
+anim:walk: 1
+anim:graze: 2
+anim:gore: 3

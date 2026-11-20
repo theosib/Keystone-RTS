@@ -1,0 +1,345 @@
+# The wild: deer and boar, and what's left of them ("Game" in data.fsc).
+#
+# Animals belong to nobody, faction 0, so no side's soldiers go for one unless sent, and nobody runs
+# from one that hasn't hurt them. A deer runs from anyone who comes near. A boar minds its own
+# business until it's hurt, and then goes for whoever did it. What falls leaves a carcass where it
+# lay, for Hands to take as provisions.
+
+set wild {=herds [] =animals [] =carcasses []}
+
+fn is_game [id] do
+    if (not {ent_alive id}) { return false }
+    if ({ent_faction id} != 0) { return false }
+    return {ANIMALS.has {ent_type id}}
+end
+
+# carcass_N has N loads left, and 0 is anything else
+fn carcass_loads [block] do
+    for n in (1..=CARCASS_LOADS) do
+        if (block == {to_sym "carcass_{n}"}) { return n }
+    end
+    return 0
+end
+
+fn is_carcass [block] { return ({carcass_loads block} > 0) }
+
+fn carcass_less [block] do
+    let left ({carcass_loads block} - 1)
+    if (left <= 0) { return :air }
+    return {to_sym "carcass_{left}"}
+end
+
+# ---- Herds --------------------------------------------------------------------
+
+# As many as DEER_HERDS or BOAR_HERDS on the usual map, more or fewer by its area
+fn herd_count [base] do
+    let area ((WORLD_RADIUS * WORLD_RADIUS) / 144.0)
+    return {max 1 {round (base * area)}}
+end
+
+fn herd_ground [x z] do
+    if ({open_ground x z} == nil) { return false }
+    for f in factions do
+        if ({is_side f} and ({dist2 x z f.x f.z} < (HERD_FROM_HOME * HERD_FROM_HOME))) { return false }
+    end
+    for h in wild.herds do
+        if ({dist2 x z h.x h.z} < (HERD_SPACING * HERD_SPACING)) { return false }
+    end
+    return {dry_around x z 6}
+end
+
+fn herd_spot [] do
+    let edge ((WORLD_RADIUS * 16) - 24)
+    for i in (0..80) do
+        let x {random_range (0 - edge) edge}
+        let z {random_range (0 - edge) edge}
+        if {herd_ground x z} { return [x z] }
+    end
+    return nil
+end
+
+fn place_herds [] do
+    for kind in [:deer :boar] do
+        let count {herd_count DEER_HERDS}
+        if (kind == :boar) { set count {herd_count BOAR_HERDS} }
+        for i in (0..count) do
+            let spot {herd_spot}
+            if (spot != nil) { found_herd kind spot[0] spot[1] }
+        end
+    end
+    log "herds:" wild.herds.length "animals:" wild.animals.length
+end
+
+fn found_herd [kind x z] do
+    let def {ANIMALS.get kind}
+    let size {random_range def.herd[0] def.herd[1]}
+    wild.herds.push {=kind kind =x x =z z =size size =next_growth 0}
+    let herd (wild.herds.length - 1)
+    for i in (0..size) do
+        spawn_animal kind herd x z
+    end
+end
+
+fn spawn_animal [kind herd x z] do
+    let at {spawn_point x z 2 {ground_y x z}}
+    let id {ent_spawn kind at}
+    ent_speed id {ANIMALS.get kind}.amble
+    wild.animals.push {=id id =kind kind =herd herd =state :graze =timer 0.0 =last_hp {ent_health id}
+                       =target nil =cooldown 0.0 =angry_until 0 =chase_at nil =last_pos {ent_pos id}
+                       =hit_by nil}
+end
+
+# A herd with two or more left grows back, one at a time, to the size it was
+fn grow_herds [tick] do
+    let alive []
+    for h in wild.herds do
+        alive.push 0
+    end
+    for a in wild.animals do
+        alive.set a.herd (alive[a.herd] + 1)
+    end
+    let i 0
+    for h in wild.herds do
+        let count alive[i]
+        if ((count >= 2) and (count < h.size)) do
+            if (h.next_growth == 0) do
+                set h.next_growth (tick + {to_int (HERD_GROWTH_SECONDS * 30)})
+            elif (tick >= h.next_growth) do
+                set h.next_growth 0
+                spawn_animal h.kind i h.x h.z
+            end
+        else do
+            set h.next_growth 0
+        end
+        set i (i + 1)
+    end
+end
+
+# ---- Carcasses ----------------------------------------------------------------
+
+fn fall_animal [a] do
+    let p a.last_pos
+    if (p == nil) { return nil }
+    let x {floor p[0]}
+    let z {floor p[2]}
+    let y {ground_y x z}
+    # In the water it's lost, and on anything but open ground there's nowhere to lay it
+    let room (y != nil)
+    if room { set room (({fluid_at x (y + 1) z} == nil) and ({block_at x (y + 1) z} == :air)) }
+    if (not room) do
+        trace :hunt a.kind a.id "fell where nothing's left of it, at" p "to" a.hit_by
+        return nil
+    end
+    let loads {ANIMALS.get a.kind}.loads
+    world_set_block x (y + 1) z {to_sym "carcass_{loads}"}
+    wild.carcasses.push {=x x =y (y + 1) =z z =rot_at ({game_tick} + {to_int (CARCASS_ROT_SECONDS * 30)})}
+    trace :hunt a.kind a.id "fell at" [x (y + 1) z] "to" a.hit_by
+end
+
+fn rot_carcasses [tick] do
+    let i 0
+    while (i < wild.carcasses.length) do
+        let c wild.carcasses[i]
+        if (tick >= c.rot_at) do
+            if {is_carcass {block_at c.x c.y c.z}} { world_set_block c.x c.y c.z :air }
+            wild.carcasses.remove i
+        elif (not {is_carcass {block_at c.x c.y c.z}}) do
+            # Eaten
+            wild.carcasses.remove i
+        else do
+            set i (i + 1)
+        end
+    end
+end
+
+# ---- Behaviour ----------------------------------------------------------------
+
+fn tick_wild [tick] do
+    let i 0
+    while (i < wild.animals.length) do
+        let a wild.animals[i]
+        if {ent_alive a.id} do
+            let p {ent_pos a.id}
+            if (p != nil) { set a.last_pos p }
+            let by {ent_last_attacker a.id}
+            if ((by != nil) and (by != 0)) { set a.hit_by by }
+            if (((a.id + tick) % THINK_INTERVAL) == 0) { think_animal a tick }
+            set i (i + 1)
+        else do
+            fall_animal a
+            wild.animals.remove i
+        end
+    end
+    if ((tick % 30) == 17) do
+        rot_carcasses tick
+        grow_herds tick
+    end
+end
+
+fn think_animal [a tick] do
+    let pos {ent_pos a.id}
+    if (pos == nil) { return nil }
+    let def {ANIMALS.get a.kind}
+    set a.timer (a.timer - THINK_SECONDS)
+    if (a.cooldown > 0.0) { set a.cooldown (a.cooldown - THINK_SECONDS) }
+    let hp {ent_health a.id}
+    let attacker nil
+    if (hp < a.last_hp) { set attacker {ent_last_attacker a.id} }
+    if (attacker == 0) { set attacker nil }
+    set a.last_hp hp
+    if (a.kind == :boar) { return {think_boar a def pos attacker tick} }
+    think_deer a def pos attacker
+end
+
+fn go_animal [a x y z speed state] do
+    ent_stop a.id
+    ent_anim a.id :idle
+    ent_speed a.id speed
+    ent_goto a.id (x + 0.5) y (z + 0.5) =range 1.5 =partial true =max_nodes 3000
+    set a.state state
+end
+
+# Graze a while, or amble somewhere else on the herd's ground
+fn wander_or_graze [a def] do
+    let herd wild.herds[a.herd]
+    if ({random_range 1 10} <= 6) { return {graze a} }
+    let x (herd.x + {random_range (0 - def.wander) def.wander})
+    let z (herd.z + {random_range (0 - def.wander) def.wander})
+    let y {open_ground x z}
+    if (y == nil) { return {graze a} }
+    go_animal a x (y + 1) z def.amble :walk
+    set a.timer 6.0
+end
+
+fn graze [a] do
+    ent_stop a.id
+    ent_anim a.id :graze
+    set a.state :graze
+    set a.timer ({random_range 30 70} / 10.0)
+end
+
+# Anyone of any side this close: a body that belongs to nobody is another animal
+fn nearest_person [pos radius] do
+    for id in {ent_find pos[0] pos[1] pos[2] radius =max 8} do
+        let side {ent_faction id}
+        if ((side != nil) and (side != 0)) { return id }
+    end
+    return nil
+end
+
+fn think_deer [a def pos attacker] do
+    let threat attacker
+    if (threat == nil) { set threat {nearest_person pos def.flee} }
+    if (threat != nil) do
+        let from {ent_pos threat}
+        if ((from != nil) and ((a.state != :flee) or (a.timer <= 0.0))) { run_from a def pos from }
+        return nil
+    end
+    if (a.timer > 0.0) { return nil }
+    wander_or_graze a def
+end
+
+# Straight away from it, or off to one side or the other where that's water or a wall
+fn run_from [a def pos from] do
+    let dx (pos[0] - from[0])
+    let dz (pos[2] - from[2])
+    let d {sqrt ((dx * dx) + (dz * dz))}
+    if (d < 0.1) do
+        set dx 1.0
+        set dz 0.0
+        set d 1.0
+    end
+    for turn in [0.0 0.7 -0.7 1.4 -1.4] do
+        let c {cos turn}
+        let n {sin turn}
+        let x {floor (pos[0] + ((((dx * c) - (dz * n)) / d) * def.flee_to))}
+        let z {floor (pos[2] + ((((dx * n) + (dz * c)) / d) * def.flee_to))}
+        let y {open_ground x z}
+        if (y != nil) do
+            # Wounded, it can't run as it did
+            let whole ({ent_health a.id} / {ent_max_health a.id})
+            go_animal a x (y + 1) z (0.5 + (0.5 * whole)) :flee
+            set a.timer 3.0
+            return nil
+        end
+    end
+end
+
+fn think_boar [a def pos attacker tick] do
+    if ((attacker != nil) and {ent_alive attacker}) do
+        set a.target attacker
+        set a.angry_until (tick + {to_int (def.temper_seconds * 30)})
+    end
+    if (a.target == nil) do
+        if (a.timer > 0.0) { return nil }
+        return {wander_or_graze a def}
+    end
+
+    let at nil
+    let calm ((not {ent_alive a.target}) or (tick > a.angry_until))
+    if (not calm) do
+        set at {ent_pos a.target}
+        if ((at == nil) or ({dist2 at[0] at[2] pos[0] pos[2]} > (def.give_up * def.give_up))) { set calm true }
+    end
+    if calm do
+        set a.target nil
+        set a.chase_at nil
+        ent_stop a.id
+        ent_speed a.id def.amble
+        set a.state :graze
+        set a.timer 1.0
+        return nil
+    end
+
+    if ({dist3 pos at} <= def.reach) do
+        if (a.chase_at != nil) do
+            ent_stop a.id
+            set a.chase_at nil
+        end
+        if (a.cooldown <= 0.0) do
+            ent_look_at a.id at[0] at[1] at[2]
+            ent_anim a.id :gore
+            ent_damage a.target def.damage a.id
+            set a.cooldown def.cooldown
+        end
+        return nil
+    end
+    # A new route only once what it's after has moved off: searches are the cost
+    if ((a.chase_at == nil) or ({dist2 at[0] at[2] a.chase_at[0] a.chase_at[2]} > 9)) do
+        ent_stop a.id
+        ent_anim a.id :idle
+        ent_speed a.id 1.0
+        ent_goto a.id at[0] at[1] at[2] =range 1.2 =partial true =max_nodes 3000
+        set a.chase_at at
+        set a.state :charge
+    end
+end
+
+# Game near here that's going for someone of this side or its allies: an angry boar is anyone's
+# enemy for as long as it's angry
+fn game_after [faction pos radius] do
+    let out []
+    for a in wild.animals do
+        if ((a.target != nil) and {ent_alive a.target} and (a.last_pos != nil)) do
+            let side {ent_faction a.target}
+            let near ({dist2 a.last_pos[0] a.last_pos[2] pos[0] pos[2]} < (radius * radius))
+            if (near and (side != nil) and (side != 0) and (not {hostile factions[faction] factions[side]})) { out.push a.id }
+        end
+    end
+    return out
+end
+
+# Paths and anger aren't saved: everyone starts afresh, grazing
+fn settle_wild_after_resume [] do
+    for a in wild.animals do
+        set a.state :graze
+        set a.timer 0.0
+        set a.target nil
+        set a.chase_at nil
+        set a.cooldown 0.0
+        if {ent_alive a.id} do
+            set a.last_hp {ent_health a.id}
+            ent_speed a.id {ANIMALS.get a.kind}.amble
+        end
+    end
+end

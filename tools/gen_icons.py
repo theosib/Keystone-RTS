@@ -157,6 +157,22 @@ def scout(draw):
     draw.ellipse([226, 226, 286, 286], fill=BARK, outline=OUTLINE, width=LINE // 2)
 
 
+def hunter(draw):
+    """A stag's head: what a Hunter goes out for"""
+    for side in (-1, 1):
+        beam = [(256 + side * 40, 250), (256 + side * 120, 150), (256 + side * 150, 40)]
+        tines = [((256 + side * 96, 180), (256 + side * 40, 110)),
+                 ((256 + side * 132, 100), (256 + side * 200, 70))]
+        for width, colour in ((48, OUTLINE), (24, PARCHMENT)):
+            draw.line(beam, fill=colour, width=width, joint="curve")
+            for a, b in tines:
+                draw.line([a, b], fill=colour, width=width)
+    draw.polygon([(256, 470), (196, 340), (176, 250), (336, 250), (316, 340)], fill=BARK, outline=OUTLINE, width=LINE)
+    draw.polygon([(176, 250), (110, 220), (150, 290)], fill=BARK, outline=OUTLINE, width=LINE // 2)
+    draw.polygon([(336, 250), (402, 220), (362, 290)], fill=BARK, outline=OUTLINE, width=LINE // 2)
+    draw.ellipse([226, 420, 286, 470], fill=OUTLINE)
+
+
 def menu(draw):
     draw.rounded_rectangle([70, 56, 442, 456], radius=44, fill=PARCHMENT, outline=OUTLINE, width=LINE)
     for y in (160, 256, 352):
@@ -164,7 +180,7 @@ def menu(draw):
 
 
 ICONS = (timber, stone, provisions, population, army, shelter, forager_hut, sawpit, watchtower,
-         palisade_wall, train_hand, militia, shortbow, scout, menu)
+         palisade_wall, train_hand, militia, shortbow, scout, hunter, menu)
 
 
 def main():

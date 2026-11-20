@@ -129,10 +129,18 @@ def faults(model):
                 yield f"{a['name']} and {b['name']}: {face} faces {gap:.3f} apart"
 
 
+def skeleton_of(path):
+    for line in path.read_text().splitlines():
+        key, _, value = line.partition(":")
+        if key == "skeleton":
+            return value.strip()
+    return "humanoid"
+
+
 def main():
-    rig = bones(MODELS / "humanoid.skeleton")
     failed = False
     for path in sorted(MODELS.glob("*.emodel")):
+        rig = bones(MODELS / f"{skeleton_of(path)}.skeleton")
         model = parts(path)
         for part in model:
             pose(part, rig)

@@ -47,3 +47,7 @@ menu.quit: Sauvegarder et quitter
 menu.cancel: Annuler
 menu.new_yes: Commencer une nouvelle partie
 menu.new_confirm: Recommencer ? Cette partie sera remplacée.
+block.carcass_1: Os
+block.carcass_2: Carcasse
+block.carcass_3: Carcasse
+block.carcass_4: Carcasse

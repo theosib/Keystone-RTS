@@ -71,6 +71,7 @@ work.idle: Idle
 work.hold: Holding position
 work.march: Marching
 work.scout: Scouting
+work.hunt_game: Hunting
 work.fight: Fighting
 work.break_keystone: Breaking the Keystone
 work.wreck: Breaking down a {name}
@@ -85,6 +86,12 @@ unit.shortbow: Shortbow
 unit.shortbow.other: Shortbows
 unit.scout: Pathfinder
 unit.scout.other: Pathfinders
+unit.hunter: Hunter
+unit.hunter.other: Hunters
+unit.deer: Deer
+unit.deer.other: Deer
+unit.boar: Boar
+unit.boar.other: Boar
 match.victory: Victory
 match.defeat: Your Keystone has fallen
 match.victory.detail: The rival Keystone is yours.
@@ -116,6 +123,10 @@ block.log_palisade_top: Log Palisade
 block.planks: Planks
 block.sand: Sand
 block.mud: Mud
+block.carcass_1: Bones
+block.carcass_2: Carcass
+block.carcass_3: Carcass
+block.carcass_4: Carcass
 block.scaffold: Scaffold
 block.stone: Stone
 block.thatch: Thatch
@@ -170,6 +181,7 @@ tip.hand: Gathers, hauls and builds. Ready in {seconds} seconds.
 tip.militia: Fights hand to hand. Ready in {seconds} seconds.
 tip.shortbow: Shoots from up to {range} blocks away. Ready in {seconds} seconds.
 tip.scout: Uncovers the map on its own, and carries on from wherever you send it. Can't fight. Ready in {seconds} seconds.
+tip.hunter: Hunts deer near home by itself, and carries the meat back to the yard. Send it at a boar only with help: a boar fights back. Ready in {seconds} seconds.
 menu.resume: Resume
 menu.settings: Settings
 menu.new: New Game

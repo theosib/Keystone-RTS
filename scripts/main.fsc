@@ -12,6 +12,7 @@ source "scripts/combat.fsc"
 source "scripts/commander.fsc"
 source "scripts/match.fsc"
 source "scripts/pressures.fsc"
+source "scripts/wild.fsc"
 source "scripts/inspect.fsc"
 source "scripts/tasks.fsc"
 source "scripts/catalog.fsc"
@@ -547,6 +548,7 @@ on :start do
     end
 
     plant_groves
+    place_herds
     let brigands {SETTINGS.get :brigands}
     if (brigands != false) { make_brigands }
     log "settlements:" {alive_factions}.length
@@ -563,7 +565,7 @@ on :player_join do
 end
 
 on :save do
-    game_state_store {=factions factions =unit_index unit_index =contest contest}
+    game_state_store {=factions factions =unit_index unit_index =contest contest =wild wild}
 end
 
 # Paths, work claims, and shots in flight aren't saved, so whatever units were in the
@@ -673,6 +675,9 @@ on :resume do
     set factions saved.factions
     set unit_index saved.unit_index
     set contest saved.contest
+    # Saves from before there was game have none
+    if ({saved.get :wild} != nil) { set wild saved.wild }
+    settle_wild_after_resume
     for f in factions do
         if (f != nil) do
             # Saves from before teams had everyone on their own
@@ -704,6 +709,7 @@ on :tick do
     for f in factions do
         if (f != nil) { tick_faction f tick }
     end
+    tick_wild tick
     if ((tick % 30) == 3) { tick_match }
     publish_all tick
 end

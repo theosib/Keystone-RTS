@@ -118,6 +118,13 @@ step, and a change is only worth keeping once it holds on a fresh 32.
   having and can't carry an army by themselves. In a set fight on open ground, 5 militia charging 4
   bows (the same spend) still win, losing one. Cheaper bows (5 timber, 5 food), with no penalty up
   close, beat militia 19-10 as an army of nothing else. See "What a unit costs" in PLAN.md.
+- **Hunting is a late supplement** (2026-11-19). The veteran with Hunters against itself without,
+  32 games each: two Hunters from its sixth Hand, waiting for game to come into sight, lost 6-20.
+  Looking around for game, then carrying kills home (Hands had walked out for 3 food a trip), still
+  7-21 on the first numbers for game. With more game nearer home (10 deer herds of 4 to 6, from 28
+  blocks out, regrowing every 90 seconds) and one Hunter, 12-17, and with that Hunter only once it
+  has all its Hands, 13-17: noise. A bed early is worth more as a Hand, and in 20 minutes hunting
+  brings in little. That's the rule it plays by now.
 - **Clever beats nothing.** A guard kept back, a strike that races an attack on home, and three
   sent at their Keystone while their army is out each measured neutral or worse. They're gone:
   the code is smaller for it.

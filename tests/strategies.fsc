@@ -29,6 +29,8 @@ on :tick do
     DIFFICULTY.set :rush {variant v {=hands 6 =strike 4 =first_strike 240 =edge 0.0}}
     # Sit at home behind a big guard and only go out with a clear edge
     DIFFICULTY.set :turtle {variant v {=guard 4 =strike 10 =edge 1.5 =towers 1}}
+    # No Hunters
+    DIFFICULTY.set :unhunting {variant v {=hunters 0}}
     # Two kept at home whatever happens
     DIFFICULTY.set :guarded {variant v {=guard 2}}
 end

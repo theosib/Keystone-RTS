@@ -1,0 +1,97 @@
+# A wild boar: low, heavy in the shoulder, with tusks
+skeleton: boar
+anim:idle: boar_idle
+anim:walk: boar_walk
+anim:graze: boar_graze
+anim:gore: boar_gore
+
+part: body
+bone: body
+offset: 0 0.14 -0.04
+size: 0.5 0.48 0.92
+color: 0.2 0.13 0.08
+part: shoulders
+bone: body
+offset: 0 0.2 0.3
+size: 0.54 0.58 0.34
+color: 0.2 0.13 0.08
+part: ridge
+bone: body
+offset: 0 0.48 0.1
+size: 0.12 0.08 0.7
+color: 0.1 0.07 0.05
+part: head
+bone: neck
+offset: 0 0.08 0.2
+size: 0.36 0.34 0.36
+color: 0.2 0.13 0.08
+part: snout
+bone: neck
+offset: 0 0.02 0.42
+size: 0.2 0.16 0.14
+color: 0.1 0.07 0.05
+part: tusk_l
+bone: neck
+offset: -0.12 0.04 0.46
+size: 0.04 0.12 0.04
+color: 0.62 0.6 0.54
+part: tusk_r
+bone: neck
+offset: 0.12 0.04 0.46
+size: 0.04 0.12 0.04
+color: 0.62 0.6 0.54
+part: ear_l
+bone: neck
+offset: -0.14 0.3 0.12
+size: 0.08 0.1 0.04
+color: 0.1 0.07 0.05
+part: ear_r
+bone: neck
+offset: 0.14 0.3 0.12
+size: 0.08 0.1 0.04
+color: 0.1 0.07 0.05
+part: tail
+bone: tail
+offset: 0 -0.02 -0.05
+size: 0.04 0.16 0.04
+color: 0.1 0.07 0.05
+part: leg_fl
+bone: leg_fl
+offset: 0 -0.16 0
+size: 0.11 0.32 0.11
+color: 0.2 0.13 0.08
+part: leg_fl_hoof
+bone: leg_fl
+offset: 0 -0.33 0.01
+size: 0.16999999999999998 0.1 0.19
+color: 0.1 0.07 0.05
+part: leg_fr
+bone: leg_fr
+offset: 0 -0.16 0
+size: 0.11 0.32 0.11
+color: 0.2 0.13 0.08
+part: leg_fr_hoof
+bone: leg_fr
+offset: 0 -0.33 0.01
+size: 0.16999999999999998 0.1 0.19
+color: 0.1 0.07 0.05
+part: leg_bl
+bone: leg_bl
+offset: 0 -0.16 0
+size: 0.11 0.32 0.11
+color: 0.2 0.13 0.08
+part: leg_bl_hoof
+bone: leg_bl
+offset: 0 -0.33 0.01
+size: 0.16999999999999998 0.1 0.19
+color: 0.1 0.07 0.05
+part: leg_br
+bone: leg_br
+offset: 0 -0.16 0
+size: 0.11 0.32 0.11
+color: 0.2 0.13 0.08
+part: leg_br_hoof
+bone: leg_br
+offset: 0 -0.33 0.01
+size: 0.16999999999999998 0.1 0.19
+color: 0.1 0.07 0.05

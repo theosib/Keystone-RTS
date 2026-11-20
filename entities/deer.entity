@@ -1,0 +1,13 @@
+# Red deer: wary and quick, and food for anyone who can catch one
+name: deer
+half_extents: 0.35 0.7 0.35
+personal_space: 0.5
+max_speed: 6.5
+max_health: 24
+ai: none
+death_seconds: 1.4
+model: deer
+vision: 22
+anim:idle: 0
+anim:walk: 1
+anim:graze: 2

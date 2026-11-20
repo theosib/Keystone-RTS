@@ -21,17 +21,17 @@ set DIFFICULTY {
                  =retreat false =counter false =raids false =towers 0 =huts 1 =food_spare 0
                  =punish false =units [:militia]
                  =build_at 40 =spare_beds 0 =first_hut :sawpit =parallel false
-                 =station false =gather false =muster_queue 1}
+                 =station false =gather false =muster_queue 1 =hunters 0}
     =standard {=think 1.0 =hands 8 =strike 6 =first_strike 540 =guard 0 =edge 1.0
                =retreat true =counter true =raids false =towers 0 =huts 1 =food_spare 0
                =punish false =units [:militia :shortbow]
                =build_at 40 =spare_beds 1 =first_hut :sawpit =parallel false
-               =station true =gather true =muster_queue 2}
+               =station true =gather true =muster_queue 2 =hunters 1}
     =veteran {=think 0.5 =hands 20 =strike 7 =first_strike 420 =guard 0 =edge 1.0
               =retreat true =counter false =raids true =towers 0 =huts 3 =food_spare 0
               =punish true =units [:militia]
               =build_at 40 =spare_beds 2 =first_hut :sawpit =parallel true
-              =station true =gather true =muster_queue 2}
+              =station true =gather true =muster_queue 2 =hunters 1}
 }
 
 
@@ -111,7 +111,7 @@ end
 fn fighters_of [f] do
     let out []
     for s in f.army do
-        if ((s.stats.role != :scout) and (s.state != :rout)) { out.push s }
+        if ({fights s} and (s.state != :rout)) { out.push s }
     end
     return out
 end
@@ -144,7 +144,7 @@ fn note_enemy [c f id tick] do
     # Brigands are a fight like any other where they are, but they say nothing of a rival's army or home
     let brigand (entry.faction == BRIGAND_ID)
     if {record.has :stats} do
-        if (record.stats.role != :scout) do
+        if {fights record} do
             c.seen.set {to_sym id} {=kind record.kind =pos p =tick tick =brigand brigand}
             # A look at their soldiers away from here: what it knows of their army is fresh
             if (far and (not brigand)) { set c.intel_at tick }
@@ -343,6 +343,20 @@ fn plan_army [c f] do
     end
 
     if (f.muster.length >= c.level.muster_queue) { return nil }
+    if (({population f} + f.muster.length) >= f.housing) { return nil }
+    # A Hunter for the game near home, once there are all the Hands it wants: a bed early on is
+    # worth more as a Hand (AI.md)
+    let hunters 0
+    for s in f.army do
+        if (s.kind == :hunter) { set hunters (hunters + 1) }
+    end
+    for kind in f.muster do
+        if (kind == :hunter) { set hunters (hunters + 1) }
+    end
+    let wanted {c.level.get :hunters}
+    if ((wanted != nil) and (hunters < wanted) and (f.hands.length >= c.level.hands) and {can_afford f {UNITS.get :hunter}.cost}) {
+        return {queue_unit f :hunter}
+    }
     if (({population f} + f.muster.length) >= f.housing) { return nil }
     let kind {next_unit c}
     let cost {UNITS.get kind}.cost

@@ -4,7 +4,7 @@ fn block_at [x y z] {world_get_block x y z}
 
 # Terrain doesn't include plants and loose rock
 
-set SOFT_BLOCKS [:canopy :timber_log :berry_bush :berry_bush_bare :boulder]
+set SOFT_BLOCKS [:canopy :timber_log :berry_bush :berry_bush_bare :boulder :carcass_1 :carcass_2 :carcass_3 :carcass_4]
 
 fn not_soft [b] do
     if (b == :air) { return false }

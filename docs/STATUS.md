@@ -23,6 +23,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Delivery | Hands take what they've gathered straight to a site that needs it. The yard gets the rest, and first call on food and on what a soldier with a bed is waiting for |
 | Pathfinder | Explores by itself, nearest unseen ground first, and carries on from wherever it's sent |
 | Units | Each kind puts the team colour somewhere else, to read at a distance. A killed unit topples and turns to motes in its team colour |
+| Game | Herds of deer and boar, belonging to nobody. Deer run from anyone near, boar fight whoever hurts them. A Hunter goes out after deer near home by itself and carries its kill to the yard. Soldiers hunt by order, or take on a boar that's attacking their side. Anything else that falls is a carcass, which Hands nearby take as provisions before it rots. Herds grow back. Rivals keep Hunters too |
 | Steward | First-person avatar (Tab). Walks up one-block ledges, harvests, digs, and places blocks from the stockpile by hand, shown at once and corrected by the server |
 | Blocks | Blocks bar: a drag overhead marks a run for Hands, which is also how roads get laid |
 | Work panel | The queue of work for anyone, or each selected unit's task stack |

@@ -112,6 +112,16 @@ def mud():
     return img
 
 
+def carcass():
+    """Hide on the top half of the tile, bone on the bottom: a carcass's body, and what's left."""
+    hide = tint(flat((112, 74, 46)), smooth_noise(rng("hide"), 6), 0.3)
+    hide[::5] *= 0.85
+    bone = tint(flat((226, 214, 186)), smooth_noise(rng("bone"), 8), 0.1)
+    img = bone.copy()
+    img[:SIZE // 2] = hide[:SIZE // 2]
+    return img
+
+
 def turf_top():
     img = tint(flat((94, 148, 72)), smooth_noise(rng("turf"), 10), 0.2)
     return tint(img, smooth_noise(rng("turf2"), 5), 0.1)
@@ -363,6 +373,7 @@ def main():
     save("gravel", pebbles((140, 132, 120), "gravel"))
     save("sand", tint(flat((214, 196, 150)), smooth_noise(rng("sand"), 9), 0.1))
     save("mud", mud())
+    save("carcass", carcass())
     save("boulder", rock())
     save("bark", bark())
     save("log_end", log_end())

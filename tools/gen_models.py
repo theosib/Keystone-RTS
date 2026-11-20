@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate the humanoid rig and animation clips in models/.
+"""Generate the rigs, animation clips, and the animals' models in models/.
 
 Clips are written out rather than hand-edited because keyframes hold quaternions.
-Every keyframe repeats the bone's rest position: a clip replaces the bone's pose.
+Every keyframe repeats the bone's rest position: a clip replaces the bone's pose, so each rig has
+clips of its own.
 """
 import math
 from pathlib import Path
@@ -45,17 +46,17 @@ def rotation(angle):
     return quat_x(angle)
 
 
-def skeleton():
-    lines = ["# Shared humanoid rig. Feet at y=0, facing +Z."]
-    for name, (parent, pos) in BONES.items():
+def skeleton(bones=BONES, title="Shared humanoid rig"):
+    lines = [f"# {title}. Feet at y=0, facing +Z."]
+    for name, (parent, pos) in bones.items():
         lines += [f"bone: {name}", f"parent: {parent or '-'}", "position: {} {} {}".format(*pos)]
     return "\n".join(lines) + "\n"
 
 
-def clip(name, duration, tracks, loop=True):
+def clip(name, duration, tracks, loop=True, bones=BONES):
     lines = [f"name: {name}", f"duration: {duration}", f"loop: {'true' if loop else 'false'}"]
     for bone, frames in tracks.items():
-        pos = BONES[bone][1]
+        pos = bones[bone][1]
         lines.append(f"track: {bone}")
         for t, angle in frames:
             lines += [
@@ -75,6 +76,113 @@ def swing(amplitude, duration, phase=1):
         (round(3 * q, 4), -amplitude * phase),
         (duration, 0.0),
     ]
+
+
+# Four legs: the body hangs from its middle, the neck from its front, and the legs from its corners.
+# A deer stands tall on long legs; a boar is low, long and heavy in the shoulder.
+def quadruped(hip, length, width, neck_up):
+    half = length / 2
+    return {
+        "body": (None, (0, hip, 0)),
+        "neck": ("body", (0, neck_up, half)),
+        "tail": ("body", (0, 0.05, -half)),
+        "leg_fl": ("body", (-width, 0, half - 0.08)),
+        "leg_fr": ("body", (width, 0, half - 0.08)),
+        "leg_bl": ("body", (-width, 0, -half + 0.08)),
+        "leg_br": ("body", (width, 0, -half + 0.08)),
+    }
+
+
+DEER = quadruped(hip=0.78, length=1.0, width=0.14, neck_up=0.12)
+BOAR = quadruped(hip=0.42, length=0.95, width=0.16, neck_up=0.02)
+
+
+def box(name, bone, offset, size, color):
+    return "\n".join([f"part: {name}", f"bone: {bone}", "offset: {} {} {}".format(*offset),
+                      "size: {} {} {}".format(*size), "color: {} {} {}".format(*color)]) + "\n"
+
+
+def legs(length, thick, color, hoof):
+    out = ""
+    for bone in ("leg_fl", "leg_fr", "leg_bl", "leg_br"):
+        # The leg ends inside its hoof, which stands a little proud of it all round
+        out += box(bone, bone, (0, -(length - 0.06) / 2, 0), (thick, length - 0.06, thick), color)
+        out += box(bone + "_hoof", bone, (0, -length + 0.05, 0.01), (thick + 0.06, 0.1, thick + 0.08), hoof)
+    return out
+
+
+def deer_model():
+    # Entities are drawn brighter than their colours (1.6 times the light), so these are dark
+    coat, pale, dark = (0.46, 0.27, 0.13), (0.62, 0.55, 0.44), (0.14, 0.10, 0.07)
+    return ("# A red deer: long legs, a pale rump, and antlers\nskeleton: deer\n"
+            "anim:idle: deer_idle\nanim:walk: deer_walk\nanim:graze: deer_graze\n\n"
+            + box("body", "body", (0, 0.1, 0), (0.42, 0.42, 1.0), coat)
+            + box("belly", "body", (0, -0.08, 0), (0.3, 0.1, 0.8), pale)
+            + box("rump", "body", (0, 0.12, -0.5), (0.36, 0.3, 0.06), pale)
+            + box("neck", "neck", (0, 0.2, 0.06), (0.2, 0.42, 0.22), coat)
+            + box("head", "neck", (0, 0.44, 0.2), (0.2, 0.2, 0.34), coat)
+            + box("muzzle", "neck", (0, 0.37, 0.4), (0.12, 0.12, 0.08), dark)
+            + box("ear_l", "neck", (-0.13, 0.56, 0.1), (0.08, 0.12, 0.04), coat)
+            + box("ear_r", "neck", (0.13, 0.56, 0.1), (0.08, 0.12, 0.04), coat)
+            + box("antler_l", "neck", (-0.06, 0.72, 0.12), (0.04, 0.3, 0.04), pale)
+            + box("antler_r", "neck", (0.06, 0.72, 0.12), (0.04, 0.3, 0.04), pale)
+            + box("tine_l", "neck", (-0.11, 0.78, 0.18), (0.1, 0.04, 0.04), pale)
+            + box("tine_r", "neck", (0.11, 0.78, 0.18), (0.1, 0.04, 0.04), pale)
+            + box("tail", "tail", (0, -0.02, -0.03), (0.08, 0.12, 0.06), pale)
+            + legs(0.74, 0.08, coat, dark))
+
+
+def boar_model():
+    bristle, dark, tusk = (0.20, 0.13, 0.08), (0.10, 0.07, 0.05), (0.62, 0.60, 0.54)
+    return ("# A wild boar: low, heavy in the shoulder, with tusks\nskeleton: boar\n"
+            "anim:idle: boar_idle\nanim:walk: boar_walk\nanim:graze: boar_graze\nanim:gore: boar_gore\n\n"
+            + box("body", "body", (0, 0.14, -0.04), (0.5, 0.48, 0.92), bristle)
+            + box("shoulders", "body", (0, 0.2, 0.3), (0.54, 0.58, 0.34), bristle)
+            + box("ridge", "body", (0, 0.48, 0.1), (0.12, 0.08, 0.7), dark)
+            + box("head", "neck", (0, 0.08, 0.2), (0.36, 0.34, 0.36), bristle)
+            + box("snout", "neck", (0, 0.02, 0.42), (0.2, 0.16, 0.14), dark)
+            + box("tusk_l", "neck", (-0.12, 0.04, 0.46), (0.04, 0.12, 0.04), tusk)
+            + box("tusk_r", "neck", (0.12, 0.04, 0.46), (0.04, 0.12, 0.04), tusk)
+            + box("ear_l", "neck", (-0.14, 0.3, 0.12), (0.08, 0.1, 0.04), dark)
+            + box("ear_r", "neck", (0.14, 0.3, 0.12), (0.08, 0.1, 0.04), dark)
+            + box("tail", "tail", (0, -0.02, -0.05), (0.04, 0.16, 0.04), dark)
+            + legs(0.38, 0.11, bristle, dark))
+
+
+def animal_clips(prefix, bones, stride, step, gore=False):
+    """Idle, walk, and head down to graze. A walk moves diagonal pairs together."""
+    clips = {
+        "idle": clip("idle", 3.0, {
+            "neck": [(0.0, 0.0), (1.4, 0.06), (1.6, (0.0, 0.25)), (2.6, (0.0, 0.25)), (3.0, 0.0)],
+            "tail": swing(0.2, 1.5),
+        }, bones=bones),
+        "walk": clip("walk", step, {
+            "leg_fl": swing(stride, step), "leg_br": swing(stride, step),
+            "leg_fr": swing(stride, step, -1), "leg_bl": swing(stride, step, -1),
+            "neck": swing(0.05, step / 2),
+        }, bones=bones),
+        "graze": clip("graze", 2.0, {
+            "neck": [(0.0, 1.1), (0.5, 1.2), (1.0, 1.1), (1.5, 1.2), (2.0, 1.1)],
+            "tail": swing(0.25, 1.0),
+        }, bones=bones),
+    }
+    if gore:
+        # Head down and driven up into whatever's in front
+        clips["gore"] = clip("gore", 0.8, {
+            "neck": [(0.0, 0.0), (0.3, 0.55), (0.45, -0.45), (0.8, 0.0)],
+            "body": [(0.0, 0.0), (0.3, 0.08), (0.45, -0.1), (0.8, 0.0)],
+        }, loop=False, bones=bones)
+    for name, text in clips.items():
+        (OUT / f"{prefix}_{name}.anim").write_text(text)
+
+
+def animals():
+    (OUT / "deer.skeleton").write_text(skeleton(DEER, "A deer"))
+    (OUT / "boar.skeleton").write_text(skeleton(BOAR, "A wild boar"))
+    animal_clips("deer", DEER, stride=0.55, step=0.5)
+    animal_clips("boar", BOAR, stride=0.6, step=0.4, gore=True)
+    (OUT / "deer.emodel").write_text(deer_model())
+    (OUT / "boar.emodel").write_text(boar_model())
 
 
 def main():
@@ -138,6 +246,7 @@ def main():
         "torso": [(0.0, (0.0, -0.25)), (shoot, (0.0, -0.25))],
         "head": [(0.0, (0.0, 0.25)), (shoot, (0.0, 0.25))],
     }, loop=False))
+    animals()
     print(f"wrote {len(list(OUT.glob('*.anim')))} clips to {OUT}")
 
 

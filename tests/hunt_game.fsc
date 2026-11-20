@@ -1,0 +1,105 @@
+# Scenario: hunting. A Hunter goes after a deer near home by itself and brings it down, the deer
+# leaves a carcass, and the Hunter carries its meat home. A boar that's hurt goes for whoever hurt
+# it, and is a bigger carcass once it's down. A carcass nobody takes rots.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set herd nil
+set hunter nil
+set deer_down nil
+set carcass nil
+set boar nil
+set soldier nil
+set boar_struck false
+set rot nil
+
+fn herd_left [index] do
+    let n 0
+    for a in wild.animals do
+        if (a.herd == index) { set n (n + 1) }
+    end
+    return n
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 2) do
+        # Nobody to run from or to fight but the game
+        let rival factions[2]
+        set rival.commander nil
+        set herd wild.herds.length
+        found_herd :deer (f.x + 22) (f.z - 4)
+        set hunter {spawn_soldier f :hunter}
+    end
+
+    if ((t > 2) and (deer_down == nil) and ({herd_left herd} < wild.herds[herd].size)) do
+        set deer_down t
+        log "a deer fell after" ((t - 2) / 30) "seconds"
+        # Food's short, so someone goes for it
+        zone_take f.zone :provisions 100000 f.x f.z
+    end
+    if ((t == 1800) and (deer_down == nil)) { return {fail "the Hunter never brought a deer down"} }
+
+    if ((deer_down != nil) and (carcass == nil)) do
+        # Wherever it ran to before it fell
+        if (wild.carcasses.length > 0) { set carcass wild.carcasses[0] }
+        if ((carcass == nil) and (t > (deer_down + 30))) { return {fail "the deer left no carcass"} }
+        if (carcass != nil) {
+            if ({block_at carcass.x carcass.y carcass.z} != :carcass_3) { return {fail "a deer's carcass should have 3 loads"} }
+        }
+    end
+    if ((carcass != nil) and (boar == nil)) do
+        if (({hunter.get :brought} != nil) and (hunter.brought > 0)) do
+            log "the Hunter brought" hunter.brought "home" ((t - deer_down) / 30) "seconds after"
+            # A boar, and two militia for it: one alone is about its match
+            set soldier {spawn_soldier f :militia}
+            spawn_soldier f :militia
+            let p {ent_pos soldier.id}
+            set boar {ent_spawn :boar (p[0] + 6) p[1] p[2]}
+            wild.animals.push {=id boar =kind :boar =herd herd =state :graze =timer 0.0 =last_hp {ent_health boar}
+                               =target nil =cooldown 0.0 =angry_until 0 =chase_at nil =last_pos {ent_pos boar} =hit_by nil}
+            ent_damage boar 5.0 soldier.id
+            set boar_struck t
+        end
+    end
+    if ((carcass != nil) and (boar == nil) and (t > (deer_down + 2400))) { return {fail "the Hunter never brought its kill home"} }
+
+    if ((boar != nil) and (rot == nil)) do
+        let hp {ent_health soldier.id}
+        if ((t == (boar_struck + 300)) and (hp >= {ent_max_health soldier.id})) {
+            return {fail "the boar never went for the one who hit it"}
+        }
+        if (not {ent_alive boar}) do
+            let big false
+            for c in wild.carcasses do
+                if ({block_at c.x c.y c.z} == :carcass_4) { set big true }
+            end
+            if (not big) { return {fail "the boar left no carcass of 4 loads"} }
+            log "the boar went down after" ((t - boar_struck) / 30) "seconds, its attacker at" {floor hp}
+            # Every carcass rots, untouched, a little sooner than usual
+            set rot []
+            for c in wild.carcasses do
+                set c.rot_at (t + 60)
+                rot.push c
+            end
+        end
+        if (t > (boar_struck + 1800)) { return {fail "the boar was never brought down"} }
+    end
+
+    if ((rot != nil) and (t > (boar_struck + 100))) do
+        let all_gone true
+        for c in rot do
+            if {is_carcass {block_at c.x c.y c.z}} { set all_gone false }
+        end
+        if all_gone do
+            log "PASS"
+            game_exit 0
+        end
+    end
+    if (t == 8900) { fail "a carcass never rotted" }
+end

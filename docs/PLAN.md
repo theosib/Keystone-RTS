@@ -105,7 +105,7 @@ walls.
 |---|---|---|---|---|
 | 1 | Rivers, lakes, beaches | the world | `WaterwayPass`, `nav_max_wade` | Sites kept dry, a ford on each side's line to the middle |
 | 2 | Soldiers worth their cost | I | none | `UNITS` numbers, judged by duels and set fights. Bows are poor value now (AI.md) |
-| 3 | Animals and hunting | I | none expected: an animal is an entity with a script brain | Deer that run, boar that fight back, a Hunter's Lodge, meat into provisions |
+| 3 | Animals and hunting | I | none: an animal is an entity of faction 0 with a script brain (`wild.fsc`) | Done (2026-11-19): deer that run, boar that fight back, Hunters, carcasses into provisions. Not yet: wolves, horses to tame (for 7), a Hunting Lodge |
 | 4 | Fishing from the bank | I | none | A Fishing Hut on a shore, Hands fishing the water by it |
 | 5 | Epochs | II-IV | none | The Keystone's tiers and the Landmark choice, gating the palette and `UNITS` |
 | 6 | Boats | I fishing, II ferries, III war | Entities that float and steer on water: navigation on the surface, and carrying passengers | A Dock that builds them. Fishing boats go further out, ferries carry units over, war boats carry bows |

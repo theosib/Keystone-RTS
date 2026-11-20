@@ -44,6 +44,7 @@ fn order_soldier [s x y z] do
     set s.siege nil
     set s.wreck nil
     set s.fallbacks []
+    set s.roaming false
     # Drop any route in progress, or it arrives and reads as this order being done
     ent_stop s.id
 end
@@ -61,10 +62,11 @@ fn hunt [s id] do
     set s.chase_time 0.0
 end
 
-# Only soldiers hunt. Anyone else in the selection just goes there.
+# Only soldiers and Hunters hunt. Anyone else in the selection just goes there.
 fn order_attack [f cmd] do
     let quarry {lookup_unit cmd.target}
     let huntable ((quarry != nil) and {hostile f factions[quarry.faction]} and {ent_alive cmd.target} and {vision_can_see_ent f.id cmd.target})
+    if {is_game cmd.target} { set huntable {vision_can_see_ent f.id cmd.target} }
     let others []
     for id in cmd.units do
         let entry {lookup_unit id}
@@ -79,6 +81,91 @@ fn order_attack [f cmd] do
         end
     end
     if (others.length > 0) { order_units f {=units others =x cmd.x =y cmd.y =z cmd.z} }
+end
+
+# A Hunter with nothing to do goes after the nearest deer its side can see near home, and with none
+# in sight walks somewhere else near home to look. A boar fights back harder than one Hunter can
+# take, so it goes after one only when it's sent.
+fn seek_game [s pos] do
+    if {bring_in_kill s pos} { return nil }
+    if ((s.hunting != nil) and {ent_alive s.hunting}) { return nil }
+    if ((s.moving and (not {s.get :roaming})) or (s.target != nil)) { return nil }
+    let f factions[s.faction]
+    for id in {ent_find pos[0] pos[1] pos[2] HUNT_RANGE =type :deer =max 12} do
+        let at {ent_pos id}
+        let near ((at != nil) and ({dist2 at[0] at[2] f.x f.z} < (HUNT_RANGE * HUNT_RANGE)))
+        if (near and (id != s.ignore) and {is_game id} and (not {in_danger f at[0] at[2]}) and {vision_can_see_ent f.id id}) do
+            set s.waypoints []
+            return {hunt s id}
+        end
+    end
+    if s.moving { return nil }
+    let next {s.get :roam_at}
+    if ((next != nil) and ({game_tick} < next)) { return nil }
+    s.set :roam_at ({game_tick} + {to_int (HUNT_LOOK_SECONDS * 30)})
+    for i in (0..8) do
+        let angle ({random_float} * 6.28)
+        let r {random_range 20 HUNT_RANGE}
+        let x {floor (f.x + (r * {cos angle}))}
+        let z {floor (f.z + (r * {sin angle}))}
+        let y {open_ground x z}
+        if ((y != nil) and (not {in_danger f x z})) do
+            order_soldier s x (y + 1) z
+            set s.roaming true
+            return nil
+        end
+    end
+end
+
+# What a Hunter brings down it dresses where it lies, and carries home to the yard: Hands would make
+# a long walk of it, a load at a time. True while it's about that.
+fn bring_in_kill [s pos] do
+    let f factions[s.faction]
+    if ({s.get :meat} == nil) do
+        set s.meat 0
+        set s.brought 0
+    end
+    if (s.meat > 0) do
+        let yard [(f.x + 7) f.y (f.z - 6)]
+        if ({dist2 pos[0] pos[2] yard[0] yard[2]} < 25) do
+            zone_deposit f.zone :provisions s.meat f.x f.z
+            trace :hunt "hunter" s.id "side" f.id "brought home" s.meat
+            set s.brought (s.brought + s.meat)
+            set s.meat 0
+        elif (not s.moving) do
+            order_soldier s yard[0] yard[1] yard[2]
+        end
+        return true
+    end
+    # Its quarry just fell: where it was last seen is where it lies. Every side's units are in the
+    # index, and game isn't.
+    if ((s.hunting != nil) and (not {ent_alive s.hunting}) and ({lookup_unit s.hunting} == nil)) do
+        set s.kill_at [s.order_x s.order_y s.order_z {game_tick}]
+        set s.hunting nil
+        set s.target nil
+    end
+    let kill {s.get :kill_at}
+    if (kill == nil) { return false }
+    let carcass nil
+    for c in wild.carcasses do
+        if ({dist2 c.x c.z kill[0] kill[2]} < 36) { set carcass c }
+    end
+    if (carcass == nil) do
+        # The carcass is laid down the tick after, or there was nowhere to lay it
+        if ({game_tick} > (kill[3] + 90)) { set s.kill_at nil }
+        return ({game_tick} <= (kill[3] + 90))
+    end
+    if ({dist2 pos[0] pos[2] (carcass.x + 0.5) (carcass.z + 0.5)} > 6.25) do
+        if (not s.moving) { order_soldier s (carcass.x + 0.5) carcass.y (carcass.z + 0.5) }
+        return true
+    end
+    let block {block_at carcass.x carcass.y carcass.z}
+    if {is_carcass block} do
+        set s.meat ({carcass_loads block} * {HARVEST.get block}.units)
+        world_set_block carcass.x carcass.y carcass.z :air
+    end
+    set s.kill_at nil
+    return true
 end
 
 # Sight can drop out for a moment, even up close, and that's no reason to lose the trail
@@ -177,7 +264,9 @@ fn find_enemy [s pos radius] do
 
     let reach radius
     if ((s.order == :move) or {at_keystone s pos}) { set reach (s.stats.range + 1.0) }
-    return {nearest_visible s pos {ent_find pos[0] pos[1] pos[2] reach =enemy_of f =max 8}}
+    let enemy {nearest_visible s pos {ent_find pos[0] pos[1] pos[2] reach =enemy_of f =max 8}}
+    if (enemy != nil) { return enemy }
+    return {nearest_visible s pos {game_after f pos reach}}
 end
 
 # Besieging a Keystone, or with one in sight to go for
@@ -200,14 +289,20 @@ fn struck_by [s pos] do
     return {nearest_visible s pos [id]}
 end
 
+# Bows and Hunters shoot; militia and the rest strike where they stand
+fn shoots [s] { return ((s.stats.role == :ranged) or (s.stats.role == :hunter)) }
+
+# What a side counts as its army: not its Pathfinders, nor its Hunters
+fn fights [s] { return ((s.stats.role == :melee) or (s.stats.role == :ranged)) }
+
 fn in_range [s pos target_pos] do
     let dy (pos[1] - target_pos[1])
     let reach s.stats.range
-    if ((s.stats.role == :ranged) and (dy > 0.0)) {
+    if ({shoots s} and (dy > 0.0)) {
         set reach (reach + (dy / HIGH_GROUND_RANGE_PER_BLOCKS))
     }
     if ({dist3 pos target_pos} > reach) { return false }
-    if (s.stats.role == :ranged) {
+    if {shoots s} {
         # Arrows stop at the first wall, so an archer has to find a clear shot
         return {line_of_sight pos[0] (pos[1] + 1.4) pos[2] target_pos[0] (target_pos[1] + 1.0) target_pos[2]}
     }
@@ -217,13 +312,13 @@ end
 fn strike [s pos target_pos] do
     let damage s.stats.damage
     if ((pos[1] - target_pos[1]) >= 2.0) { set damage (damage * HIGH_GROUND_DAMAGE) }
-    if ((s.stats.role == :ranged) and ({dist3 pos target_pos} < POINT_BLANK)) { set damage (damage * POINT_BLANK_DAMAGE) }
+    if ({shoots s} and ({dist3 pos target_pos} < POINT_BLANK)) { set damage (damage * POINT_BLANK_DAMAGE) }
 
     ent_look_at s.id target_pos[0] target_pos[1] target_pos[2]
     ent_anim s.id {strike_anim s}
     set s.striking STRIKE_SECONDS
 
-    if (s.stats.role == :ranged) do
+    if {shoots s} do
         projectile_fire pos[0] (pos[1] + 1.4) pos[2] target_pos[0] (target_pos[1] + 1.0) target_pos[2] =speed ARROW_SPEED =damage damage =owner s.id =faction s.faction
     else do
         ent_damage s.target damage s.id
@@ -260,7 +355,7 @@ fn nearest_free [f pos] do
     let best nil
     let best_d (ALARM_REACH * ALARM_REACH)
     for s in f.army do
-        let free ((s.stats.role != :scout) and (s.state != :rout) and {keeping_post s} and (s.target == nil))
+        let free ({fights s} and (s.state != :rout) and {keeping_post s} and (s.target == nil))
         if (free and (s.last_pos != nil)) do
             let d {dist2 s.last_pos[0] s.last_pos[2] pos[0] pos[2]}
             if (d < best_d) do
@@ -651,6 +746,7 @@ fn think_soldier [s] do
     if (s.morale < ROUT_AT) { return rout s }
 
     if (s.stats.role == :scout) { return think_scout s pos }
+    if (s.stats.role == :hunter) { seek_game s pos }
 
     # At peace, a soldier just goes where it's told
     let commander factions[s.faction].commander

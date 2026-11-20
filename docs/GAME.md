@@ -29,6 +29,16 @@ the walk and hard to watch over. Soldiers eat too: each takes a ration from the 
 minutes, and with none there it goes hungry, loses heart and soon breaks. An army costs food for as
 long as it stands.
 
+There's game out there too: herds of deer, and wild boar, on their own ground away from anyone's
+home. A **Hunter** goes out after deer near home by itself, looking around when there are none in
+sight, and carries what it brings down back to the yard. Deer run from anyone who comes near, and a
+wounded one can't run as it did. Anything else killed lies where it fell, and Hands nearby take the
+meat, a load at a time. A boar leaves more meat, but it's slow to anger
+and dangerous once it is: it goes for whoever hurt it, and one militia is about its match, so a
+Hunter goes after one only when sent, with help. Soldiers nearby take on a boar that's attacking one
+of their own. A carcass nobody comes for rots in a few minutes, and a herd grows back while two or
+more of it are left.
+
 Sooner or later someone comes. Brigands come first, from about the seventh minute: a band from the
 edge of the map, bigger each time, going for whichever settlement has the fewest soldiers at home.
 They kill Hands and break buildings for a couple of minutes and then go, but they can't take a
@@ -186,7 +196,7 @@ you can do to the world. Everything below this line is design and isn't built ye
 | **Bastion** | Engineer | Deep shafts, waterwheels and aqueducts, siege works and sappers |
 | **Forge** | Reshape | Steel, earthworks on a grand scale, and black powder |
 
-Also planned: animals to hunt, fishing, boats for fishing, ferrying and fighting, bridges, mounted
+Also planned: fishing, boats for fishing, ferrying and fighting, bridges, mounted
 warriors, siege engines, a Landmark to choose between at each advance, freeform buildings defined by what's in
 the room, refitting a timber town to stone in place, walls that collapse when you take out
 what holds them up, fire that spreads, and the Steward fighting and carrying a captured Keystone.

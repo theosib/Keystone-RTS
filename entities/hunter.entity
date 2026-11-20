@@ -1,0 +1,15 @@
+# Hunter: goes after game near home by itself, and leaves a Hand the carcass
+name: hunter
+half_extents: 0.3 0.85 0.3
+personal_space: 0.4
+max_speed: 4.2
+max_health: 30
+ai: none
+death_seconds: 1.2
+death_emitter: keystone:unit_lost
+model: hunter
+vision: 30
+anim:idle: 0
+anim:walk: 1
+anim:work: 2
+anim:shoot: 3

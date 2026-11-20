@@ -671,7 +671,7 @@ fn palette_children [] do
     unit_button children {loc "ui.train_hand"} "train_hand" "hand" fn [] do
         train_hands {click_count}
     end
-    for name in ["militia" "shortbow" "scout"] do
+    for name in ["militia" "shortbow" "scout" "hunter"] do
         muster_button children name
     end
     return children
@@ -794,11 +794,15 @@ end
 
 # Whoever's closest to the cursor, within reason: at a distance a body's only a few pixels across,
 # and it's on the move
+set GAME_KINDS [:deer :boar]
+
 fn enemy_under [x y] do
     for reach in ENEMY_PICK_REACHES do
         for id in {pick_entities (x - reach) (y - reach) (x + reach) (y + reach)} do
             let side {entity_faction id}
             if ((side != nil) and (side != 0) and (side != my_faction)) { return id }
+            # Game belongs to nobody, and anyone may hunt it
+            if ((side == 0) and {GAME_KINDS.contains {entity_type id}}) { return id }
         end
     end
     return nil

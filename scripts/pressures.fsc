@@ -6,8 +6,9 @@
 # A soldier eats from the yard, wherever it is, one each RATION_SECONDS. Without, it goes hungry: it
 # loses heart, and soon breaks and goes home. An army is a cost for as long as it stands.
 
+# A Hunter lives off what it catches
 fn update_rations [f] do
-    for s in f.army do
+    for s in {f.army.filter fn [s] (s.stats.role != :hunter)} do
         let left {s.get :ration}
         if (left == nil) { set left {random_range 1 RATION_SECONDS} }
         set left (left - 1)
@@ -96,7 +97,7 @@ fn home_guard [f] do
     if (f.keystone == nil) { return 0 }
     let n 0
     for s in f.army do
-        if ((s.stats.role != :scout) and (s.last_pos != nil) and ({dist2 s.last_pos[0] s.last_pos[2] f.x f.z} < (40 * 40))) {
+        if ({fights s} and (s.last_pos != nil) and ({dist2 s.last_pos[0] s.last_pos[2] f.x f.z} < (40 * 40))) {
             set n (n + 1)
         }
     end

@@ -54,6 +54,6 @@ fn catalog_of [] do
                       =palisade_wall {building_entry :palisade_wall}
                       =hand {=needs HAND_COST =seconds {floor HAND_TRAIN_SECONDS} =bed true}
                       =militia {unit_entry :militia} =shortbow {unit_entry :shortbow}
-                      =scout {unit_entry :scout}}
+                      =scout {unit_entry :scout} =hunter {unit_entry :hunter}}
             =blocks BLOCK_MATERIAL =breaks {break_results}}
 end

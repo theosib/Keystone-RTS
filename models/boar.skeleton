@@ -1,0 +1,22 @@
+# A wild boar. Feet at y=0, facing +Z.
+bone: body
+parent: -
+position: 0 0.42 0
+bone: neck
+parent: body
+position: 0 0.02 0.475
+bone: tail
+parent: body
+position: 0 0.05 -0.475
+bone: leg_fl
+parent: body
+position: -0.16 0 0.39499999999999996
+bone: leg_fr
+parent: body
+position: 0.16 0 0.39499999999999996
+bone: leg_bl
+parent: body
+position: -0.16 0 -0.39499999999999996
+bone: leg_br
+parent: body
+position: 0.16 0 -0.39499999999999996

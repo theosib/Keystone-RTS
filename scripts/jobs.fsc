@@ -152,10 +152,15 @@ fn start_gather [w kind] do
     if (pos == nil) { return nil }
     let f factions[w.faction]
     let names {HARVEST_BLOCKS.get kind}
+    let first {HARVEST_FIRST.get kind}
+    if (first != nil) { set names (names + first) }
     # The nearest can all be where the raiders are
     let look 24
     if (f.danger.length > 0) { set look 96 }
     let found {find_blocks pos[0] pos[1] pos[2] SEARCH_RADIUS names =max look}
+    if (first != nil) {
+        set found ({find_blocks pos[0] pos[1] pos[2] HARVEST_FIRST_RADIUS first =max 8} + found)
+    }
 
     for p in found do
         if ({is_trunk_base p} and (not {in_danger f p[0] p[2]})) do
@@ -277,6 +282,8 @@ fn finish_harvest [w] do
     elif (block == :berry_bush) do
         world_set_block p[0] p[1] p[2] :berry_bush_bare
         factions[w.faction].regrow.push {=x p[0] =y p[1] =z p[2] =at ({game_tick} + (BUSH_REGROW_SECONDS * 30))}
+    elif {is_carcass block} do
+        world_set_block p[0] p[1] p[2] {carcass_less block}
     else do
         world_set_block p[0] p[1] p[2] :air
     end

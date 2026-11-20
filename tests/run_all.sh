@@ -114,6 +114,7 @@ run siege 3900
 run wreck 9000
 run pause 700
 run water 3000
+run hunt_game 9000
 
 if python3 "$here/tools/check_models.py"; then
     echo "PASS  check_models"
