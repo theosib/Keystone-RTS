@@ -392,8 +392,22 @@ ROCKS = [  # name, x0 y0 z0 x1 y1 z1, bevel
 ]
 
 
+# Underneath, where no boulder carries it, so one left hanging isn't hollow: the big rock's foot,
+# which is the base's too, and the strips of the small one's that stick out past it. Same-facing
+# faces that overlapped would fight.
+BOULDER_BOTTOMS = [  # name, x0 z0 x1 z1
+    ("open_down_foot", (0.04, 0.06, 0.94, 0.92)),
+    ("open_down_rock2_east", (0.94, 0.44, 0.97, 0.97)),
+    ("open_down_rock2_south", (0.50, 0.92, 0.94, 0.97)),
+]
+
+
 def boulder_geometry():
-    return clump("Boulder", [(name, box, (0, 0, 1, 1), slope) for name, box, slope in ROCKS])
+    bottoms = []
+    for name, (x0, z0, x1, z1) in BOULDER_BOTTOMS:
+        corners = [(x0, 0.0, z0), (x1, 0.0, z0), (x1, 0.0, z1), (x0, 0.0, z1)]
+        bottoms.append(face(f"{name}_bottom", corners, [(x0, z0), (x1, z0), (x1, z1), (x0, z1)], (0, -1, 0)))
+    return clump("Boulder", [(name, box, (0, 0, 1, 1), slope) for name, box, slope in ROCKS], bottoms)
 
 
 # ---- Carcass -----------------------------------------------------------------------------
