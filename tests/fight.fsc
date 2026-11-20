@@ -1,0 +1,57 @@
+# Not a test: a set fight, to see what an even spend buys. BOWS shortbows of side 1 stand in a line
+# by their Hall, and MILITIA of side 2 start 22 blocks off and charge them. It prints who's left
+# standing, and their health; a fight still going at tick 2400 is one where the militia broke.
+#   finevox_headless --game-root . --ticks 2600 --script tests/fight.fsc --define BOWS=4 --define MILITIA=5
+set bows []
+set foes []
+set over false
+
+fn place [s p] do
+    ent_stop s.id
+    ent_set_pos s.id p[0] p[1] p[2]
+    set s.post p
+    set s.last_pos p
+end
+
+fn standing [list] do
+    let n 0
+    let hp 0
+    for s in list do
+        if {ent_alive s.id} do
+            set n (n + 1)
+            set hp (hp + {ent_health s.id})
+        end
+    end
+    return [n hp]
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+    let e factions[2]
+    if (t == 30) do
+        let y f.y
+        for i in (0..{to_int BOWS}) do
+            let s {spawn_soldier f :shortbow}
+            place s [(f.x - 8) y (f.z + 6 + (i * 1.5))]
+            bows.push s
+        end
+        let ids []
+        for i in (0..{to_int MILITIA}) do
+            let s {spawn_soldier e :militia}
+            place s [(f.x + 14) y (f.z + 6 + (i * 1.5))]
+            foes.push s
+            ids.push s.id
+        end
+        order_units e {=units ids =x (f.x - 8) =y y =z (f.z + 10)}
+    end
+    if ((t > 60) and (not over) and ((t % 15) == 0)) do
+        let b {standing bows}
+        let m {standing foes}
+        if ((b[0] == 0) or (m[0] == 0) or (t > 2400)) do
+            set over true
+            log "FIGHT bows" b[0] "hp" {round b[1]} "militia" m[0] "hp" {round m[1]} "at" t
+            game_exit 0
+        end
+    end
+end

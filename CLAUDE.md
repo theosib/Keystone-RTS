@@ -161,6 +161,8 @@ finescript traps that cost real time here:
   map is much harder to take, and one side's games alone mislead. `DUEL_JOBS=8` suits the Mac.
   The same seed plays differently each run (threads): 12 games swung a level from 5-1 to 2-5, so
   judge on 32 (16 seeds both ways). That's about 3 minutes of 20-minute games.
+- `tests/fight.fsc` is a set fight of bows against charging militia, to check what an even spend
+  buys beside what duels say (PLAN.md, "What a unit costs").
 - Levels to try go in `tests/strategies.fsc` (`DUEL_SCRIPT`), as the veteran with numbers changed,
   so nothing in the tree changes. `tools/tune.py` hill-climbs a level's numbers by playing it
   against itself. A duel reads scripts as each game starts, so editing the tree mid-run mixes
