@@ -104,7 +104,7 @@ walls.
 | # | What | Epoch | Engine | Keystone |
 |---|---|---|---|---|
 | 1 | Rivers, lakes, beaches | the world | `WaterwayPass`, `nav_max_wade` | Sites kept dry, a ford on each side's line to the middle |
-| 2 | Soldiers worth their cost | I | none | `UNITS` numbers, judged by duels. Bows are poor value now (AI.md) |
+| 2 | Soldiers worth their cost | I | none | `UNITS` numbers, judged by duels and set fights. Bows are poor value now (AI.md) |
 | 3 | Animals and hunting | I | none expected: an animal is an entity with a script brain | Deer that run, boar that fight back, a Hunter's Lodge, meat into provisions |
 | 4 | Fishing from the bank | I | none | A Fishing Hut on a shore, Hands fishing the water by it |
 | 5 | Epochs | II-IV | none | The Keystone's tiers and the Landmark choice, gating the palette and `UNITS` |
@@ -124,3 +124,16 @@ Nothing in the noise promises a way across, and one seed in six had none between
 `ford_the_way` lays a gravel ford wherever the line from the middle of the map, out through a
 settlement to the edge, meets deep water: every side can reach the middle, and brigands, who come in
 along that line, can reach it.
+
+### What a unit costs
+
+Units don't cost the same, and shouldn't: a dearer unit is a better one for what it costs, with a
+weakness of its own that something cheaper can use. Militia are cheap and sturdy, and have to close
+in. Bows cost more, reach far, gain from height and walls, and are poor at close quarters. Later,
+horse costs more again, is fast and hits hard on the charge, and spears stop it. Siege is the dearest
+and slowest, and breaks what nothing else can.
+
+So the test of a new unit's numbers is that no one kind wins on its own: an army of only that kind,
+or only militia, does no better than one that mixes them, played as duels both ways round
+(`tools/duel.sh`, CLAUDE.md), and a set fight of equal spending goes the way its strengths say it
+should.

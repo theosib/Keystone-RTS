@@ -217,6 +217,7 @@ end
 fn strike [s pos target_pos] do
     let damage s.stats.damage
     if ((pos[1] - target_pos[1]) >= 2.0) { set damage (damage * HIGH_GROUND_DAMAGE) }
+    if ((s.stats.role == :ranged) and ({dist3 pos target_pos} < POINT_BLANK)) { set damage (damage * POINT_BLANK_DAMAGE) }
 
     ent_look_at s.id target_pos[0] target_pos[1] target_pos[2]
     ent_anim s.id {strike_anim s}

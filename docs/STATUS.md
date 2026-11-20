@@ -65,7 +65,8 @@ Honest gaps against Stage 1:
 - **Day and night.** Nights had no part in the game and only made it harder to see, so the sun is
   held at `TIME_OF_DAY`. Bringing them back wants a rule that makes them matter.
 - **Audio.** No sound content yet.
-- **Balance.** Numbers in `scripts/data.fsc` are first guesses.
+- **Balance.** Numbers in `scripts/data.fsc` are first guesses, but for bows against militia,
+  which duels measured (AI.md).
 - **CJK fonts.** Strings and plurals are ready; finegui has no font fallback yet.
 
 ## Not tested

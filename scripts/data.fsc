@@ -143,7 +143,7 @@ set THINK_SECONDS (THINK_INTERVAL / 30.0)
 set UNITS {
     =militia {=role :melee =damage 8.0 =range 2.2 =cooldown 1.0 =aggro 16 =strike_anim :thrust
               =cost {=timber 4 =provisions 8}}
-    =shortbow {=role :ranged =damage 6.0 =range 18.0 =cooldown 1.7 =aggro 20 =strike_anim :shoot
+    =shortbow {=role :ranged =damage 7.0 =range 18.0 =cooldown 1.4 =aggro 20 =strike_anim :shoot
                =cost {=timber 8 =provisions 6}}
     =scout {=role :scout =damage 0.0 =range 0.0 =cooldown 1.0 =aggro 0 =strike_anim :work
             =cost {=provisions 8}}
@@ -194,6 +194,9 @@ set EXPLORE_STUCK_SQ 16
 # Actual height wins fights (DESIGN 6.2)
 set HIGH_GROUND_RANGE_PER_BLOCKS 2.0
 set HIGH_GROUND_DAMAGE 1.15
+# An arrow loosed at someone this close, while they're at you, does this much of its damage
+set POINT_BLANK 3.0
+set POINT_BLANK_DAMAGE 0.5
 
 # Morale: 1.0 is steady. Units rout below ROUT_AT and rally above RALLY_AT.
 set ROUT_AT 0.25

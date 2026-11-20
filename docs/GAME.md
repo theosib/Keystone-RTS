@@ -120,6 +120,9 @@ Combat works off the world's real shape:
 
 - **Arrows fly.** They're simulated in flight, and real cover stops them.
 - **High ground matters.** Shooting from above gives you the advantage.
+- **Each kind has its job.** Militia are cheap and tough, and have to get close. Shortbows cost more
+  and hit from far off, but they're fragile, and poor at close quarters: keep militia in front of
+  them. Bows on their own lose to militia that reach them.
 - **Soldiers break.** Morale gives way, and a beaten force routs instead of dying to the last.
 - **Soldiers think a little for themselves.** They guard where you sent them, answer whoever hits
   them, and go to an alarm in proportion to the raid, then back again. On guard they let an enemy

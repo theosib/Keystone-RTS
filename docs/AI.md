@@ -110,10 +110,14 @@ step, and a change is only worth keeping once it holds on a fresh 32.
   economy wants an army early enough to use it. Against a small economy with an early army, like
   `swords` (8 Hands, out at minute 7), holding two back at home lost 12-16, and sending everyone
   won 19-8. The levels don't form a ladder: each beats some and loses to others.
-- **Bows are poor value.** A shortbow does 3.5 damage a second to a militia's 8, has 35 health to
-  60, and costs 8 timber to 4. Arrows stop at walls, and militia close the distance fast. Militia
-  alone beat the mixed army 9-2. That's the game's balance, not the AI's: a fix belongs in
-  `UNITS`, and the counter rule in `next_unit` comes back into play once bows are worth having.
+- **Bows were poor value** (until 2026-11-19). A shortbow did 3.5 damage a second to a militia's 8,
+  had 35 health to 60, and cost 8 timber to 4. The mixed army, a quarter bows, lost to militia alone
+  8-18 with 6 drawn. Now it does 5 a second, has 40 health and costs the same, but does half damage
+  to anyone within 3 blocks: it's dearer than a militia and better for it at range, and poor up
+  close. Mixed against militia alone went 13-16-3, and bows alone lost 10-18-4, so bows are worth
+  having and can't carry an army by themselves. In a set fight on open ground, 5 militia charging 4
+  bows (the same spend) still win, losing one. Cheaper bows (5 timber, 5 food), with no penalty up
+  close, beat militia 19-10 as an army of nothing else. See "What a unit costs" in PLAN.md.
 - **Clever beats nothing.** A guard kept back, a strike that races an attack on home, and three
   sent at their Keystone while their army is out each measured neutral or worse. They're gone:
   the code is smaller for it.
