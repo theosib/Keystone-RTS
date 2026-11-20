@@ -118,7 +118,9 @@ walls.
 Rivers are a barrier. They're crossed at fords and marshes, both a block deep, which units wade: the
 difference between them is only how they look (a gravel bed, or mud with tussocks). Lakes are rimmed
 with a shallow edge, and both have sand beaches. All water is at sea level, so rivers and lakes meet
-where they cross. The numbers are in `game.conf`.
+where they cross. The usual numbers are in `game.conf`, and each land in the lobby (`lobby.fsc`) sets
+its own: a desert lowers its sea below most of its hollows, a dense forest has a pond or two, and
+River divide has a single river (`river_course: line`) between the two sides.
 
 Nothing in the noise promises a way across, and one seed in six had none between the two sides. So
 `ford_the_way` lays a gravel ford wherever the line from the middle of the map, out through a

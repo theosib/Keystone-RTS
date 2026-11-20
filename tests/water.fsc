@@ -1,0 +1,69 @@
+# Scenario: rivers and lakes. Each settlement stands on dry ground, nothing is built in the water,
+# not even an edge of it, and one side can walk to the other's Hall: rivers are a barrier, but
+# ford_the_way leaves a way across.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn wet [x z] {fluid_at x SEA_LEVEL z}
+
+# A plot a Shelter could have, with its corner in the water and its middle on dry land
+fn shore_plot [f size] do
+    let r 20
+    while (r < 90) do
+        for dx in [(0 - r) 0 r] do
+            for dz in [(0 - r) 0 r] do
+                let x (f.x + dx)
+                let z (f.z + dz)
+                let cx (x + {floor (size.size_x / 2)})
+                let cz (z + {floor (size.size_z / 2)})
+                if (({wet x z} != nil) and ({wet cx cz} == nil)) { return [cx cz] }
+            end
+        end
+        set r (r + 1)
+    end
+    return nil
+end
+
+set walker nil
+
+on :tick do
+    let t {game_tick}
+    let a factions[1]
+    let b factions[2]
+
+    if (t == 5) do
+        for f in [a b] do
+            if (not {dry_around f.x f.z LEVEL_RADIUS}) { return {fail "side {f.id} was settled by the water"} }
+        end
+
+        let size {blueprint_info :shelter}
+        let plot {shore_plot a size}
+        if (plot == nil) { return {fail "no shore to try a Shelter on: the map has changed"} }
+        if ({place_building a :shelter plot[0] plot[1] 0} != nil) {
+            return {fail "a Shelter went up with its corner in the water at {plot[0]} {plot[1]}"}
+        }
+
+        set walker {ent_spawn :scout (a.x + 3) (a.y + 1) (a.z + 8) =faction BRIGAND_ID}
+        ent_goto walker b.x b.y b.z =range 6.0 =partial true =max_nodes 12000
+    end
+
+    if ((t > 5) and ((t % 15) == 0)) do
+        let p {ent_pos walker}
+        if (({abs (p[0] - b.x)} < 12) and ({abs (p[2] - b.z)} < 12)) do
+            log "PASS: walked to the other side's Hall in" ((t - 5) / 30) "seconds"
+            game_exit 0
+        end
+        let nav {ent_nav walker}
+        if ((nav == :arrived) or (nav == :failed) or (nav == :idle)) do
+            ent_stop walker
+            ent_goto walker b.x b.y b.z =range 6.0 =partial true =max_nodes 12000
+        end
+    end
+    if (t == 2900) do
+        let p {ent_pos walker}
+        fail "never reached the other side: stuck at {p[0]} {p[1]} {p[2]}"
+    end
+end

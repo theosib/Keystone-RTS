@@ -146,8 +146,13 @@ Rivers wind across the land, and lakes lie in its hollows, with sand along their
 wade a river where it's deep, so it holds an army back like a wall. They cross where it runs a block
 deep: at a ford, over a gravel bed, or through a marsh, wide and muddy with tussocks standing out of
 it. Every settlement has a way to the middle of the map, but it may be a long way round, and a ford
-is a place worth holding. You can still lay blocks across the water by hand. The lobby's **Water**
-setting chooses dry land, rivers and lakes, or wetlands.
+is a place worth holding. You can still lay blocks across the water by hand.
+
+How much water there is depends on the land. Meadows and mixed country have rivers and lakes,
+woodland fewer lakes, and highland fewer rivers, cut deep, and more lakes. A dense forest has a pond
+or two, and a desert next to nothing. **River divide** has one river, winding across the middle of
+the map between the two sides, with a ford in the middle. The lobby's **Water** setting can overrule
+the land: dry, or wetlands.
 
 ## Playing with others
 

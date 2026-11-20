@@ -35,7 +35,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Multiplayer | Lobby with settings, chat and launch, everyone starting at once, each player their own faction with their own fog. Chat in game. A dropped player gets their seat back |
 | Open to the network | Menu, Invite Players, in a running game. A friend who joins takes over a rival, or founds a settlement if there's none left |
 | Server | `./run.sh --server [--config FILE]`, with no window |
-| Lands | Mixed, meadow, woodland, dense forest, highland, desert, in three sizes, with up to 7 rivals and a side panel to show who's out there |
+| Lands | Mixed, meadow, woodland, dense forest, highland, desert, river divide, each with its own water, in three sizes, with up to 7 rivals and a side panel to show who's out there |
 
 ## Not done yet
 

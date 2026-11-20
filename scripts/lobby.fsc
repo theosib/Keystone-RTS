@@ -2,7 +2,10 @@
 # a player's lobby can show a game it has never seen.
 #
 # `manifest` reaches into game.conf, for what must be known before there's a world: a setting's
-# value goes to that key, and a choice can set several of its own.
+# value goes to that key, and a choice can set several of its own. Each land has the water that
+# suits it (game.conf has the usual), and the water setting, which comes after, can overrule it:
+# a dense forest has a pond or two, and a desert, its sea lowered below most of its hollows, a pool
+# in a game or so out of five.
 #
 # Teams: everyone for themselves, every player against every rival, or each player and each rival
 # on the team of its number. A player picks their own, a rival's is the host's to pick, and the
@@ -19,20 +22,21 @@ return {
         {=key :map =type :choice =label "lobby.setting.map" =default :mixed =choices [
             {=value :mixed =label "lobby.map.mixed" =manifest {=world_biomes "highland meadow woodland"}}
             {=value :meadow =label "lobby.map.meadow" =manifest {=world_biomes "meadow"}}
-            {=value :woodland =label "lobby.map.woodland" =manifest {=world_biomes "woodland"}}
-            {=value :deepwood =label "lobby.map.deepwood" =manifest {=world_biomes "deepwood"}}
-            {=value :highland =label "lobby.map.highland" =manifest {=world_biomes "highland meadow"}}
-            {=value :desert =label "lobby.map.desert" =manifest {=world_biomes "desert"}}
+            {=value :woodland =label "lobby.map.woodland" =manifest {=world_biomes "woodland" =lake_threshold "0.58"}}
+            {=value :deepwood =label "lobby.map.deepwood" =manifest {=world_biomes "deepwood" =river_scale "0" =lake_threshold "0.62"}}
+            {=value :highland =label "lobby.map.highland" =manifest {=world_biomes "highland meadow" =river_scale "0.002" =lake_threshold "0.45"}}
+            {=value :desert =label "lobby.map.desert" =manifest {=world_biomes "desert" =river_scale "0" =lake_scale "0" =sea_level "54"}}
+            {=value :divide =label "lobby.map.divide" =manifest {=world_biomes "meadow woodland" =river_course "line" =river_meander "120" =river_width "9" =lake_scale "0"}}
         ]}
         {=key :size =type :choice =label "lobby.setting.size" =default :standard =choices [
             {=value :small =label "lobby.size.small" =manifest {=world_radius 9}}
             {=value :standard =label "lobby.size.standard" =manifest {=world_radius 12}}
             {=value :large =label "lobby.size.large" =manifest {=world_radius 18}}
         ]}
-        {=key :water =type :choice =label "lobby.setting.water" =default :rivers =choices [
+        {=key :water =type :choice =label "lobby.setting.water" =default :land =choices [
+            {=value :land =label "lobby.water.land"}
             {=value :dry =label "lobby.water.dry" =manifest {=river_scale "0" =lake_scale "0"}}
-            {=value :rivers =label "lobby.water.rivers"}
-            {=value :wet =label "lobby.water.wet" =manifest {=river_scale "0.004" =lake_threshold "0.4"}}
+            {=value :wet =label "lobby.water.wet" =manifest {=river_scale "0.004" =lake_scale "0.004" =lake_threshold "0.4"}}
         ]}
         {=key :rivals =type :int =label "lobby.setting.rivals" =default 1 =min 0 =max 7}
         {=key :rival_level =type :choice =label "lobby.setting.rival_level" =default :standard =choices [

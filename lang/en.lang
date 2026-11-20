@@ -240,11 +240,12 @@ lobby.map.woodland: Woodland
 lobby.map.deepwood: Dense forest
 lobby.map.highland: Highland
 lobby.map.desert: Desert
+lobby.map.divide: River divide
 lobby.size.small: Small
 lobby.size.standard: Standard
 lobby.size.large: Large
 lobby.water.dry: Dry
-lobby.water.rivers: Rivers and lakes
+lobby.water.land: As the land has it
 lobby.water.wet: Wetlands
 lobby.level.apprentice: Apprentice
 lobby.level.standard: Standard

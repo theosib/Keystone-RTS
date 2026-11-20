@@ -115,12 +115,14 @@ fn overlaps [plots x0 z0 x1 z1] do
 end
 
 # Start a building at (x, z), its footprint centred there, if the ground's free
-# Ground under water, at the middle or a corner. Its foundation would be a pier out of the
-# lakebed, built by Hands who can't wade out to it.
+# Any of the plot under water. Its foundation would be a pier out of the lakebed, built by Hands
+# who can't wade out to it. All water lies at sea level, and the UI's ghost asks the same question
+# (wet_footprint in ui/main.fs), so that what shows red is what's refused.
 fn wet_plot [x0 z0 size_x size_z] do
-    for p in [[0 0] [(size_x - 1) 0] [0 (size_z - 1)] [(size_x - 1) (size_z - 1)] [(size_x / 2) (size_z / 2)]] do
-        let g {ground_y (x0 + p[0]) (z0 + p[1])}
-        if ((g != nil) and (g < SEA_LEVEL)) { return true }
+    for dx in (0..size_x) do
+        for dz in (0..size_z) do
+            if ({fluid_at (x0 + dx) SEA_LEVEL (z0 + dz)} != nil) { return true }
+        end
     end
     return false
 end

@@ -828,6 +828,17 @@ fn order_move [] do
     drop_pin selection (hit.x + 0.5) (hit.y + 1) (hit.z + 0.5) nil queued
 end
 
+# Any of a plot under water, as the game's wet_plot asks it: all water lies at sea level
+fn wet_footprint [x0 z0 sx sz] do
+    if ((state == nil) or (state.sea_level == nil)) { return false }
+    for dx in (0..sx) do
+        for dz in (0..sz) do
+            if ({fluid_at (x0 + dx) state.sea_level (z0 + dz)} != nil) { return true }
+        end
+    end
+    return false
+end
+
 # Where a building would stand with its middle at this hit, worked out as the game will
 fn placement_at [hit] do
     let size {blueprint_size placing}
@@ -840,9 +851,8 @@ fn placement_at [hit] do
     end
     let x (hit.x - (sx / 2))
     let z (hit.z - (sz / 2))
-    # The lakebed, when it's water that's picked through: the game says no to that
-    let wet ((state != nil) and (state.sea_level != nil) and (hit.y < state.sea_level))
-    return {=x x =y (hit.y + 1) =z z =sx sx =sy size[1] =sz sz =taken (wet or {is_taken x z (x + sx) (z + sz)})}
+    let taken ({wet_footprint x z sx sz} or {is_taken x z (x + sx) (z + sz)})
+    return {=x x =y (hit.y + 1) =z z =sx sx =sy size[1] =sz sz =taken taken}
 end
 
 fn commit_placement [] do
