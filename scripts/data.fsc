@@ -261,4 +261,6 @@ set CARCASS_ROT_SECONDS 360
 # A Hunter looks for game this far from home, and with none in sight looks around this long
 # before trying somewhere else
 set HUNT_RANGE 60
+# Sent this far from home or further, it looks for game round there instead, and no further off
+set HUNT_AWAY_RANGE 24
 set HUNT_LOOK_SECONDS 4.0

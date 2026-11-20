@@ -75,6 +75,8 @@ fn order_attack [f cmd] do
             if (huntable and {s.has :stats} and (s.stats.role != :scout)) do
                 set s.waypoints []
                 hunt s cmd.target
+                # Where there's game: a Hunter goes on looking there
+                if {is_game cmd.target} { s.set :grounds [s.order_x s.order_z] }
             else do
                 others.push id
             end
@@ -83,17 +85,31 @@ fn order_attack [f cmd] do
     if (others.length > 0) { order_units f {=units others =x cmd.x =y cmd.y =z cmd.z} }
 end
 
-# A Hunter with nothing to do goes after the nearest deer its side can see near home, and with none
-# in sight walks somewhere else near home to look. A boar fights back harder than one Hunter can
-# take, so it goes after one only when it's sent.
+# A Hunter with nothing to do goes after the nearest deer its side can see on its hunting ground,
+# and with none in sight walks somewhere else there to look. That's near home, or where it was last
+# sent: it goes there first, and back there after taking a kill home. A boar fights back harder than
+# one Hunter can take, so it goes after one only when it's sent.
 fn seek_game [s pos] do
     if {bring_in_kill s pos} { return nil }
     if ((s.hunting != nil) and {ent_alive s.hunting}) { return nil }
     if ((s.moving and (not {s.get :roaming})) or (s.target != nil)) { return nil }
+    if ((s.order == :move) and (not {s.get :roaming})) do
+        if (s.errand == nil) { s.set :grounds [s.order_x s.order_z] }
+        return nil
+    end
     let f factions[s.faction]
+    let grounds {s.get :grounds}
+    let roam_from 20
+    let roam_to HUNT_RANGE
+    if (grounds == nil) do
+        set grounds [f.x f.z]
+    elif ({dist2 grounds[0] grounds[1] f.x f.z} > (HUNT_AWAY_RANGE * HUNT_AWAY_RANGE)) do
+        set roam_from 0
+        set roam_to HUNT_AWAY_RANGE
+    end
     for id in {ent_find pos[0] pos[1] pos[2] HUNT_RANGE =type :deer =max 12} do
         let at {ent_pos id}
-        let near ((at != nil) and ({dist2 at[0] at[2] f.x f.z} < (HUNT_RANGE * HUNT_RANGE)))
+        let near ((at != nil) and ({dist2 at[0] at[2] grounds[0] grounds[1]} < (HUNT_RANGE * HUNT_RANGE)))
         if (near and (id != s.ignore) and {is_game id} and (not {in_danger f at[0] at[2]}) and {vision_can_see_ent f.id id}) do
             set s.waypoints []
             return {hunt s id}
@@ -105,9 +121,9 @@ fn seek_game [s pos] do
     s.set :roam_at ({game_tick} + {to_int (HUNT_LOOK_SECONDS * 30)})
     for i in (0..8) do
         let angle ({random_float} * 6.28)
-        let r {random_range 20 HUNT_RANGE}
-        let x {floor (f.x + (r * {cos angle}))}
-        let z {floor (f.z + (r * {sin angle}))}
+        let r {random_range roam_from roam_to}
+        let x {floor (grounds[0] + (r * {cos angle}))}
+        let z {floor (grounds[1] + (r * {sin angle}))}
         let y {open_ground x z}
         if ((y != nil) and (not {in_danger f x z})) do
             order_soldier s x (y + 1) z
@@ -115,6 +131,12 @@ fn seek_game [s pos] do
             return nil
         end
     end
+end
+
+# A walk of its own, with the kill: not somewhere it was sent to hunt
+fn fetch [s x y z] do
+    order_soldier s x y z
+    set s.errand :fetch
 end
 
 # What a Hunter brings down it dresses where it lies, and carries home to the yard: Hands would make
@@ -133,7 +155,7 @@ fn bring_in_kill [s pos] do
             set s.brought (s.brought + s.meat)
             set s.meat 0
         elif (not s.moving) do
-            order_soldier s yard[0] yard[1] yard[2]
+            fetch s yard[0] yard[1] yard[2]
         end
         return true
     end
@@ -156,7 +178,7 @@ fn bring_in_kill [s pos] do
         return ({game_tick} <= (kill[3] + 90))
     end
     if ({dist2 pos[0] pos[2] (carcass.x + 0.5) (carcass.z + 0.5)} > 6.25) do
-        if (not s.moving) { order_soldier s (carcass.x + 0.5) carcass.y (carcass.z + 0.5) }
+        if (not s.moving) { fetch s (carcass.x + 0.5) carcass.y (carcass.z + 0.5) }
         return true
     end
     let block {block_at carcass.x carcass.y carcass.z}

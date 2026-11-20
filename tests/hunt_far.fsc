@@ -1,0 +1,79 @@
+# Scenario: a Hunter sent somewhere hunts there. Deer further off than it would look by itself, and
+# it's sent near them: it goes, brings one down there, carries the meat home, and goes back.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set hunter nil
+set spot nil
+set sent 0
+set stage 0
+
+# Open ground this far from home, toward the rival first
+fn far_spot [f r] do
+    let rival factions[2]
+    let toward {atan2 (rival.z - f.z) (rival.x - f.x)}
+    for i in (0..12) do
+        let angle (toward + (i * 0.52))
+        let x {floor (f.x + (r * {cos angle}))}
+        let z {floor (f.z + (r * {sin angle}))}
+        let y {open_ground x z}
+        if (y != nil) { return [x (y + 1) z] }
+    end
+    return nil
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 2) do
+        let rival factions[2]
+        set rival.commander nil
+        set spot {far_spot f 80}
+        if (spot == nil) { return {fail "no open ground to send it to"} }
+        found_herd :deer (spot[0] + 6) (spot[2] + 4)
+        set hunter {spawn_soldier f :hunter}
+    end
+
+    # Long enough to have set off on its own, if it was going to
+    if (t == 60) do
+        order_units f {=units [hunter.id] =x spot[0] =y spot[1] =z spot[2]}
+        set sent t
+        set stage 1
+    end
+
+    if (stage == 1) do
+        if ((t == (sent + 30)) and ({dist2 hunter.order_x hunter.order_z spot[0] spot[2]} > 100)) {
+            return {fail "the Hunter went somewhere else than it was sent"}
+        }
+        let kill {hunter.get :kill_at}
+        if (kill != nil) do
+            if ({dist2 kill[0] kill[2] spot[0] spot[2]} > (HUNT_AWAY_RANGE * HUNT_AWAY_RANGE * 4)) {
+                return {fail "the Hunter brought a deer down somewhere else"}
+            }
+            log "a deer fell" {floor {sqrt {dist2 kill[0] kill[2] f.x f.z}}} "blocks from home after" ((t - sent) / 30) "seconds"
+            set stage 2
+        end
+        if (t > (sent + 3000)) { return {fail "the Hunter never brought a deer down where it was sent"} }
+    end
+
+    if ((stage == 2) and ({hunter.get :brought} != nil) and (hunter.brought > 0)) do
+        log "it brought" hunter.brought "home"
+        set sent t
+        set stage 3
+    end
+
+    # And then back out to where the deer are
+    if ((stage == 3) and (t > (sent + 60))) do
+        let pos {ent_pos hunter.id}
+        let out {sqrt {dist2 pos[0] pos[2] f.x f.z}}
+        if (out > 50) do
+            log "PASS"
+            return {game_exit 0}
+        end
+        if (t > (sent + 1500)) { return {fail "the Hunter stayed home after bringing its kill in"} }
+    end
+end
