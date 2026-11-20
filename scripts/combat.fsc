@@ -252,8 +252,8 @@ fn nearest_visible [s pos found] do
     return best
 end
 
-# Soldiers answer to other soldiers first. A unit on the march, or at a Keystone it could break,
-# won't peel off after a farmer it can't already reach, or an attack dissolves into chasing workers.
+# Soldiers answer to other soldiers first. Anyone else is worth little to a unit with more to do: see
+# passes_by. An angry boar is a fighter like any other.
 fn find_enemy [s pos radius] do
     let f s.faction
     for kind in [:militia :shortbow] do
@@ -262,22 +262,38 @@ fn find_enemy [s pos radius] do
         if (id != nil) { return id }
     end
 
+    let k {keystone_ahead s pos}
     let reach radius
-    if ((s.order == :move) or {at_keystone s pos}) { set reach (s.stats.range + 1.0) }
-    let enemy {nearest_visible s pos {ent_find pos[0] pos[1] pos[2] reach =enemy_of f =max 8}}
-    if (enemy != nil) { return enemy }
+    if ((s.order == :move) or (k != nil)) { set reach (s.stats.range + 1.0) }
+    if (not {passes_by s pos k}) do
+        let enemy {nearest_visible s pos {ent_find pos[0] pos[1] pos[2] reach =enemy_of f =max 8}}
+        if (enemy != nil) { return enemy }
+    end
     return {nearest_visible s pos {game_after f pos reach}}
 end
 
-# Besieging a Keystone, or with one in sight to go for
-fn at_keystone [s pos] do
-    if ((contest.state != :playing) or {brigand_unit s}) { return false }
-    return ((s.siege != nil) or ({keystone_in_sight s pos} != nil))
+# The Keystone this soldier is breaking, or has in sight to go for
+fn keystone_ahead [s pos] do
+    if ((contest.state != :playing) or {brigand_unit s}) { return nil }
+    if (s.siege != nil) { return factions[s.siege].keystone }
+    let f {keystone_in_sight s pos}
+    if (f == nil) { return nil }
+    return f.keystone
 end
 
-fn is_soldier [id] do
-    let entry {lookup_unit id}
-    return ((entry != nil) and {entry.record.has :stats})
+# A Hand isn't worth the time of a soldier with more to do. On the march it walks past them, and
+# at a Keystone it hits only those it can reach from inside the ring that breaks it. Otherwise an
+# attack dissolves into chasing workers, and a bow stops short to shoot them from 18 blocks off.
+fn passes_by [s pos k] do
+    if (s.order == :move) { return true }
+    if (k == nil) { return false }
+    return ({dist2 pos[0] pos[2] (k[0] + 0.5) (k[2] + 0.5)} > (KEYSTONE_RADIUS * KEYSTONE_RADIUS))
+end
+
+# Militia and bows, anyone's: the ones a soldier answers to wherever it is
+fn is_fighter [id] do
+    let kind {ent_type id}
+    return ((kind == :militia) or (kind == :shortbow))
 end
 
 # Whoever just hurt this unit. Bows reach further than a soldier looks, so waiting to spot them
@@ -757,10 +773,11 @@ fn think_soldier [s] do
     # Keep fighting what's in front of you
     if ((s.target != nil) and (not {ent_alive s.target})) { lose_target s }
     if ((s.target != nil) and (s.hunting == nil) and (not {vision_can_see_ent s.faction s.target})) { lose_target s }
-    # A Hand it's after, with a Keystone to break instead
-    if ((s.target != nil) and (s.hunting == nil) and (not {is_soldier s.target}) and {at_keystone s pos}) {
-        if (not {in_range s pos {ent_pos s.target}}) { lose_target s }
-    }
+    # A Hand it's after, with better to do
+    if ((s.target != nil) and (s.hunting == nil) and (not {is_fighter s.target}) and (not {is_game s.target})) do
+        let k {keystone_ahead s pos}
+        if ({passes_by s pos k} or ((k != nil) and (not {in_range s pos {ent_pos s.target}}))) { lose_target s }
+    end
 
     # On the march it keeps going, but on guard it answers whoever's hitting it
     if ((not at_peace) and {keeping_post s}) do

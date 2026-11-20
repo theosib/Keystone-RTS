@@ -148,7 +148,8 @@ finescript traps that cost real time here:
   from helping". The cause isn't known yet.
 - `explore` failed once in a dozen runs (2026-11-11), "it left over a sixth of the map" with 109 dead
   ends, and passed twice straight after. Same: cause unknown, rerun first. So does `hunt`, "the order
-  fell behind its quarry", about 1 run in 5 on unchanged code.
+  fell behind its quarry", about 1 run in 5 on unchanged code, and `flee`, "Hands kept coming back:
+  10 frights", once in a full run (2026-11-20) and then 12 straight passes.
 - `chase` failed once in a full `run_all.sh` (2026-11-14), "it stood by while an enemy walked
   past", then passed 25 runs straight on its own. Rerun before suspecting a change.
 - `flee` failed once in a full `run_all.sh` run beside other headless games (2026-11-16), "Hands

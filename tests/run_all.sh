@@ -111,6 +111,7 @@ run brigand_defence 4700
 run loads 5500
 run shelters 12000
 run siege 3900
+run passing 3500
 run wreck 9000
 run pause 700
 run water 3000

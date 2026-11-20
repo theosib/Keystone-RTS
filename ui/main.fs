@@ -60,7 +60,7 @@ set hud_hint {ui.text "" =id "hud_hint"}
 set hud_fps {ui.text "" =id "hud_fps"}
 
 for name in ["timber" "stone" "provisions" "population" "army" "shelter" "forager_hut" "sawpit"
-             "watchtower" "palisade_wall" "train_hand" "militia" "shortbow" "scout" "menu"] do
+             "watchtower" "palisade_wall" "train_hand" "militia" "shortbow" "scout" "hunter" "menu"] do
     ui_texture name "ui/icons/{name}.png"
 end
 for tool in BLOCK_TOOLS do

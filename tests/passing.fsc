@@ -1,0 +1,104 @@
+# Scenario: Hands aren't worth stopping for. A militia sent somewhere walks past one on its way, and
+# a bow sent at a Keystone doesn't stop short to shoot those it passes: it goes into the ring that
+# breaks it, and only from there takes the ones it can reach. Those outside the Hall it can't: walls.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn stand_at [s x z] do
+    let y ({ground_y {floor x} {floor z}} + 1)
+    ent_stop s.id
+    ent_set_pos s.id x y z
+    set s.post [x y z]
+    set s.last_pos [x y z]
+end
+
+# Bare entities, with no Hand's mind to run from anyone
+fn idle_hand [f x z] do
+    let y ({ground_y {floor x} {floor z}} + 1)
+    return {ent_spawn :hand [x y z] =faction f.id}
+end
+
+fn in_ring [pos k] do
+    return ({dist2 pos[0] pos[2] (k[0] + 0.5) (k[2] + 0.5)} <= (KEYSTONE_RADIUS * KEYSTONE_RADIUS))
+end
+
+set stage 0
+set soldier nil
+set bow nil
+set by_road nil
+set by_hall []
+set inside nil
+set began 0
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+    let rival factions[2]
+    let k rival.keystone
+
+    if (t == 1) do
+        set rival.commander nil
+        for w in rival.hands do
+            ent_damage w.id 1000 0
+        end
+    end
+
+    # Right beside the road, on the march
+    if (t == 30) do
+        set by_road {idle_hand rival (k[0] + 1.5) (k[2] + 22.5)}
+        set soldier {spawn_soldier f :militia}
+        stand_at soldier (k[0] + 0.5) (k[2] + 32.5)
+        order_units f {=units [soldier.id] =x k[0] =y k[1] =z (k[2] + 14)}
+        set began t
+        set stage 1
+    end
+    if (stage == 1) do
+        if (soldier.target == by_road) { return fail "the militia stopped for a Hand on the march" }
+        if (not {ent_alive by_road}) { return fail "the militia killed a Hand on the march" }
+        if ((soldier.order == nil) and ({dist2 soldier.post[0] soldier.post[2] k[0] (k[2] + 14)} < 16)) do
+            ent_damage soldier.id 1000 0
+            ent_damage by_road 1000 0
+            set stage 2
+        end
+        if (t > (began + 900)) { return fail "the militia never got there" }
+    end
+
+    # Hands round the Hall, in a bow's reach long before it gets to the ring
+    if ((stage == 2) and (t > (began + 60))) do
+        by_hall.push {idle_hand rival (k[0] - 1.5) (k[2] + 12.5)}
+        by_hall.push {idle_hand rival (k[0] + 2.5) (k[2] + 11.5)}
+        set bow {spawn_soldier f :shortbow}
+        stand_at bow (k[0] + 0.5) (k[2] + 30.5)
+        order_units f {=units [bow.id] =x k[0] =y k[1] =z k[2]}
+        set began t
+        set stage 3
+    end
+    if (stage == 3) do
+        let pos {ent_pos bow.id}
+        let ringed {in_ring pos k}
+        if ((not ringed) and {by_hall.contains bow.target}) { return fail "the bow stopped short of the ring for a Hand" }
+        if ((not ringed) and ((not {ent_alive by_hall[0]}) or (not {ent_alive by_hall[1]}))) {
+            return fail "the bow shot a Hand from outside the ring"
+        }
+        if ringed do
+            log "the bow reached the ring in" ((t - began) / 30) "seconds"
+            set inside {ent_spawn :hand [(k[0] - 1.5) k[1] (k[2] + 0.5)] =faction rival.id}
+            set began t
+            set stage 4
+        end
+        if (t > (began + 1200)) { return fail "the bow never reached the ring" }
+    end
+
+    # From inside it, the ones in reach are fair game
+    if (stage == 4) do
+        if (not {ent_alive inside}) do
+            if (rival.capture == 0) { return fail "the Keystone isn't being broken" }
+            log "PASS"
+            return {game_exit 0}
+        end
+        if (t > (began + 600)) { return fail "the bow never shot a Hand it could reach from the ring" }
+    end
+end
