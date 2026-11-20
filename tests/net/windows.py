@@ -227,4 +227,29 @@ check("your people are still there", units.get("matched", 0) >= 8, units)
 check("and you're still you", call(CONT, "client_eval", code="my_faction") == 1)
 stop(second)
 
+print("---- continuing a game begun from the menu, which saves to a slot of its own", flush=True)
+third = game(CONT, "MenuPlay", cwd=copy)
+call(CONT, "client_eval", code="start_hosting false")
+wait_for(lambda: call(CONT, "client_eval", code="screen") == ":lobby", "the lobby")
+call(CONT, "client_eval", code="lobby_launch")
+wait_for(lambda: in_game(CONT), "the new game")
+call(CONT, "client_eval", code="cam_focus 50 -40")
+call(CONT, "wait", frames=60)
+spot = call(CONT, "client_state")["pivot"]
+call(CONT, "client_eval", code="quit_game")
+try:
+    third.wait(timeout=15)
+except subprocess.TimeoutExpired:
+    check("quitting finishes", False)
+    third.kill()
+check("it was saved apart from the other", os.path.isdir(os.path.join(copy, "saves", "hosted")))
+
+fourth = game(CONT, "MenuReturn", cwd=copy)
+call(CONT, "client_eval", code="game_start")
+wait_for(lambda: in_game(CONT), "the saved game")
+call(CONT, "wait", frames=30)
+back = call(CONT, "client_state")["pivot"]
+check("Continue picks up the last game played", abs(back[0] - spot[0]) < 1 and abs(back[2] - spot[2]) < 1, (spot, back))
+stop(fourth)
+
 sys.exit(1 if failures else 0)
