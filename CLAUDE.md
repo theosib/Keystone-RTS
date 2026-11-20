@@ -144,7 +144,8 @@ finescript traps that cost real time here:
   the yard, so place relative to `f.x`, not to a Hand that may be standing by them.
 - `game_exit 0` later in the same tick overrides an earlier `game_exit 1`. See `failed` in `tests/hunt.fsc`.
 - `guard` fails about 1 run in 6 on unchanged code, "the wrong number answered the alarm" with
-  nobody answering. The cause isn't known yet.
+  nobody answering, or (2 full runs in 7 on 2026-11-19, none in 14 alone) "a soldier never came back
+  from helping". The cause isn't known yet.
 - `explore` failed once in a dozen runs (2026-11-11), "it left over a sixth of the map" with 109 dead
   ends, and passed twice straight after. Same: cause unknown, rerun first. So does `hunt`, "the order
   fell behind its quarry", about 1 run in 5 on unchanged code.

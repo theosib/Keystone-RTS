@@ -30,13 +30,13 @@ fn go_build_near [w x y z next] do
     set w.build_y y
     set w.build_z z
     set w.scaffolding false
-    ent_goto w.id (x + 0.5) y (z + 0.5) =range 2.0 =max_nodes 6000
+    ent_goto w.id (x + 0.5) y (z + 0.5) =range 2.0 =reach_up BUILD_REACH_UP =max_nodes 6000
 end
 
 fn try_scaffolding [w] do
     trace :path "hand" w.id "side" w.faction "scaffolding up to" [w.build_x w.build_y w.build_z]
     set w.scaffolding true
-    ent_goto w.id (w.build_x + 0.5) w.build_y (w.build_z + 0.5) =range 2.0 =max_nodes 16000 =place true
+    ent_goto w.id (w.build_x + 0.5) w.build_y (w.build_z + 0.5) =range 2.0 =reach_up BUILD_REACH_UP =max_nodes 16000 =place true
 end
 
 fn wait_for [w seconds next anim] do
