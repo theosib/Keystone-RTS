@@ -1,0 +1,132 @@
+# Scenario: a Hunter that can see deer it can't get to, here past a moat, doesn't stand on the bank
+# for good. It gives up on them, and when there's a herd it can get to, it hunts that one.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set hunter nil
+set moat nil
+set open_herd nil
+set still_since 0
+set still_at nil
+set longest 0
+set stage 0
+set ISLAND 3
+set MOAT_OUT 19
+set tried false
+
+# Open ground this far from home, starting from this angle
+fn spot_at [c r from] do
+    for i in (0..12) do
+        let angle (from + (i * 0.52))
+        let x {floor (c[0] + (r * {cos angle}))}
+        let z {floor (c[2] + (r * {sin angle}))}
+        let y {open_ground x z}
+        if (y != nil) { return [x y z] }
+    end
+    return nil
+end
+
+# An island in a pond, too deep to wade and wider than a bow reaches. The water stops a block
+# short of the ground, or it spills where the bank dips. Nothing grows on the island.
+fn dig_moat [cx cz] do
+    for dx in ((0 - MOAT_OUT)..(MOAT_OUT + 1)) do
+        for dz in ((0 - MOAT_OUT)..(MOAT_OUT + 1)) do
+            let x (cx + dx)
+            let z (cz + dz)
+            let g {ground_y x z}
+            if ({max {abs dx} {abs dz}} > ISLAND) do
+                for y in ((g - 2)..(g + 9)) do
+                    world_set_block x y z :air
+                end
+                for y in ((g - 2)..g) do
+                    fluid_place x y z :water 15
+                end
+            else do
+                for y in ((g + 1)..(g + 9)) do
+                    world_set_block x y z :air
+                end
+            end
+        end
+    end
+end
+
+# Past the water, where anyone could walk to it
+fn got_out [p] do
+    return (({abs (p[0] - moat[0])} > MOAT_OUT) or ({abs (p[2] - moat[2])} > MOAT_OUT))
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 2) do
+        let rival factions[2]
+        set rival.commander nil
+        # Only the deer this sets out
+        for a in wild.animals do
+            ent_remove a.id
+        end
+        set wild.animals []
+        set wild.herds []
+        set moat {spot_at [f.x f.y f.z] 45 0.0}
+        if (moat == nil) { return {fail "no open ground for the moat"} }
+        dig_moat moat[0] moat[2]
+        found_herd :deer moat[0] moat[2]
+        # It spreads out looking for room, and the island is small
+        for a in wild.animals do
+            let x (moat[0] + {random_range (0 - 2) 2})
+            let z (moat[2] + {random_range (0 - 2) 2})
+            ent_set_pos a.id (x + 0.5) ({ground_y x z} + 1) (z + 0.5)
+        end
+        # On the bank, near enough to see them and too far to shoot
+        set hunter {spawn_soldier f :hunter}
+        let bx (moat[0] - (MOAT_OUT + 2))
+        ent_set_pos hunter.id (bx + 0.5) ({ground_y bx moat[2]} + 1) (moat[2] + 0.5)
+        set hunter.post {ent_pos hunter.id}
+    end
+
+    if (t > 2) do
+        let pos {ent_pos hunter.id}
+        if ((still_at != nil) and ({dist2 pos[0] pos[2] still_at[0] still_at[2]} < 1)) do
+            let held ((t - still_since) / 30)
+            if (held > longest) { set longest held }
+            if (held > 20) { return {fail "the Hunter stood still {held} seconds"} }
+        else do
+            set still_at pos
+            set still_since t
+        end
+        for a in wild.animals do
+            if ((a.herd == 0) and (hunter.hunting == a.id)) { set tried true }
+            let p {ent_pos a.id}
+            if ((a.herd == 0) and (p != nil) and {got_out p}) { return {fail "a deer got out of the moat"} }
+        end
+    end
+
+    # Long enough to have seen the moated deer and found it can't get to them
+    if ((t == 900) and (stage == 0)) do
+        if (not tried) { return {fail "the Hunter never went after the deer in the moat"} }
+        log "the Hunter stood still at most" longest "seconds by the moat"
+        let at {spot_at [f.x f.y f.z] 40 3.14}
+        if (at == nil) { return {fail "no open ground for the other herd"} }
+        set open_herd at
+        found_herd :deer at[0] at[2]
+        set stage 1
+    end
+
+    if (stage == 1) do
+        let kill {hunter.get :kill_at}
+        if ((kill != nil) and {got_out kill}) do
+            log "a deer fell past the water after" ((t - 900) / 30) "seconds"
+            log "PASS"
+            return {game_exit 0}
+        end
+        if (t > 4500) do
+            let pos {ent_pos hunter.id}
+            log "hunter at" pos "order" hunter.order "hunting" hunter.hunting "nav" {ent_nav hunter.id} "stood still" ((t - still_since) / 30)
+            return {fail "the Hunter never hunted the herd it could get to"}
+        end
+    end
+end

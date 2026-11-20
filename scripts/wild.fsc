@@ -134,6 +134,7 @@ fn fall_animal [a] do
     world_set_block x (y + 1) z {to_sym "carcass_{loads}"}
     wild.carcasses.push {=x x =y (y + 1) =z z =rot_at ({game_tick} + {to_int (CARCASS_ROT_SECONDS * 30)})}
     trace :hunt a.kind a.id "fell at" [x (y + 1) z] "to" a.hit_by
+    if (a.hit_by != nil) { brought_down a.hit_by [x (y + 1) z] }
 end
 
 fn rot_carcasses [tick] do

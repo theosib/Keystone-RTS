@@ -45,8 +45,18 @@ fn order_soldier [s x y z] do
     set s.wreck nil
     set s.fallbacks []
     set s.roaming false
+    set s.failed_at nil
     # Drop any route in progress, or it arrives and reads as this order being done
     ent_stop s.id
+end
+
+# How far a failed route still had to go. Failing again no nearer than last time, a unit only
+# spends another search to stand where it is: as near as it got will have to do.
+fn no_nearer [s pos] do
+    let d {sqrt {dist2 pos[0] pos[2] s.order_x s.order_z}}
+    let last {s.get :failed_at}
+    s.set :failed_at d
+    return ((last != nil) and (d > (last - 1.0)))
 end
 
 # Sent after one enemy, a soldier sticks to it wherever it goes, and walks to where it was last
@@ -110,9 +120,12 @@ fn seek_game [s pos] do
     for id in {ent_find pos[0] pos[1] pos[2] HUNT_RANGE =type :deer =max 12} do
         let at {ent_pos id}
         let near ((at != nil) and ({dist2 at[0] at[2] grounds[0] grounds[1]} < (HUNT_RANGE * HUNT_RANGE)))
-        if (near and (id != s.ignore) and {is_game id} and (not {in_danger f at[0] at[2]}) and {vision_can_see_ent f.id id}) do
+        if (near and (id != s.ignore) and {is_game id} and (not {no_way s at[0] at[2]}) and (not {in_danger f at[0] at[2]}) and {vision_can_see_ent f.id id}) do
             set s.waypoints []
-            return {hunt s id}
+            hunt s id
+            # Its own idea, not somewhere it was sent: wherever the deer leads isn't its hunting ground
+            set s.roaming true
+            return nil
         end
     end
     if s.moving { return nil }
@@ -125,12 +138,35 @@ fn seek_game [s pos] do
         let x {floor (grounds[0] + (r * {cos angle}))}
         let z {floor (grounds[1] + (r * {sin angle}))}
         let y {open_ground x z}
-        if ((y != nil) and (not {in_danger f x z})) do
+        if ((y != nil) and (not {no_way s x z}) and (not {in_danger f x z})) do
             order_soldier s x (y + 1) z
             set s.roaming true
             return nil
         end
     end
+end
+
+# Where a Hunter found no way to its quarry: across a river, say. It leaves game there be for a
+# while, or it would stand on the bank trying for one after another.
+fn no_way_to [s at] do
+    let spots []
+    let old {s.get :no_way}
+    if (old != nil) do
+        for w in old do
+            if ({game_tick} < w[2]) { spots.push w }
+        end
+    end
+    spots.push [at[0] at[2] ({game_tick} + {to_int (HUNT_NO_WAY_SECONDS * 30)})]
+    s.set :no_way spots
+end
+
+fn no_way [s x z] do
+    let spots {s.get :no_way}
+    if (spots == nil) { return false }
+    for w in spots do
+        if (({game_tick} < w[2]) and ({dist2 x z w[0] w[1]} < (HUNT_NO_WAY_RANGE * HUNT_NO_WAY_RANGE))) { return true }
+    end
+    return false
 end
 
 # A walk of its own, with the kill: not somewhere it was sent to hunt
@@ -188,6 +224,23 @@ fn bring_in_kill [s pos] do
     end
     set s.kill_at nil
     return true
+end
+
+# An arrow can land after its Hunter lost sight of the deer, when it's after another. A Hunter with
+# its hands free goes for what it brought down first.
+fn brought_down [id at] do
+    let entry {lookup_unit id}
+    if (entry == nil) { return nil }
+    let s entry.record
+    if ((not {s.has :stats}) or (s.stats.role != :hunter)) { return nil }
+    if (({s.get :kill_at} != nil) or (({s.get :meat} != nil) and (s.meat > 0))) { return nil }
+    set s.kill_at [at[0] at[1] at[2] {game_tick}]
+    set s.hunting nil
+    set s.target nil
+    if s.moving do
+        ent_stop s.id
+        set s.moving false
+    end
 end
 
 # Sight can drop out for a moment, even up close, and that's no reason to lose the trail
@@ -837,6 +890,10 @@ fn think_soldier [s] do
             if (nav == :failed) { set s.hunt_fails (s.hunt_fails + 1) }
             if (s.hunt_fails > HUNT_TRIES) do
                 ent_nav_ack s.id
+                if (s.stats.role == :hunter) do
+                    trace :hunt "hunter" s.id "side" s.faction "found no way to" s.hunting "at" [{floor target_pos[0]} {floor target_pos[2]}]
+                    no_way_to s target_pos
+                end
                 set s.hunting nil
                 set s.target nil
                 set s.moving false
@@ -872,6 +929,7 @@ fn think_soldier [s] do
         if ((nav == :failed) and (not close)) {
             if {try_fallback s} { return nil }
         }
+        if ((nav == :failed) and (not stop_trying) and {no_nearer s pos}) { set stop_trying true }
         if (((nav == :idle) or (nav == :failed)) and (not ((nav == :failed) and stop_trying))) do
             ent_nav_ack s.id
             ent_goto s.id s.order_x s.order_y s.order_z =range ORDER_RANGE =partial true =max_nodes 6000

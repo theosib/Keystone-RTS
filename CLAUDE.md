@@ -149,7 +149,8 @@ finescript traps that cost real time here:
 - `explore` failed once in a dozen runs (2026-11-11), "it left over a sixth of the map" with 109 dead
   ends, and passed twice straight after. Same: cause unknown, rerun first. So does `hunt`, "the order
   fell behind its quarry", about 1 run in 5 on unchanged code, and `flee`, "Hands kept coming back:
-  10 frights", once in a full run (2026-11-20) and then 12 straight passes.
+  10 frights", once in a full run (2026-11-20) and then 12 straight passes. `hunt_far`, "the Hunter
+  never brought a deer down where it was sent", failed 2 in 5 at unchanged code (2026-11-20).
 - `chase` failed once in a full `run_all.sh` (2026-11-14), "it stood by while an enemy walked
   past", then passed 25 runs straight on its own. Rerun before suspecting a change.
 - `flee` failed once in a full `run_all.sh` run beside other headless games (2026-11-16), "Hands
@@ -208,6 +209,8 @@ finescript traps that cost real time here:
   nobody walks through water two blocks deep. Anything a scenario puts at a fixed offset from home can
   land in a river: check the ground first, as `deliver.fsc` does. `ford_the_way` is what keeps the
   sides in reach of each other.
+- Water a scenario pours (`fluid_place`) level with the ground spills where the bank dips, and a body
+  walking the edge can slip in and float, off any route. Stop it a block short, as `hunt_moat.fsc` does.
 - Fluids are the game root's `fluids/`, not the engine's. Before `fluids/water.fluid` the server had
   water that was never registered: units waded it, and no client drew it.
 - A block shape can follow what's above it: `connect_up_*` faces show with one of its `connects`
