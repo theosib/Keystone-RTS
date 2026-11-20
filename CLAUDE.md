@@ -109,7 +109,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline (2026-11-16): 2566 + 205 + 53 = 2824 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline (2026-11-19): 2571 + 224 + 53 = 2848 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -193,6 +193,12 @@ finescript traps that cost real time here:
   reload hides it. Check it with `light_at` from a scenario, as `tests/light.fsc` does.
 - Tree shade comes from `blocks-sky-light: true` on `canopy`: see-through, but the sky stops there.
   Without it, sky light falls straight past a non-opaque block, as it does past bushes.
+- Rivers and lakes (`river_*`, `lake_*` in `game.conf`) cut across the map, and with `nav_max_wade: 1`
+  nobody walks through water two blocks deep. Anything a scenario puts at a fixed offset from home can
+  land in a river: check the ground first, as `deliver.fsc` does. `ford_the_way` is what keeps the
+  sides in reach of each other.
+- Fluids are the game root's `fluids/`, not the engine's. Before `fluids/water.fluid` the server had
+  water that was never registered: units waded it, and no client drew it.
 - A block shape can follow what's above it: `connect_up_*` faces show with one of its `connects`
   group on top, `open_up_*` without. That's how a boulder under another is flat on top.
 - Screenshots: `./run.sh --size 1280 720 --screenshot PATH --screenshot-frame N --exit-after M`.

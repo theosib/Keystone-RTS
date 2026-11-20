@@ -29,6 +29,11 @@ return {
             {=value :standard =label "lobby.size.standard" =manifest {=world_radius 12}}
             {=value :large =label "lobby.size.large" =manifest {=world_radius 18}}
         ]}
+        {=key :water =type :choice =label "lobby.setting.water" =default :rivers =choices [
+            {=value :dry =label "lobby.water.dry" =manifest {=river_scale "0" =lake_scale "0"}}
+            {=value :rivers =label "lobby.water.rivers"}
+            {=value :wet =label "lobby.water.wet" =manifest {=river_scale "0.004" =lake_threshold "0.4"}}
+        ]}
         {=key :rivals =type :int =label "lobby.setting.rivals" =default 1 =min 0 =max 7}
         {=key :rival_level =type :choice =label "lobby.setting.rival_level" =default :standard =choices [
             {=value :apprentice =label "lobby.level.apprentice"}

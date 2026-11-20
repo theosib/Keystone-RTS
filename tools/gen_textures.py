@@ -104,6 +104,14 @@ def loam():
     return tint(img, smooth_noise(rng("loam2"), 14), 0.14)
 
 
+def mud():
+    """Wet ground: dark, with paler patches where it's drying out."""
+    img = tint(flat((92, 78, 60)), smooth_noise(rng("mud"), 8), 0.3)
+    dry = smooth_noise(rng("mud-dry"), 11) > 0.7
+    img[dry] = img[dry] * 0.5 + np.array((132, 116, 90)) * 0.5
+    return img
+
+
 def turf_top():
     img = tint(flat((94, 148, 72)), smooth_noise(rng("turf"), 10), 0.2)
     return tint(img, smooth_noise(rng("turf2"), 5), 0.1)
@@ -354,6 +362,7 @@ def main():
     save("turf_side", turf_side())
     save("gravel", pebbles((140, 132, 120), "gravel"))
     save("sand", tint(flat((214, 196, 150)), smooth_noise(rng("sand"), 9), 0.1))
+    save("mud", mud())
     save("boulder", rock())
     save("bark", bark())
     save("log_end", log_end())

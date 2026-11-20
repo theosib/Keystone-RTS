@@ -139,6 +139,13 @@ Every world is generated. The lands are Mixed, Meadow, Woodland, Dense Forest, H
 in three sizes, and each plays differently because each is short of something different. Wood is
 scarce in a desert, and room to build is scarce in a dense forest.
 
+Rivers wind across the land, and lakes lie in its hollows, with sand along their shores. Nobody can
+wade a river where it's deep, so it holds an army back like a wall. They cross where it runs a block
+deep: at a ford, over a gravel bed, or through a marsh, wide and muddy with tussocks standing out of
+it. Every settlement has a way to the middle of the map, but it may be a long way round, and a ford
+is a place worth holding. You can still lay blocks across the water by hand. The lobby's **Water**
+setting chooses dry land, rivers and lakes, or wetlands.
+
 ## Playing with others
 
 Multiplayer is built in. **Host a Game** opens a lobby for up to eight, with settings and chat, and
@@ -171,8 +178,9 @@ you can do to the world. Everything below this line is design and isn't built ye
 | **Bastion** | Engineer | Deep shafts, waterwheels and aqueducts, siege works and sappers |
 | **Forge** | Reshape | Steel, earthworks on a grand scale, and black powder |
 
-Also planned: a Landmark to choose between at each advance, freeform buildings defined by what's in
-the room, refitting a timber town to stone in place, cavalry, walls that collapse when you take out
+Also planned: animals to hunt, fishing, boats for fishing, ferrying and fighting, bridges, mounted
+warriors, siege engines, a Landmark to choose between at each advance, freeform buildings defined by what's in
+the room, refitting a timber town to stone in place, walls that collapse when you take out
 what holds them up, fire that spreads, and the Steward fighting and carrying a captured Keystone.
 [DESIGN.md](DESIGN.md) has all of this.
 

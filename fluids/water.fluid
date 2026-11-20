@@ -1,0 +1,38 @@
+# Rivers and lakes. Drawn in its tint alone: fluids take no texture.
+name: water
+
+# Flow
+spread_decay: 1
+flow_speed: 5
+source_formation: true
+source_formation_count: 2
+slope_preference: 1.0
+max_level: 14
+
+# Infiltration
+infiltrates_non_full: true
+infiltrates_below: true
+
+# Physics
+density: 1000.0
+viscosity: 1.0
+buoyancy_factor: 1.0
+flow_force: 0.5
+can_displace: true
+
+# Visual
+opaque: false
+tint_color: 0.16 0.38 0.58 0.72
+
+# Light
+light_emission: 0
+light_attenuation: 2
+custom_attenuation: true
+attenuation_base: 0.85
+
+# Fog
+underwater_fog_color: 0.08 0.18 0.3 1.0
+underwater_fog_density: 0.04
+
+# Container
+units_per_source: 1000

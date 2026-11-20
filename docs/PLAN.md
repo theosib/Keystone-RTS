@@ -93,3 +93,34 @@ about what's drawn over the world. The rest, roughly in order:
    UI, which the scripts can do since every string goes through `loc`.
 
 Settings that change a game (land, rivals, fog) stay in the lobby: they're the game's, and the host's.
+
+## Water, animals, boats, cavalry and siege
+
+Asked for on 2026-11-19, after the slice. In the order they depend on each other. Nothing has Epochs
+yet, so the pieces that belong to a later one need Epochs first (step 5). The counter triangle these
+fill in is DESIGN §6.2's: spears beat horse, horse beats bows and siege, bows beat foot, siege beats
+walls.
+
+| # | What | Epoch | Engine | Keystone |
+|---|---|---|---|---|
+| 1 | Rivers, lakes, beaches | the world | `WaterwayPass`, `nav_max_wade` | Sites kept dry, a ford on each side's line to the middle |
+| 2 | Soldiers worth their cost | I | none | `UNITS` numbers, judged by duels. Bows are poor value now (AI.md) |
+| 3 | Animals and hunting | I | none expected: an animal is an entity with a script brain | Deer that run, boar that fight back, a Hunter's Lodge, meat into provisions |
+| 4 | Fishing from the bank | I | none | A Fishing Hut on a shore, Hands fishing the water by it |
+| 5 | Epochs | II-IV | none | The Keystone's tiers and the Landmark choice, gating the palette and `UNITS` |
+| 6 | Boats | I fishing, II ferries, III war | Entities that float and steer on water: navigation on the surface, and carrying passengers | A Dock that builds them. Fishing boats go further out, ferries carry units over, war boats carry bows |
+| 7 | Mounted warriors | II outriders, III lancers | Probably none: a rider and horse can be one unit with one model | A Stable. Fast, a charge, weak to spears |
+| 8 | Siege weapons | II ram, III trebuchet and tower, IV bombard | Projectiles that break blocks where they land. Collapse needs structural integrity (DESIGN Stage 2) | A ram for gates and palisades, a trebuchet that breaks walls from range |
+| 9 | Bridges | II or III | none: units walk over blocks already | A bridge blueprint that spans water. Laying blocks over a river works now, as a sandbox does |
+
+### Water
+
+Rivers are a barrier. They're crossed at fords and marshes, both a block deep, which units wade: the
+difference between them is only how they look (a gravel bed, or mud with tussocks). Lakes are rimmed
+with a shallow edge, and both have sand beaches. All water is at sea level, so rivers and lakes meet
+where they cross. The numbers are in `game.conf`.
+
+Nothing in the noise promises a way across, and one seed in six had none between the two sides. So
+`ford_the_way` lays a gravel ford wherever the line from the middle of the map, out through a
+settlement to the edge, meets deep water: every side can reach the middle, and brigands, who come in
+along that line, can reach it.

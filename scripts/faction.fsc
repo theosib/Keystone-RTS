@@ -71,9 +71,55 @@ end
 
 fn endow_new [f] do
     found_settlement f
+    ford_the_way f
     endow f 60 30 60
     for i in (0..8) do
         spawn_hand f
+    end
+end
+
+# Rivers are a barrier, and nothing in the world promises a way across one. So the straight line
+# through each settlement, from the middle of the map out to the edge, gets a ford wherever it meets
+# water too deep to wade: every side can reach every other, and brigands, who come in along that
+# line (send_band), can reach it.
+fn ford_the_way [f] do
+    let d {sqrt ((f.x * f.x) + (f.z * f.z))}
+    if (d < 1) { return nil }
+    let edge ((WORLD_RADIUS * 16) - 16)
+    let fords 0
+    let i 0
+    while (i < edge) do
+        let x {round ((f.x * i) / d)}
+        let z {round ((f.z * i) / d)}
+        if {too_deep x z} do
+            ford_at x z
+            set fords (fords + 1)
+        end
+        set i (i + 1)
+    end
+    if (fords > 0) { trace :setup "side" f.id "forded" fords "blocks of water between the middle and the edge" }
+end
+
+fn too_deep [x z] do
+    let y {ground_y x z}
+    return ((y != nil) and (y < (SEA_LEVEL - 1)))
+end
+
+# A gravel bar a block under the water, five wide
+fn ford_at [cx cz] do
+    for dx in (-2..=2) do
+        for dz in (-2..=2) do
+            let x (cx + dx)
+            let z (cz + dz)
+            let y {ground_y x z}
+            if {too_deep x z} do
+                while (y < (SEA_LEVEL - 1)) do
+                    set y (y + 1)
+                    fluid_remove x y z
+                    world_set_block x y z :gravel
+                end
+            end
+        end
     end
 end
 

@@ -7,6 +7,14 @@ fn fail [why] do
     game_exit 1
 end
 
+fn dry_run [x0 x1 z] do
+    for x in (x0..=x1) do
+        let y {ground_y x z}
+        if ((y == nil) or (y <= (SEA_LEVEL + 1))) { return false }
+    end
+    return true
+end
+
 set site nil
 set began 0
 set finished_at nil
@@ -25,8 +33,11 @@ on :tick do
 
     if (t == 30) do
         zone_take f.zone :timber 100000 f.x f.z
-        # Long enough that a gatherer has a load ready before the builders are done
-        lay_blocks f :planks (f.x + 20) (f.z + 20) (f.x + 51) (f.z + 20)
+        # Long enough that a gatherer has a load ready before the builders are done, and on dry
+        # land: over a river it's a bridge, and a slower job than this is about
+        let z (f.z + 20)
+        if (not {dry_run (f.x + 20) (f.x + 51) z}) { set z (f.z - 20) }
+        lay_blocks f :planks (f.x + 20) z (f.x + 51) z
         set site f.sites[0].site
         set began t
     end

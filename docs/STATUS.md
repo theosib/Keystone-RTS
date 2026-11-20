@@ -8,7 +8,7 @@ Stage 1 "Hearthfire Slice" from [DESIGN.md](DESIGN.md) §8. Scope and milestones
 | Area | State |
 |---|---|
 | Boot | `finevox_run --game-root Keystone`, no game C++ |
-| World | Generated terrain, biomes, trees, forage, boulders, water |
+| World | Generated terrain, biomes, trees, forage, boulders. Rivers and lakes with beaches: deep water stops anyone on foot, and fords and marshes are a block deep. Every side has a ford on its way to the middle |
 | Art | Procedural 32×32 textures, box-part unit models with faction emblems, skeletal animation |
 | Command | Orbit camera, grab panning, box select, double-click for a kind, shift-click to choose kinds that boxes then keep to, right-click to move or to hunt an enemy down, with an order onto a roof or a tree meaning the floor under it or its foot, and a fallback if it can't be reached, build palette with a ghost footprint that turns red on taken ground, and Shift-click to place another of the same, and tooltips quoting live costs, drag to run a palisade that joins up straight and on the diagonal, ghosts of unbuilt work that firm up as it goes |
 | Economy | Gathering, hauling, material fetch, bottom-up construction, hunger, housing. Who builds which block is solved for the whole side at once by the engine's task board, so a Hand with the block beside a cell gets it ahead of one far off. Sites earlier in the queue come first, a later one gets a scarce material only once the earlier ones have enough, and with units waiting on a bed, Shelters go first and gatherers help build them |

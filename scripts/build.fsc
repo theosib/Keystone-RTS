@@ -115,6 +115,16 @@ fn overlaps [plots x0 z0 x1 z1] do
 end
 
 # Start a building at (x, z), its footprint centred there, if the ground's free
+# Ground under water, at the middle or a corner. Its foundation would be a pier out of the
+# lakebed, built by Hands who can't wade out to it.
+fn wet_plot [x0 z0 size_x size_z] do
+    for p in [[0 0] [(size_x - 1) 0] [0 (size_z - 1)] [(size_x - 1) (size_z - 1)] [(size_x / 2) (size_z / 2)]] do
+        let g {ground_y (x0 + p[0]) (z0 + p[1])}
+        if ((g != nil) and (g < SEA_LEVEL)) { return true }
+    end
+    return false
+end
+
 fn place_building [f name x z turns] do
     let def {BUILDINGS.get name}
     if (def == nil) { return nil }
@@ -124,6 +134,7 @@ fn place_building [f name x z turns] do
     let x0 (x - (size[0] / 2))
     let z0 (z - (size[1] / 2))
     if {overlaps {all_plots} x0 z0 (x0 + size[0]) (z0 + size[1])} { return nil }
+    if {wet_plot x0 z0 size[0] size[1]} { return nil }
     let g {ground_y x z}
     if (g == nil) { return nil }
     let y (g + 1)

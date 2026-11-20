@@ -19,6 +19,7 @@ block.loam: Terreau
 block.palisade: Palissade
 block.planks: Planches
 block.sand: Sable
+block.mud: Boue
 block.scaffold: Échafaudage
 block.stone: Pierre
 block.thatch: Chaume

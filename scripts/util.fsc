@@ -24,7 +24,7 @@ end
 
 # What the world is made of. To ground_y a roof is ground too, so anything setting a
 # unit down has to ask about the block as well as its height
-set TERRAIN_BLOCKS [:turf :loam :stone :sand :gravel]
+set TERRAIN_BLOCKS [:turf :loam :stone :sand :gravel :mud]
 
 fn open_ground [x z] do
     let y {ground_y x z}
@@ -126,20 +126,39 @@ fn level_area [x0 z0 x1 z1 y] do
     end
 end
 
-# A spot near (x, z) with room, above water. Scans outward in steps.
+# No water, nor ground low enough to flood, within r of (x, z)
+fn dry_around [x z r] do
+    let dx (0 - r)
+    while (dx <= r) do
+        let dz (0 - r)
+        while (dz <= r) do
+            let y {ground_y (x + dx) (z + dz)}
+            if ((y == nil) or (y <= (SEA_LEVEL + 1))) { return false }
+            set dz (dz + 4)
+        end
+        set dx (dx + 4)
+    end
+    return true
+end
+
+# A spot near (x, z) with dry ground all round, for a settlement. Scans outward in steps, and
+# settles for the centre alone being dry if nowhere nearby is.
 fn find_settlement_site [x z] do
-    let best nil
+    let reach (LEVEL_RADIUS + 6)
+    let fallback nil
     let radius 0
     while (radius <= 64) do
         for dx in [(0 - radius) 0 radius] do
             for dz in [(0 - radius) 0 radius] do
                 let y {ground_y (x + dx) (z + dz)}
-                if ((y != nil) and (y > (SEA_LEVEL + 1))) {
-                    return [(x + dx) (y + 1) (z + dz)]
-                }
+                if ((y != nil) and (y > (SEA_LEVEL + 1))) do
+                    if {dry_around (x + dx) (z + dz) reach} { return [(x + dx) (y + 1) (z + dz)] }
+                    if (fallback == nil) { set fallback [(x + dx) (y + 1) (z + dz)] }
+                end
             end
         end
         set radius (radius + 8)
     end
+    if (fallback != nil) { return fallback }
     return [x 80 z]
 end

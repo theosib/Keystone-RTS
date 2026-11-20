@@ -115,6 +115,7 @@ block.log_palisade: Log Palisade
 block.log_palisade_top: Log Palisade
 block.planks: Planks
 block.sand: Sand
+block.mud: Mud
 block.scaffold: Scaffold
 block.stone: Stone
 block.thatch: Thatch
@@ -219,6 +220,7 @@ lobby.leave: Leave
 lobby.setting.title: Title
 lobby.setting.map: Land
 lobby.setting.size: Size
+lobby.setting.water: Water
 lobby.setting.rivals: Rivals
 lobby.setting.rival_level: Rivals' skill
 lobby.setting.fog: Fog of war
@@ -241,6 +243,9 @@ lobby.map.desert: Desert
 lobby.size.small: Small
 lobby.size.standard: Standard
 lobby.size.large: Large
+lobby.water.dry: Dry
+lobby.water.rivers: Rivers and lakes
+lobby.water.wet: Wetlands
 lobby.level.apprentice: Apprentice
 lobby.level.standard: Standard
 lobby.level.veteran: Veteran

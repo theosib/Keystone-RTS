@@ -93,7 +93,7 @@ fn publish_state [f] do
                     =stone {zone_count f.zone :stone}
                     =provisions {zone_count f.zone :provisions}}
                 =hands {population f} =housing f.housing
-                =sites f.sites.length =plots {plots_seen_by f} =home [f.x f.z]
+                =sites f.sites.length =plots {plots_seen_by f} =home [f.x f.z] =sea_level SEA_LEVEL
                 =queue {work_queue f}
                 =army f.army.length
                 =match contest.state =winner contest.winner =won {won f}

@@ -840,7 +840,9 @@ fn placement_at [hit] do
     end
     let x (hit.x - (sx / 2))
     let z (hit.z - (sz / 2))
-    return {=x x =y (hit.y + 1) =z z =sx sx =sy size[1] =sz sz =taken {is_taken x z (x + sx) (z + sz)}}
+    # The lakebed, when it's water that's picked through: the game says no to that
+    let wet ((state != nil) and (state.sea_level != nil) and (hit.y < state.sea_level))
+    return {=x x =y (hit.y + 1) =z z =sx sx =sy size[1] =sz sz =taken (wet or {is_taken x z (x + sx) (z + sz)})}
 end
 
 fn commit_placement [] do
