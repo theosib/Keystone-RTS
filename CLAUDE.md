@@ -153,6 +153,10 @@ finescript traps that cost real time here:
   past", then passed 25 runs straight on its own. Rerun before suspecting a change.
 - `flee` failed once in a full `run_all.sh` run beside other headless games (2026-11-16), "Hands
   kept coming back: 10 frights", then passed 5 runs straight on its own.
+- `ent_last_attacker` is 0, not nil, for nobody. `ent_type` of an entity that's gone is nil.
+- `tools/gen_icons.py` writes every icon, and Pillow here encodes them differently from the ones in
+  the tree: check the old ones back out (`git checkout -- ui/icons/`) and keep only the new.
+- Entities are drawn at 1.6 times their light, so a model's colours come out much paler than written.
 - Game (deer, boar: `wild.fsc`) is faction 0, nobody's enemy, so `ent_find =enemy_of` never finds
   it and arrows do hit it. Animals aren't in `unit_index`: `is_game id` says whether an id is one,
   and `game_after` finds a boar that's going for a side, which soldiers treat as an enemy.
