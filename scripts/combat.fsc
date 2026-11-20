@@ -318,13 +318,15 @@ fn is_fighter [id] do
     return ((kind == :militia) or (kind == :shortbow))
 end
 
-# Whoever just hurt this unit. Bows reach further than a soldier looks, so waiting to spot them
-# would mean standing there being shot.
+# Whoever just hurt this unit, seen or not, and however far off: a bow reaches further than a
+# soldier looks or a guard goes out. Waiting for it to come near is standing there being shot. Only
+# one it's just given up chasing is let be, so it can get on with the job.
 fn struck_by [s pos] do
     if ({ent_since_damage s.id} > STRUCK_SECONDS) { return nil }
     let id {ent_last_attacker s.id}
     if (not {ent_alive id}) { return nil }
-    return {nearest_visible s pos [id]}
+    if ((id == s.ignore) and ({game_tick} < s.ignore_until)) { return nil }
+    return id
 end
 
 # Bows and Hunters shoot; militia and the rest strike where they stand
@@ -792,22 +794,23 @@ fn think_soldier [s] do
     if at_peace { set s.target nil }
     if (s.hunting != nil) { follow_quarry s }
 
-    # Keep fighting what's in front of you
+    # Keep fighting what's in front of you, and whoever's hitting it
+    let attacker nil
+    if ((not at_peace) and (s.hunting == nil)) { set attacker {struck_by s pos} }
     if ((s.target != nil) and (not {ent_alive s.target})) { lose_target s }
-    if ((s.target != nil) and (s.hunting == nil) and (not {vision_can_see_ent s.faction s.target})) { lose_target s }
+    let held ((s.target == nil) or (s.hunting != nil) or (s.target == attacker))
+    if ((not held) and (not {vision_can_see_ent s.faction s.target})) { lose_target s }
     # A Hand it's after, with better to do
-    if ((s.target != nil) and (s.hunting == nil) and (not {is_fighter s.target}) and (not {is_game s.target})) do
+    if ((not held) and (s.target != nil) and (not {is_fighter s.target}) and (not {is_game s.target})) do
         let k {keystone_ahead s pos}
         if ({passes_by s pos k} or ((k != nil) and (not {in_range s pos {ent_pos s.target}}))) { lose_target s }
     end
 
-    # On the march it keeps going, but on guard it answers whoever's hitting it
-    if ((not at_peace) and {keeping_post s}) do
-        let attacker {struck_by s pos}
-        if (attacker != nil) do
-            raise_alarm factions[s.faction] pos
-            if ((s.target == nil) or (not {in_range s pos {ent_pos s.target}})) { set s.target attacker }
-        end
+    # On guard or on the march, it answers whoever's hitting it, and on guard calls for help. The
+    # march goes on once that's dealt with or got away.
+    if (attacker != nil) do
+        if {keeping_post s} { raise_alarm factions[s.faction] pos }
+        if ((s.target == nil) or (not {in_range s pos {ent_pos s.target}})) { set s.target attacker }
     end
     if ((s.target == nil) and (not at_peace)) { set s.target {find_enemy s pos s.stats.aggro} }
 

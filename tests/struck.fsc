@@ -1,0 +1,73 @@
+# Scenario: a soldier being shot answers whoever's doing it. A guard a bow picks off from further
+# than it would go out for anyone else goes for the bow, and so does one on the march.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn stand_at [s x z] do
+    let y ({ground_y {floor x} {floor z}} + 1)
+    ent_stop s.id
+    ent_set_pos s.id x y z
+    set s.post [x y z]
+    set s.last_pos [x y z]
+end
+
+fn gap [a b] do
+    let p {ent_pos a}
+    let q {ent_pos b}
+    return {sqrt {dist2 p[0] p[2] q[0] q[2]}}
+end
+
+set stage 0
+set bow nil
+set guard nil
+set marcher nil
+set began 0
+set closest 100.0
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+    let rival factions[2]
+
+    if (t == 2) do
+        set rival.commander nil
+        set bow {spawn_soldier f :shortbow}
+        stand_at bow (f.x + 0.5) (f.z + 25.5)
+        set guard {spawn_soldier rival :militia}
+        stand_at guard (f.x + 0.5) (f.z + 42.5)
+        set began t
+        set stage 1
+    end
+
+    # On guard, 17 blocks off: further than it goes out for an enemy that's not hitting it
+    if (stage == 1) do
+        if (({ent_since_damage guard.id} < 1.0) and (guard.target == bow.id)) { set closest {min closest {gap guard.id bow.id}} }
+        if ((not {ent_alive guard.id}) or (closest < 4.0)) do
+            if (closest > 10.0) { return {fail "the guard stood there being shot"} }
+            log "the guard came within" {floor closest} "of the bow"
+            ent_damage guard.id 1000 0
+            set closest 100.0
+            set marcher {spawn_soldier rival :militia}
+            stand_at marcher (f.x - 15.5) (f.z + 40.5)
+            order_soldier marcher (f.x + 25.5) (f.y + 1) (f.z + 40.5)
+            set began t
+            set stage 2
+        end
+        if (t > (began + 900)) { return {fail "the guard never went for the bow"} }
+    end
+
+    # Crossing in front of it, on the march
+    if (stage == 2) do
+        if ({ent_alive marcher.id} and (marcher.target == bow.id)) { set closest {min closest {gap marcher.id bow.id}} }
+        if ((not {ent_alive marcher.id}) or (closest < 4.0)) do
+            if (closest > 10.0) { return {fail "the marcher walked on being shot"} }
+            log "the marcher came within" {floor closest} "of the bow"
+            log "PASS"
+            return {game_exit 0}
+        end
+        if (t > (began + 900)) { return {fail "the marcher never went for the bow"} }
+    end
+end
