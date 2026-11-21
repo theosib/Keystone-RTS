@@ -103,6 +103,12 @@ finescript traps that cost real time here:
   counts any body that crosses into the cell: a Hand in the next cell within 0.3 of the edge, or a
   head from the cell below. Placing never checks the load, and Hand scaffolding is free. The
   `carry_marks` setting shows each Hand's load over its head, and a red ring while it waits.
+- A Hand shows its load as a block in its arms: `show_load` runs `ent_hold` after each think, with the
+  block from `CARRY_BLOCKS` (`data.fsc`). A new kind of load needs an entry there. The `load` part in
+  `hand.emodel` shows only in `idle` and `walk`, so it's put away while the Hand gathers or builds.
+- Order pins are `marker_box`es with `=shaded`, `=texture` (from `textures/markers`, made by
+  `tools/gen_textures.py`) and `=uv`. A marker with alpha 1 is drawn with the bodies and hides what's
+  behind it; a see-through one hides nothing.
 
 ## Testing
 
@@ -153,6 +159,8 @@ finescript traps that cost real time here:
   never brought a deer down where it was sent", failed 2 in 5 at unchanged code (2026-11-20).
 - `chase` failed once in a full `run_all.sh` (2026-11-14), "it stood by while an enemy walked
   past", then passed 25 runs straight on its own. Rerun before suspecting a change.
+- `teams` failed 2 runs in 9 (2026-11-21), "nobody fought the enemy", then 32 straight passes, with
+  and without that day's change. Rerun before suspecting a change.
 - `flee` failed once in a full `run_all.sh` run beside other headless games (2026-11-16), "Hands
   kept coming back: 10 frights", then passed 5 runs straight on its own.
 - `ent_last_attacker` is 0, not nil, for nobody. `ent_type` of an entity that's gone is nil.

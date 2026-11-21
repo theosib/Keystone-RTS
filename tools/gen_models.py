@@ -246,6 +246,12 @@ def main():
         "torso": [(0.0, (0.0, -0.25)), (shoot, (0.0, -0.25))],
         "head": [(0.0, (0.0, 0.25)), (shoot, (0.0, 0.25))],
     }, loop=False))
+    # A load held before the chest in both hands. The model lays it over idle and walk while a
+    # Hand holds one (`hold_pose`), and it has only the arms, so the legs go on walking.
+    (OUT / "humanoid_carry.anim").write_text(clip("carry", 1.0, {
+        "arm_l": [(0.0, -1.05), (1.0, -1.05)],
+        "arm_r": [(0.0, -1.05), (1.0, -1.05)],
+    }))
     animals()
     print(f"wrote {len(list(OUT.glob('*.anim')))} clips to {OUT}")
 

@@ -54,6 +54,8 @@ set HARVEST {
     =carcass_1 {=kind :provisions =units 4 =seconds 1.2 =anim :forage}
 }
 set HARVEST_BLOCKS {=timber [:timber_log] =stone [:boulder] =provisions [:berry_bush]}
+# What a Hand's load looks like in its arms
+set CARRY_BLOCKS {=timber :timber_log =stone :stone =provisions :grain_sack_8}
 # Looked for first, this near, before the nearest of the rest: a carcass won't keep. Further off it's
 # one of the rest: a Hunter carries its own kill home.
 set HARVEST_FIRST {=provisions [:carcass_4 :carcass_3 :carcass_2 :carcass_1]}

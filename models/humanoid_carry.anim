@@ -1,0 +1,17 @@
+name: carry
+duration: 1.0
+loop: true
+track: arm_l
+keyframe: 0.0
+pos: -0.3 0.52 0
+rot: -0.50121 0.00000 0.00000 0.86532
+keyframe: 1.0
+pos: -0.3 0.52 0
+rot: -0.50121 0.00000 0.00000 0.86532
+track: arm_r
+keyframe: 0.0
+pos: 0.3 0.52 0
+rot: -0.50121 0.00000 0.00000 0.86532
+keyframe: 1.0
+pos: 0.3 0.52 0
+rot: -0.50121 0.00000 0.00000 0.86532

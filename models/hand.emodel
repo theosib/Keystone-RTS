@@ -7,6 +7,8 @@ anim:chop: humanoid_chop
 anim:quarry: humanoid_chop
 anim:build: humanoid_build
 anim:forage: humanoid_forage
+# Arms round a load while it walks or stands with one
+hold_pose: humanoid_carry
 
 part: skirt
 bone: hips
@@ -189,3 +191,14 @@ offset: 0 -0.86 0
 size: 0.13 0.13 0.24
 color: 0.36 0.26 0.16
 only_in: build
+
+# The load, a block of what it carries before its chest, between its hands. Put away while it
+# works: building lays it, and gathering fills it. Entities are drawn at 1.6 times their light, so
+# 0.62 shows the block as the world does.
+part: load
+bone: torso
+offset: 0 0.24 0.4
+size: 0.4 0.4 0.4
+color: 0.62 0.62 0.62
+held: true
+only_in: idle walk

@@ -14,7 +14,20 @@ set PIN_ATTACK [1.0 0.3 0.2 0.95]
 set PIN_DROP_SECONDS 0.35
 set PIN_DROP_HEIGHT 4.0
 set PIN_RING_SECONDS 0.45
-set PIN_STEM 1.1
+# A move pin is a pennant on a staff, a blunt arrowhead over whoever's to be attacked. Sizes are at
+# the pin's own size, in blocks.
+set PIN_STAFF 1.5
+set PIN_STAFF_WIDTH 0.07
+set PIN_CAP 0.13
+set PIN_CAP_COLOR [0.95 0.7 0.25]
+set PIN_FLAG_COLOR [1.0 0.7 0.16]
+set PIN_FLAG_LENGTH 0.7
+set PIN_FLAG_HEIGHT 0.42
+set PIN_FLAG_STRIPS 14
+set PIN_FLAG_WAVE 0.07
+set PIN_ARROW_STEPS [0.09 0.2 0.31 0.42]
+set PIN_ARROW_STEP 0.09
+set PIN_ARROW_SHAFT 0.4
 set PIN_DOT_STEP 1.2
 # A pin is drawn at its own size up to this far from the camera, and grows beyond it, to this much
 set PIN_NEAR 14.0
@@ -292,17 +305,66 @@ fn draw_pin [pin at] do
         set lift (0.35 * {sin (t * 3.14159)})
     end
     let base (at[1] + (lift * k))
-    if (pin.target != nil) { set base (at[1] + 2.4 + (lift * k)) }
-    let stem (0.08 * k)
-    let head (0.32 * k)
-    marker_box (at[0] - (stem / 2)) base (at[2] - (stem / 2)) stem (PIN_STEM * k) stem color[0] color[1] color[2] color[3]
-    marker_box (at[0] - (head / 2)) (base + (PIN_STEM * k)) (at[2] - (head / 2)) head head head color[0] color[1] color[2] color[3]
-    if (pin.target != nil) { return nil }
+    if (pin.target != nil) do
+        draw_arrow at (at[1] + 2.4 + ((lift + (0.12 * {sin (age * 4.0)})) * k)) k color
+        return nil
+    end
+    # Its shadow stays on the ground as it falls
+    let shadow (0.16 * k)
+    marker_ring at[0] (at[1] + 0.03) at[2] shadow 0.0 0.0 0.0 0.35 =width (shadow * 2)
+    draw_flag at base k age
     if ((age > PIN_DROP_SECONDS) and (age < (PIN_DROP_SECONDS + PIN_RING_SECONDS))) do
         let t ((age - PIN_DROP_SECONDS) / PIN_RING_SECONDS)
         marker_ring at[0] (at[1] + 0.05) at[2] ((0.3 + (t * 0.9)) * k) color[0] color[1] color[2] (1.0 - t)
     end
     marker_ring at[0] (at[1] + 0.05) at[2] (0.35 * k) color[0] color[1] color[2] 0.7
+end
+
+# A box by the staff, u along the pennant and w across it. The pennant runs along X or Z, whichever
+# is more square to the camera, so that it's never seen edge on. A texture runs along +X or +Z
+# through a box, so each strip of the pennant shows its own slice of the picture.
+fn flag_box [at along_x u y w su sy sw color texture uv] do
+    if along_x do
+        marker_box (at[0] + u) y (at[2] + w) su sy sw color[0] color[1] color[2] 1.0 =shaded true =texture texture =uv uv
+    else do
+        marker_box (at[0] + w) y (at[2] + u) sw sy su color[0] color[1] color[2] 1.0 =shaded true =texture texture =uv uv
+    end
+end
+
+# A staff with a metal cap, and a pennant tapering away from it that ripples more toward its tip
+fn draw_flag [at base k age] do
+    let eye {cam_pos}
+    let along_x ({abs (eye[2] - at[2])} >= {abs (eye[0] - at[0])})
+    let staff (PIN_STAFF_WIDTH * k)
+    let top (base + (PIN_STAFF * k))
+    flag_box at along_x (staff / -2) base (staff / -2) staff (PIN_STAFF * k) staff [1.0 1.0 1.0] "staff" [0 0 1 1]
+    let cap (PIN_CAP * k)
+    flag_box at along_x (cap / -2) top (cap / -2) cap cap cap PIN_CAP_COLOR "plate" [0 0 1 1]
+    let strip ((PIN_FLAG_LENGTH * k) / PIN_FLAG_STRIPS)
+    let middle (top - ((PIN_FLAG_HEIGHT / 2) * k))
+    let thick (0.025 * k)
+    let i 0
+    while (i < PIN_FLAG_STRIPS) do
+        let t ((i + 0.5) / PIN_FLAG_STRIPS)
+        let share (1.0 - (0.75 * t))
+        let h ((PIN_FLAG_HEIGHT * k) * share)
+        let w ((PIN_FLAG_WAVE * k) * t * {sin ((age * 5.0) - (t * 6.0))})
+        let uv [(i / (PIN_FLAG_STRIPS * 1.0)) (0.5 - (share / 2)) ((i + 1) / (PIN_FLAG_STRIPS * 1.0)) (0.5 + (share / 2))]
+        flag_box at along_x ((staff / 2) + (i * strip)) (middle - (h / 2)) (w - (thick / 2)) strip h thick PIN_FLAG_COLOR "pennant" uv
+        set i (i + 1)
+    end
+end
+
+# A stepped arrowhead pointing down at the target, its point at y
+fn draw_arrow [at y k color] do
+    let level y
+    for width in PIN_ARROW_STEPS do
+        let s (width * k)
+        marker_box (at[0] - (s / 2)) level (at[2] - (s / 2)) s (PIN_ARROW_STEP * k) s color[0] color[1] color[2] 1.0 =shaded true =texture "plate"
+        set level (level + (PIN_ARROW_STEP * k))
+    end
+    let shaft (0.14 * k)
+    marker_box (at[0] - (shaft / 2)) level (at[2] - (shaft / 2)) shaft (PIN_ARROW_SHAFT * k) shaft color[0] color[1] color[2] 1.0 =shaded true =texture "plate"
 end
 
 fn draw_trail [a b color] do

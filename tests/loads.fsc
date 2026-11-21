@@ -12,6 +12,7 @@ fn fail [why] do
 end
 
 set worst 0
+set held_seen 0
 
 # A site whose layer being built wants timber
 fn short_of_timber [f] do
@@ -43,15 +44,27 @@ on :tick do
         end
     end
 
+    # Each Hand shows the load it has, as a block of what it is, from the think that changed it
+    if ((tick > 10) and ((tick % 15) == 0)) do
+        for w in f.hands do
+            let want nil
+            if (w.carry_n > 0) { set want {CARRY_BLOCKS.get w.carry_kind} }
+            let shown {ent_held w.id}
+            if (shown != want) { fail "a Hand with {w.carry_n} {w.carry_kind} shows {shown}" }
+            if (shown != nil) { set held_seen (held_seen + 1) }
+        end
+    end
+
     if ((tick > 900) and ((tick % 30) == 0) and {short_of_timber f}) {
         set worst {max worst {stock_of f :timber}}
     }
 
     if (tick == 5400) do
-        print "LOADS worst yard {worst}, sites left {f.sites.length}"
+        print "LOADS worst yard {worst}, sites left {f.sites.length}, loads seen held {held_seen}"
         if (worst > 12) { fail "{worst} timber sat in the yard with sites short of it" }
         # Five half-built sites house nobody, so the first in line comes first
         if (f.buildings.length == 0) { fail "nothing finished: the work spread over every site" }
+        if (held_seen == 0) { fail "no Hand was ever seen holding its load" }
         log "LOADS DONE"
         if (not failed) { game_exit 0 }
     end

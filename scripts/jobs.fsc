@@ -14,6 +14,13 @@ end
 
 fn worker_pos [w] {ent_pos w.id}
 
+# A load changes as a Hand thinks, so it's shown after each think. The engine saves what's shown.
+fn show_load [w] do
+    let block nil
+    if (w.carry_n > 0) { set block {CARRY_BLOCKS.get w.carry_kind} }
+    ent_hold w.id block
+end
+
 fn go_to [w x y z range next] do
     set w.state :moving
     set w.scaffolding false

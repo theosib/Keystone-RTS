@@ -14,6 +14,8 @@ from PIL import Image
 
 SIZE = 32
 OUT = Path(__file__).resolve().parent.parent / "textures" / "blocks"
+# What UI scripts put on their markers (game.conf `marker_textures`). Light, as most are tinted.
+MARKERS = OUT.parent / "markers"
 
 
 def rng(name):
@@ -50,14 +52,14 @@ def shade(img, mask, factor):
     return out
 
 
-def save(name, img, alpha=None):
-    OUT.mkdir(parents=True, exist_ok=True)
+def save(name, img, alpha=None, out=OUT):
+    out.mkdir(parents=True, exist_ok=True)
     rgb = np.clip(img, 0, 255).astype(np.uint8)
     if alpha is None:
-        Image.fromarray(rgb, "RGB").save(OUT / f"{name}.png")
+        Image.fromarray(rgb, "RGB").save(out / f"{name}.png")
     else:
         rgba = np.dstack([rgb, np.clip(alpha, 0, 255).astype(np.uint8)])
-        Image.fromarray(rgba, "RGBA").save(OUT / f"{name}.png")
+        Image.fromarray(rgba, "RGBA").save(out / f"{name}.png")
 
 
 def ashlar(base, mortar, rows=4, seed="ashlar", jitter=0.06):
@@ -365,6 +367,48 @@ def banner(color):
     return img
 
 
+# ---- Markers. Pale, to be dyed by the marker's colour.
+
+def pennant():
+    """A pennant flying from a staff at its left edge: a darker band where it's sewn round the
+    staff, and the Keystone's diamond near it, within what's left once it tapers to a point."""
+    w, h = 64, 32
+    ys, xs = np.mgrid[0:h, 0:w]
+    img = np.zeros((h, w, 3)) + (232, 228, 218)
+    img *= (1 + 0.025 * np.sin(ys * 2.2))[..., None]
+    img *= (1 - 0.06 * xs / w)[..., None]
+    img[:, :6] *= 0.72
+    img[:, 6] *= 1.08
+    diamond = np.abs(xs - 19.5) + np.abs(ys - 15.5)
+    img[diamond < 9.5] *= 0.58
+    img[diamond < 7.5] = (250, 248, 240)
+    img[diamond < 3.5] *= 0.8
+    return img
+
+
+def staff():
+    """A planed wooden staff, grain running up it."""
+    r = rng("staff")
+    img = flat((158, 112, 66))
+    grain = smooth_noise(r, 4).mean(axis=0)
+    img *= (1 + (grain - 0.5) * 0.3)[None, :, None]
+    img *= (1 + (smooth_noise(r, 8) - 0.5) * 0.08)[..., None]
+    img[:, :2] *= 0.8
+    img[:, -2:] *= 0.8
+    return img
+
+
+def plate():
+    """A bevelled metal plate: lit along the top and left, shadowed along the bottom and right."""
+    r = rng("plate")
+    img = tint(flat((226, 226, 230)), smooth_noise(r, 8), 0.06)
+    ys, xs = np.mgrid[0:SIZE, 0:SIZE]
+    img *= (1 + 0.03 * np.sin(ys * 1.7))[..., None]
+    img[(ys < 2) | (xs < 2)] *= 1.12
+    img[(ys >= SIZE - 2) | (xs >= SIZE - 2)] *= 0.7
+    return img
+
+
 def main():
     save("stone", stone())
     save("loam", loam())
@@ -394,7 +438,10 @@ def main():
     save("banner_red", banner((170, 56, 52)))
     img, alpha = scaffold()
     save("scaffold", img, alpha)
-    print(f"wrote {len(list(OUT.glob('*.png')))} textures to {OUT}")
+    save("pennant", pennant(), out=MARKERS)
+    save("staff", staff(), out=MARKERS)
+    save("plate", plate(), out=MARKERS)
+    print(f"wrote {len(list(OUT.glob('*.png')))} textures to {OUT}, {len(list(MARKERS.glob('*.png')))} to {MARKERS}")
 
 
 if __name__ == "__main__":

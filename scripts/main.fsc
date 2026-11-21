@@ -24,7 +24,10 @@ fn tick_hands [f tick] do
         if {ent_alive w.id} do
             set w.last_pos {ent_pos w.id}
             set w.hit_by {ent_last_attacker w.id}
-            if (((w.id + tick) % THINK_INTERVAL) == 0) { think w }
+            if (((w.id + tick) % THINK_INTERVAL) == 0) do
+                think w
+                show_load w
+            end
             set i (i + 1)
         else do
             trace_death f :hand w.id {w.get :last_pos} {w.get :hit_by}
