@@ -96,7 +96,6 @@ match.victory: Victory
 match.defeat: Your Keystone has fallen
 match.victory.detail: The rival Keystone is yours.
 match.defeat.detail: Your realm is conquered, but the world remains.
-match.exit: View Chronicle and Exit
 match.continue: Continue in Open-Ended World
 match.pacify: Make Rivals Passive
 ui.keystone_danger: The Keystone is under attack! {percent}% broken

@@ -1134,14 +1134,6 @@ end
 set end_screen nil
 set pacify_rivals false
 
-fn leave_or_quit [] do
-    if {net_is_host} do
-        quit_game
-    else do
-        to_menu
-    end
-end
-
 fn show_end_screen [won] do
     let size {window_size}
     let title {loc "match.defeat"}
@@ -1165,8 +1157,8 @@ fn show_end_screen [won] do
                 send_command {=name :continue =pacify pacify_rivals}
                 ui_hide end_screen
             end}
-            {ui.button {loc "match.exit"} =on_click fn [] do
-                leave_or_quit
+            {ui.button {loc "menu.to_title"} =on_click fn [] do
+                to_menu
             end}
         ]
     }}
