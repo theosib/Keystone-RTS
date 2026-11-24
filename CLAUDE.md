@@ -115,7 +115,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline (2026-11-23): 2576 + 224 + 53 = 2853 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline (2026-11-24): 2582 + 224 + 53 = 2859 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -161,6 +161,9 @@ finescript traps that cost real time here:
   past", then passed 25 runs straight on its own. Rerun before suspecting a change.
 - `teams` failed 2 runs in 9 (2026-11-21), "nobody fought the enemy", then 32 straight passes, with
   and without that day's change. Rerun before suspecting a change.
+- `hunt_game` fails about 1 run in 10 on unchanged code (2026-11-24), "the boar was never brought
+  down": the second militia never notices the boar, and the first loses to it by a hit. Now and
+  then it's "the Hunter never brought a deer down" instead.
 - `flee` failed once in a full `run_all.sh` run beside other headless games (2026-11-16), "Hands
   kept coming back: 10 frights", then passed 5 runs straight on its own.
 - `ent_last_attacker` is 0, not nil, for nobody. `ent_type` of an entity that's gone is nil.
