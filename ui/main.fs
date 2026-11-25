@@ -1376,6 +1376,9 @@ on :frame do
     let size {window_size}
     set work_window.window_pos_x (size[0] - 8)
     set sides_window.window_pos_x (size[0] - 180)
+    # Work sits below the sides, which grow with every player
+    let sides_h {sides_window.get :window_drawn_h}
+    if (sides_h != nil) { set work_window.window_pos_y {max 130 (sides_h + 16)} }
     set hint_window.window_pos_x (size[0] / 2)
     set tool_window.window_pos_x (size[0] / 2)
     set tool_window.window_pos_y (size[1] - 8)
