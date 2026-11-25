@@ -1,3 +1,4 @@
 include: base/solid_cube
 texture: blocks/mud
 hardness: 0.6
+blend: 40 0.3

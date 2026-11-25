@@ -1,3 +1,4 @@
 include: base/solid_cube
 texture: blocks/gravel
 hardness: 1.0
+blend: 20 0.3

@@ -1,3 +1,4 @@
 include: base/solid_cube
 texture: blocks/loam
 hardness: 1.0
+blend: 50 0.3

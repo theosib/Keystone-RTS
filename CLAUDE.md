@@ -115,7 +115,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline (2026-11-24): 2582 + 224 + 53 = 2859 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline (2026-11-25): 2590 + 224 + 53 = 2867 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -153,7 +153,8 @@ finescript traps that cost real time here:
   nobody answering, or (2 full runs in 7 on 2026-11-19, none in 14 alone) "a soldier never came back
   from helping". The cause isn't known yet.
 - `explore` failed once in a dozen runs (2026-11-11), "it left over a sixth of the map" with 109 dead
-  ends, and passed twice straight after. Same: cause unknown, rerun first. So does `hunt`, "the order
+  ends, and passed twice straight after. On 2026-11-25 it failed that way 5 runs in 13 (no change that
+  headless runs read). Same: cause unknown, rerun first. So does `hunt`, "the order
   fell behind its quarry", about 1 run in 5 on unchanged code, and `flee`, "Hands kept coming back:
   10 frights", once in a full run (2026-11-20) and then 12 straight passes. `hunt_far`, "the Hunter
   never brought a deer down where it was sent", failed 2 in 5 at unchanged code (2026-11-20).
@@ -170,6 +171,10 @@ finescript traps that cost real time here:
 - `tools/gen_icons.py` writes every icon, and Pillow here encodes them differently from the ones in
   the tree: check the old ones back out (`git checkout -- ui/icons/`) and keep only the new.
 - Entities are drawn at 1.6 times their light, so a model's colours come out much paler than written.
+- "Ground blends at the edges" (the `blend_ground` setting) spreads natural ground over its neighbours
+  by the `blend:` priority in each block's `.model`: see the engine's rendering.md, "Blending". Only
+  a higher priority spreads, and only onto a face level with it, so steps and walls stay hard edges.
+  A block with no `blend:` takes no part, which keeps built surfaces (flagstone, planks) crisp.
 - Game (deer, boar: `wild.fsc`) is faction 0, nobody's enemy, so `ent_find =enemy_of` never finds
   it and arrows do hit it. Animals aren't in `unit_index`: `is_game id` says whether an id is one,
   and `game_after` finds a boar that's going for a side, which soldiers treat as an enemy.
