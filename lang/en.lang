@@ -235,6 +235,7 @@ lobby.setting.water: Water
 lobby.setting.rivals: Rivals
 lobby.setting.rival_level: Rivals' skill
 lobby.setting.fog: Fog of war
+lobby.setting.slopes: Walk on slopes, not steps
 lobby.setting.teams: Teams
 lobby.setting.brigands: Brigands
 lobby.teams.ffa: Everyone for themselves

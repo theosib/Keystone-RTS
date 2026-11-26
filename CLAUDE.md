@@ -115,7 +115,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline (2026-11-25): 2610 + 224 + 57 = 2891 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline (2026-11-26): 2620 + 224 + 57 = 2901 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -183,6 +183,14 @@ finescript traps that cost real time here:
   (the engine's rendering.md, "Smooth ground"). A step of two keeps a block of wall, which from
   the usual camera can look like a thin dark line along a ridge; that's meant. Built blocks have
   no `smooth:`, so ground meets them level.
+- The lobby's "Walk on slopes" (`solid_slopes` in `game.conf`, kept in the save) makes those tops
+  solid: bodies stand on the slope as drawn, and every client draws it so, with the Settings row
+  hidden (`ground_solid`). Placing, breaking, picking, ceilings and path cells stay on the grid
+  (the engine's physics.md, "Solid slopes"). A unit's y isn't whole then, and where ground dips its
+  feet are inside the block it stands on: `{floor pos[1]}` is that block, not the cell over it.
+- `finevox_headless --set KEY=VALUE` changes a `game.conf` setting for one run. `tests/slopes.fsc`
+  needs `--set solid_slopes=true`, and `KEYSTONE_SET="solid_slopes=true" tests/run_all.sh` plays
+  every scenario that way.
 - A UI script that changes pack (`texture_pack id`) only asks: the change is made between frames,
   since freeing an atlas while the UI runs breaks the frame being recorded. Try a pack change with
   `--validation` and on `../fv-tsan`: both were clean on 2026-11-25.

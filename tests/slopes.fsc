@@ -1,0 +1,86 @@
+# Scenario: with solid slopes (run with --set solid_slopes=true), a trench a block deep and a block
+# wide is drawn as a shallow gully, and a unit sent across walks through the gully, as drawn, rather
+# than dropping to the bottom of the trench.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+fn dry_strip [x0 x1 z0 z1] do
+    for z in (z0..=z1) do
+        for x in (x0..=x1) do
+            let y {ground_y x z}
+            if ((y == nil) or (y <= (SEA_LEVEL + 1))) { return false }
+        end
+    end
+    return true
+end
+
+set soldier nil
+set row nil
+set floor_y nil
+set trench_x nil
+set lowest 99.0
+set crossings 0
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    if (t == 20) do
+        let x0 (f.x + 12)
+        let x1 (f.x + 40)
+        for dz in [24 32 40] do
+            for z in [(f.z + dz) (f.z - dz)] do
+                if ((row == nil) and {dry_strip x0 x1 (z - 3) (z + 3)}) { set row z }
+            end
+        end
+        if (row == nil) { return {fail "no dry ground to try it on"} }
+        # A level strip seven wide, and a trench across it
+        set floor_y {ground_y x0 row}
+        for x in (x0..=x1) do
+            for z in ((row - 3)..=(row + 3)) do
+                for y in ((floor_y + 1)..=(floor_y + 10)) do
+                    world_set_block x y z :air
+                end
+                world_set_block x floor_y z :turf
+                world_set_block x (floor_y - 1) z :loam
+                world_set_block x (floor_y - 2) z :loam
+            end
+        end
+        set trench_x (f.x + 24)
+        for z in ((row - 3)..=(row + 3)) do
+            world_set_block trench_x floor_y z :air
+        end
+    end
+
+    if (t == 40) do
+        set soldier {spawn_soldier f :militia}
+        ent_set_pos soldier.id (f.x + 14.5) (floor_y + 1) (row + 0.5)
+        set soldier.post {ent_pos soldier.id}
+    end
+
+    if (t == 50) do
+        order_units f {=units [soldier.id] =x (f.x + 36) =y (floor_y + 1) =z row}
+    end
+
+    if ((t > 50) and (soldier != nil)) do
+        let p {ent_pos soldier.id}
+        if ((p[0] > (trench_x + 0.3)) and (p[0] < (trench_x + 0.7))) do
+            set crossings (crossings + 1)
+            set lowest {min lowest p[1]}
+        end
+    end
+
+    if (t == 600) do
+        let p {ent_pos soldier.id}
+        log "slopes: crossed at" (lowest - floor_y) "over the trench's floor, in" crossings "ticks"
+        if ((p[0] < (f.x + 34)) or ({abs (p[2] - (row + 0.5))} > 3.0)) { return {fail "it never got across"} }
+        if (crossings == 0) { return {fail "it went round the trench, so this checks nothing"} }
+        if (lowest < (floor_y + 0.3)) { return {fail "it dropped into the trench, under the gully it's drawn as"} }
+        if (lowest > (floor_y + 0.9)) { return {fail "it never went down into the gully"} }
+        log "PASS"
+        game_exit 0
+    end
+end

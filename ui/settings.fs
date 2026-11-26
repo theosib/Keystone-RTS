@@ -71,7 +71,8 @@ end
 fn settings_children [on_close] do
     let children [{ui.text {loc "settings.title"}} {ui.separator}]
     children.push {pack_row}
-    children.push {smooth_row}
+    # A game whose bodies stand on the slopes always draws them
+    if (not {ground_solid}) { children.push {smooth_row} }
     for setting in SETTINGS do
         children.push {setting_row setting}
     end

@@ -8,12 +8,17 @@ command -v python3 >/dev/null || python3() { python "$@"; }  # Windows calls it 
 here="$(cd "$(dirname "$0")/.." && pwd)"
 build="${KEYSTONE_BUILD:-$here/../fv-keystone}"
 failed=0
+# KEYSTONE_SET="solid_slopes=true ..." plays every scenario with those game.conf settings changed
+sets=()
+for setting in ${KEYSTONE_SET:-}; do sets+=(--set "$setting"); done
 
+# A scenario, with any further arguments for the game
 run() {
     local name="$1" ticks="$2"
+    shift 2
     local output status
     output="$("$build/finevox_headless" --game-root "$here" --ticks "$ticks" \
-        --script "$here/tests/$name.fsc" 2>&1)"
+        --script "$here/tests/$name.fsc" ${sets[@]+"${sets[@]}"} "$@" 2>&1)"
     status=$?
     if [ "$status" -eq 0 ]; then
         echo "PASS  $name"
@@ -29,7 +34,7 @@ resume_scenario() {
     local dir output_a output_b status
     dir="$(mktemp -d)"
     output_a="$("$build/finevox_headless" --game-root "$here" --ticks 2400 \
-        --script "$here/tests/resume.fsc" --save "$dir/game" 2>&1)"
+        --script "$here/tests/resume.fsc" --save "$dir/game" ${sets[@]+"${sets[@]}"} 2>&1)"
     status=$?
     if [ "$status" -ne 0 ]; then
         echo "FAIL  resume, saving (exit $status)"
@@ -37,7 +42,7 @@ resume_scenario() {
         failed=1
     else
         output_b="$("$build/finevox_headless" --game-root "$here" --ticks 1800 \
-            --script "$here/tests/resume.fsc" --resume "$dir/game" 2>&1)"
+            --script "$here/tests/resume.fsc" --resume "$dir/game" ${sets[@]+"${sets[@]}"} 2>&1)"
         status=$?
         local before after
         before="$(echo "$output_a" | grep SUMMARY)"
@@ -119,6 +124,7 @@ run water 3000
 run hunt_game 9000
 run hunt_far 6000
 run hunt_moat 4600
+run slopes 700 --set solid_slopes=true
 
 if python3 "$here/tools/check_models.py"; then
     echo "PASS  check_models"
