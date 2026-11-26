@@ -298,6 +298,7 @@ settings.health_bars: Health bars
 settings.halos: Show units behind things
 settings.pins: Pins where units are sent
 settings.texture_pack: Texture pack
+settings.smooth_ground: Smooth slopes over steps in the ground
 settings.pack.none: The game's own
 settings.carry_marks: What Hands carry (for debugging)
 settings.choice.damaged: When hurt

@@ -2,3 +2,4 @@ include: base/solid_cube
 texture: blocks/sand
 hardness: 0.8
 blend: 30 0.3
+smooth: true

@@ -115,7 +115,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline (2026-11-25): 2595 + 224 + 57 = 2876 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline (2026-11-25): 2610 + 224 + 57 = 2891 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -177,6 +177,12 @@ finescript traps that cost real time here:
   by the `blend:` priority in each block's `.model` (rendering.md, "Blending"). Only a higher
   priority spreads, and only onto a face level with it, so steps and walls stay hard edges. A block
   with no `blend:` takes no part, which keeps built surfaces (flagstone, planks) crisp.
+- Steps in natural ground can be drawn as slopes: `smooth: true` in a block's `.model`, switched by
+  the `ground_smooth` UI native (the Settings row, kept as the `smooth_ground` pref). Drawing only:
+  collision, paths and the server still see blocks, and bodies are drawn lifted onto the slope
+  (the engine's rendering.md, "Smooth ground"). A step of two keeps a block of wall, which from
+  the usual camera can look like a thin dark line along a ridge; that's meant. Built blocks have
+  no `smooth:`, so ground meets them level.
 - A UI script that changes pack (`texture_pack id`) only asks: the change is made between frames,
   since freeing an atlas while the UI runs breaks the frame being recorded. Try a pack change with
   `--validation` and on `../fv-tsan`: both were clean on 2026-11-25.

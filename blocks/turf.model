@@ -4,3 +4,4 @@ texture-top: blocks/turf_top
 texture-bottom: blocks/loam
 hardness: 1.0
 blend: 60 0.35
+smooth: true

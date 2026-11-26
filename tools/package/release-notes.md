@@ -57,6 +57,10 @@ a folder in `packs` in the folder above, holding pictures at the same paths as t
 (`textures/blocks/turf_top.png`, say) and a `pack.conf` with a `name:` line. Pictures can be up to
 128 pixels across.
 
+**Settings > Smooth slopes over steps in the ground** draws hills as slopes instead of steps, and
+everyone walks on them. It's only how they look: a step of two blocks is still too high to climb,
+and still has a wall in it.
+
 ## Playing over a network
 
 Other players on your network find your game in **Join a Game**. Keystone uses TCP 7810 for the game and UDP 7811 to be found, so a firewall may need telling. On a Mac, allow it when macOS asks about your local network.
