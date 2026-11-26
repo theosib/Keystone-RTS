@@ -172,25 +172,23 @@ finescript traps that cost real time here:
   the tree: check the old ones back out (`git checkout -- ui/icons/`) and keep only the new.
 - Entities are drawn at 1.6 times their light, so a model's colours come out much paler than written.
 - Texture packs are folders in `packs/` (the engine's `docs/systems/texture-packs.md`), chosen in
-  Settings and changed live. Only pictures and UI skins can be replaced. The "Smooth ground" pack
-  (`packs/smooth`) has no pictures: its `blending: true` spreads natural ground over its neighbours
-  by the `blend:` priority in each block's `.model` (rendering.md, "Blending"). Only a higher
-  priority spreads, and only onto a face level with it, so steps and walls stay hard edges. A block
-  with no `blend:` takes no part, which keeps built surfaces (flagstone, planks) crisp.
-- Steps in natural ground can be drawn as slopes: `smooth: true` in a block's `.model`, switched by
-  the `ground_smooth` UI native (the Settings row, kept as the `smooth_ground` pref). Drawing only:
-  collision, paths and the server still see blocks, and bodies are drawn lifted onto the slope
-  (the engine's rendering.md, "Smooth ground"). A step of two keeps a block of wall, which from
-  the usual camera can look like a thin dark line along a ridge; that's meant. Built blocks have
-  no `smooth:`, so ground meets them level.
-- The lobby's "Walk on slopes" (`solid_slopes` in `game.conf`, kept in the save) makes those tops
-  solid: bodies stand on the slope as drawn, and every client draws it so, with the Settings row
-  hidden (`ground_solid`). Placing, breaking, picking, ceilings and path cells stay on the grid
-  (the engine's physics.md, "Solid slopes"). A unit's y isn't whole then, and where ground dips its
-  feet are inside the block it stands on: `{floor pos[1]}` is that block, not the cell over it.
-- `finevox_headless --set KEY=VALUE` changes a `game.conf` setting for one run. `tests/slopes.fsc`
-  needs `--set solid_slopes=true`, and `KEYSTONE_SET="solid_slopes=true" tests/run_all.sh` plays
-  every scenario that way.
+  Settings and changed live. Only pictures and UI skins can be replaced. `blending: true` in
+  `game.conf` spreads natural ground over its neighbours by the `blend:` priority in each block's
+  `.model` (rendering.md, "Blending"); the "Hard edges" pack (`packs/hard_edges`, no pictures) turns
+  it off. Only a higher priority spreads, and only onto a face in the same plane: level with it, or
+  a step the slope runs over. Walls stay hard edges. A block with no `blend:` takes no part, which
+  keeps built surfaces (flagstone, planks) crisp.
+- Steps in natural ground are slopes: `smooth: true` in a block's `.model`, with `solid_slopes` in
+  `game.conf` (and the lobby's "Walk on slopes", on by default, kept in the save). Bodies stand on
+  the slope as drawn (the engine's rendering.md, "Smooth ground", and physics.md, "Solid slopes");
+  with it off the ground is drawn and walked as cubes. A step of two keeps a block of wall, which
+  from the usual camera can look like a thin dark line along a ridge; that's meant. Built blocks
+  have no `smooth:`, so ground meets them level. Placing, breaking, picking, ceilings and path
+  cells stay on the grid. A unit's y isn't whole, and where ground dips its feet are inside the
+  block it stands on: `{floor pos[1]}` is that block, not the cell over it.
+- `finevox_headless --set KEY=VALUE` changes a `game.conf` setting for one run, and
+  `KEYSTONE_SET="solid_slopes=false" tests/run_all.sh` plays every scenario that way. Headless runs
+  never see the lobby, so they play what `game.conf` says.
 - A UI script that changes pack (`texture_pack id`) only asks: the change is made between frames,
   since freeing an atlas while the UI runs breaks the frame being recorded. Try a pack change with
   `--validation` and on `../fv-tsan`: both were clean on 2026-11-25.

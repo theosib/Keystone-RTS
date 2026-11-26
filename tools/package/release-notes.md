@@ -51,15 +51,16 @@ Saves, screenshots and your window layout are kept apart from the game, so they 
 
 ## Texture packs
 
-**Settings > Texture pack** changes how the game looks while you play. **Smooth ground** comes
-with it: grass, earth, sand and stone blend into each other at their edges. To make your own, put
-a folder in `packs` in the folder above, holding pictures at the same paths as the game's
-(`textures/blocks/turf_top.png`, say) and a `pack.conf` with a `name:` line. Pictures can be up to
-128 pixels across.
+**Settings > Texture pack** changes how the game looks while you play. Grass, earth, sand and
+stone blend into each other at their edges, and **Hard edges**, which comes with the game, keeps
+each block square instead. To make your own, put a folder in `packs` in the folder above, holding
+pictures at the same paths as the game's (`textures/blocks/turf_top.png`, say) and a `pack.conf`
+with a `name:` line. Pictures can be up to 128 pixels across.
 
-**Settings > Smooth slopes over steps in the ground** draws hills as slopes instead of steps, and
-everyone walks on them. It's only how they look: a step of two blocks is still too high to climb,
-and still has a wall in it.
+Hills are slopes rather than steps, and everyone walks on them as they're drawn: a hole a block
+deep is a dip you walk through. A step of two blocks is still too high to climb, and still has a
+wall in it. **Walk on slopes, not steps** in the lobby turns it off for a game, which then has
+blocks and steps.
 
 ## Playing over a network
 

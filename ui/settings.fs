@@ -3,8 +3,7 @@
 #
 # Each is a row in SETTINGS: a pref name, a label, and the choices, the first being the default.
 # The texture pack is a row of its own: the engine keeps that choice, and the packs it can be are
-# whatever's in packs/ (the game's, and the player's own). Smooth ground is too: the engine keeps
-# it, and changes it at once.
+# whatever's in packs/ (the game's, and the player's own).
 
 set SETTINGS [
     {=key :health_bars =label "settings.health_bars" =choices [:damaged :always :never]}
@@ -57,22 +56,10 @@ fn pack_row [] do
     end}
 end
 
-# Steps in the ground drawn as slopes, or as the blocks they are
-fn smooth_row [] do
-    let labels [{loc "ui.no"} {loc "ui.yes"}]
-    let current 0
-    if {ground_smooth} { set current 1 }
-    return {ui.combo {loc "settings.smooth_ground"} labels current fn [index] do
-        ground_smooth (index == 1)
-    end}
-end
-
 # on_close puts back whatever this was opened from
 fn settings_children [on_close] do
     let children [{ui.text {loc "settings.title"}} {ui.separator}]
     children.push {pack_row}
-    # A game whose bodies stand on the slopes always draws them
-    if (not {ground_solid}) { children.push {smooth_row} }
     for setting in SETTINGS do
         children.push {setting_row setting}
     end

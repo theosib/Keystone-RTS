@@ -1,4 +1,4 @@
-# Scenario: with solid slopes (run with --set solid_slopes=true), a trench a block deep and a block
+# Scenario: with solid slopes (the default; run_all.sh says so anyway), a trench a block deep and a block
 # wide is drawn as a shallow gully, and a unit sent across walks through the gully, as drawn, rather
 # than dropping to the bottom of the trench.
 
