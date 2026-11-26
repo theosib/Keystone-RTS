@@ -157,7 +157,9 @@ finescript traps that cost real time here:
   headless runs read). Same: cause unknown, rerun first. So does `hunt`, "the order
   fell behind its quarry", about 1 run in 5 on unchanged code, and `flee`, "Hands kept coming back:
   10 frights", once in a full run (2026-11-20) and then 12 straight passes. `hunt_far`, "the Hunter
-  never brought a deer down where it was sent", failed 2 in 5 at unchanged code (2026-11-20).
+  never brought a deer down where it was sent", failed 2 in 5 at unchanged code (2026-11-20), and
+  "the Hunter brought a deer down somewhere else" (one met on the way) 2 in 8, slopes or cubes alike
+  (2026-11-26).
 - `chase` failed once in a full `run_all.sh` (2026-11-14), "it stood by while an enemy walked
   past", then passed 25 runs straight on its own. Rerun before suspecting a change.
 - `teams` failed 2 runs in 9 (2026-11-21), "nobody fought the enemy", then 32 straight passes, with
@@ -183,8 +185,8 @@ finescript traps that cost real time here:
   the slope as drawn (the engine's rendering.md, "Smooth ground", and physics.md, "Solid slopes");
   with it off the ground is drawn and walked as cubes. A step of two keeps a block of wall, which
   from the usual camera can look like a thin dark line along a ridge; that's meant. Built blocks
-  have no `smooth:`, so ground meets them level. Placing, breaking, picking, ceilings and path
-  cells stay on the grid. A unit's y isn't whole, and where ground dips its feet are inside the
+  have no `smooth:`, so ground meets them level. Ground ceilings are solid as drawn too (a building
+  cut into a hill has one). Placing, breaking, picking and path cells stay on the grid. A unit's y isn't whole, and where ground dips its feet are inside the
   block it stands on: `{floor pos[1]}` is that block, not the cell over it.
 - `finevox_headless --set KEY=VALUE` changes a `game.conf` setting for one run, and
   `KEYSTONE_SET="solid_slopes=false" tests/run_all.sh` plays every scenario that way. Headless runs
