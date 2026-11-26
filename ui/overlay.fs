@@ -405,13 +405,18 @@ end
 
 # The block the Steward would break, held in brass corner fittings like the panels' own, and a warm
 # glow on the face a new block would go against. On the grid, smoothed ground or not: what's broken
-# and placed is a whole cell. Ground over a corner hides that fitting, as it hides anything.
+# and placed is a whole cell. Where ground rises over a fitting or the glow, it shows through faintly.
+# Where the slope reaches into the cell a new block would fill, so the glow alone can't say what
+# placing would do, that block shows as a faint ghost.
 set TARGET_BRASS [0.58 0.4 0.15]
 set TARGET_ARM 0.24
 set TARGET_BAR 0.05
 set TARGET_STANDOFF 0.03
 set TARGET_GLOW [1.0 0.8 0.45]
 set TARGET_GLOW_INSET 0.12
+set TARGET_THROUGH 0.4
+set TARGET_GHOST_FILL 0.035
+set TARGET_GHOST_EDGES 0.3
 
 # One fitting: three bars from a corner along its three edges
 fn target_fitting [x y z sx sy sz] do
@@ -423,9 +428,10 @@ fn target_fitting [x y z sx sy sz] do
     if (sy < 0) { set ay (y - TARGET_ARM) }
     let az z
     if (sz < 0) { set az (z - TARGET_ARM) }
-    marker_box ax (y - half) (z - half) TARGET_ARM TARGET_BAR TARGET_BAR c[0] c[1] c[2] 1.0 =shaded true
-    marker_box (x - half) ay (z - half) TARGET_BAR TARGET_ARM TARGET_BAR c[0] c[1] c[2] 1.0 =shaded true
-    marker_box (x - half) (y - half) az TARGET_BAR TARGET_BAR TARGET_ARM c[0] c[1] c[2] 1.0 =shaded true
+    let t TARGET_THROUGH
+    marker_box ax (y - half) (z - half) TARGET_ARM TARGET_BAR TARGET_BAR c[0] c[1] c[2] 1.0 =shaded true =through t
+    marker_box (x - half) ay (z - half) TARGET_BAR TARGET_ARM TARGET_BAR c[0] c[1] c[2] 1.0 =shaded true =through t
+    marker_box (x - half) (y - half) az TARGET_BAR TARGET_BAR TARGET_ARM c[0] c[1] c[2] 1.0 =shaded true =through t
 end
 
 # A thin glowing plate just off the face the view hit
@@ -449,7 +455,20 @@ fn target_glow [hit] do
     end
     let breath (0.17 + (0.06 * {sin (ui_clock * 2.5)}))
     let g TARGET_GLOW
-    marker_box pos[0] pos[1] pos[2] size[0] size[1] size[2] g[0] g[1] g[2] breath
+    let hidden (breath * 0.6)
+    marker_box pos[0] pos[1] pos[2] size[0] size[1] size[2] g[0] g[1] g[2] breath =through hidden
+end
+
+# The block that would go in, faintly, where the slope reaches into its cell
+fn target_ghost [hit] do
+    let x (hit.x + hit.nx)
+    let y (hit.y + hit.ny)
+    let z (hit.z + hit.nz)
+    if (not {ground_reaches x y z}) { return nil }
+    if {avatar_overlaps x y z} { return nil }
+    let g TARGET_GLOW
+    marker_box x y z 1 1 1 g[0] g[1] g[2] TARGET_GHOST_FILL
+    marker_edges x y z 1 1 1 g[0] g[1] g[2] TARGET_GHOST_EDGES =points 1.2 =through 0.15
 end
 
 fn draw_target [] do
@@ -466,6 +485,7 @@ fn draw_target [] do
         end
     end
     target_glow hit
+    target_ghost hit
 end
 
 fn draw_overlay [] do
