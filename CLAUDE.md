@@ -115,7 +115,7 @@ finescript traps that cost real time here:
 - Run test **binaries** serially (`./finevox_tests`, `./finevox_script_tests`,
   `./finevox_render_tests`). `ctest -j` gives ~33 false failures: each case is a separate
   process and fixtures share temp paths.
-- Baseline (2026-11-25): 2590 + 224 + 53 = 2867 passing, 4 skipped. Check exit codes, not the tail of the
+- Baseline (2026-11-25): 2595 + 224 + 57 = 2876 passing, 4 skipped. Check exit codes, not the tail of the
   output: a segfault mid-run prints no summary at all.
 - After an engine header change, build with bare `ninja`. Naming targets leaves
   `finevox_headless` stale, and every `run_all.sh` scenario then dies with exit 139.
@@ -171,10 +171,15 @@ finescript traps that cost real time here:
 - `tools/gen_icons.py` writes every icon, and Pillow here encodes them differently from the ones in
   the tree: check the old ones back out (`git checkout -- ui/icons/`) and keep only the new.
 - Entities are drawn at 1.6 times their light, so a model's colours come out much paler than written.
-- "Ground blends at the edges" (the `blend_ground` setting) spreads natural ground over its neighbours
-  by the `blend:` priority in each block's `.model`: see the engine's rendering.md, "Blending". Only
-  a higher priority spreads, and only onto a face level with it, so steps and walls stay hard edges.
-  A block with no `blend:` takes no part, which keeps built surfaces (flagstone, planks) crisp.
+- Texture packs are folders in `packs/` (the engine's `docs/systems/texture-packs.md`), chosen in
+  Settings and changed live. Only pictures and UI skins can be replaced. The "Smooth ground" pack
+  (`packs/smooth`) has no pictures: its `blending: true` spreads natural ground over its neighbours
+  by the `blend:` priority in each block's `.model` (rendering.md, "Blending"). Only a higher
+  priority spreads, and only onto a face level with it, so steps and walls stay hard edges. A block
+  with no `blend:` takes no part, which keeps built surfaces (flagstone, planks) crisp.
+- A UI script that changes pack (`texture_pack id`) only asks: the change is made between frames,
+  since freeing an atlas while the UI runs breaks the frame being recorded. Try a pack change with
+  `--validation` and on `../fv-tsan`: both were clean on 2026-11-25.
 - Game (deer, boar: `wild.fsc`) is faction 0, nobody's enemy, so `ent_find =enemy_of` never finds
   it and arrows do hit it. Animals aren't in `unit_index`: `is_game id` says whether an id is one,
   and `game_after` finds a boar that's going for a side, which soldiers treat as an enemy.

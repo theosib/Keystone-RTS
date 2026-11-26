@@ -49,6 +49,14 @@ Saves, screenshots and your window layout are kept apart from the game, so they 
 | macOS | `~/Library/Application Support/keystone` |
 | Linux | `~/.keystone` |
 
+## Texture packs
+
+**Settings > Texture pack** changes how the game looks while you play. **Smooth ground** comes
+with it: grass, earth, sand and stone blend into each other at their edges. To make your own, put
+a folder in `packs` in the folder above, holding pictures at the same paths as the game's
+(`textures/blocks/turf_top.png`, say) and a `pack.conf` with a `name:` line. Pictures can be up to
+128 pixels across.
+
 ## Playing over a network
 
 Other players on your network find your game in **Join a Game**. Keystone uses TCP 7810 for the game and UDP 7811 to be found, so a firewall may need telling. On a Mac, allow it when macOS asks about your local network.

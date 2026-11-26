@@ -305,7 +305,7 @@ Where an installed copy finds things, from `ResourceLocator`:
 | `game/` | `--game-root`, or `engine/game` |
 | `user/` | `--user-dir`. Otherwise the game root if `--game-root` was given, so a source tree works as it always has, or else where Minecraft would: `~/.keystone`, `~/Library/Application Support/keystone`, `%APPDATA%\.keystone` |
 
-Saves, screenshots and `imgui.ini` go in `user/`. A build's compiled-in paths don't exist on anyone
+Saves, screenshots, `imgui.ini` and the player's own texture packs (`packs/`) go in `user/`. A build's compiled-in paths don't exist on anyone
 else's machine, and a test on the machine that built it can't see that: one like this passed here
 until the build directory was hidden. Test a package from somewhere read-only, with the build tree
 out of reach.

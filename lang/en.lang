@@ -297,7 +297,8 @@ settings.done: Done
 settings.health_bars: Health bars
 settings.halos: Show units behind things
 settings.pins: Pins where units are sent
-settings.blend_ground: Ground blends at the edges
+settings.texture_pack: Texture pack
+settings.pack.none: The game's own
 settings.carry_marks: What Hands carry (for debugging)
 settings.choice.damaged: When hurt
 settings.choice.always: Always
