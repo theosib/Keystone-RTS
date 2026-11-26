@@ -403,6 +403,71 @@ fn draw_orders [] do
     end
 end
 
+# The block the Steward would break, held in brass corner fittings like the panels' own, and a warm
+# glow on the face a new block would go against. On the grid, smoothed ground or not: what's broken
+# and placed is a whole cell. Ground over a corner hides that fitting, as it hides anything.
+set TARGET_BRASS [0.58 0.4 0.15]
+set TARGET_ARM 0.24
+set TARGET_BAR 0.05
+set TARGET_STANDOFF 0.03
+set TARGET_GLOW [1.0 0.8 0.45]
+set TARGET_GLOW_INSET 0.12
+
+# One fitting: three bars from a corner along its three edges
+fn target_fitting [x y z sx sy sz] do
+    let half (TARGET_BAR / 2.0)
+    let c TARGET_BRASS
+    let ax x
+    if (sx < 0) { set ax (x - TARGET_ARM) }
+    let ay y
+    if (sy < 0) { set ay (y - TARGET_ARM) }
+    let az z
+    if (sz < 0) { set az (z - TARGET_ARM) }
+    marker_box ax (y - half) (z - half) TARGET_ARM TARGET_BAR TARGET_BAR c[0] c[1] c[2] 1.0 =shaded true
+    marker_box (x - half) ay (z - half) TARGET_BAR TARGET_ARM TARGET_BAR c[0] c[1] c[2] 1.0 =shaded true
+    marker_box (x - half) (y - half) az TARGET_BAR TARGET_BAR TARGET_ARM c[0] c[1] c[2] 1.0 =shaded true
+end
+
+# A thin glowing plate just off the face the view hit
+fn target_glow [hit] do
+    let inset TARGET_GLOW_INSET
+    let thin 0.012
+    let off 0.006
+    let span (1.0 - (2.0 * inset))
+    let pos [(hit.x + inset) (hit.y + inset) (hit.z + inset)]
+    let size [span span span]
+    let normal [hit.nx hit.ny hit.nz]
+    let base [hit.x hit.y hit.z]
+    for axis in (0..3) do
+        if (normal[axis] > 0) do
+            pos.set axis (base[axis] + 1.0 + off)
+            size.set axis thin
+        elif (normal[axis] < 0) do
+            pos.set axis (base[axis] - off - thin)
+            size.set axis thin
+        end
+    end
+    let breath (0.17 + (0.06 * {sin (ui_clock * 2.5)}))
+    let g TARGET_GLOW
+    marker_box pos[0] pos[1] pos[2] size[0] size[1] size[2] g[0] g[1] g[2] breath
+end
+
+fn draw_target [] do
+    if {game_paused} { return nil }
+    let hit {pick_view}
+    if ((hit == nil) or (hit.distance > STEWARD_REACH)) { return nil }
+    let out TARGET_STANDOFF
+    let span (1.0 + (2.0 * out))
+    for cx in [0 1] do
+        for cy in [0 1] do
+            for cz in [0 1] do
+                target_fitting ((hit.x - out) + (cx * span)) ((hit.y - out) + (cy * span)) ((hit.z - out) + (cz * span)) (1 - (2 * cx)) (1 - (2 * cy)) (1 - (2 * cz))
+            end
+        end
+    end
+    target_glow hit
+end
+
 fn draw_overlay [] do
     let rate {fps}
     let dt (1.0 / {max rate 20})

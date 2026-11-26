@@ -1390,7 +1390,10 @@ on :frame do
         set tools_view view_mode
         refresh_tools
     end
-    if (view_mode == :embodied) { draw_crosshair }
+    if (view_mode == :embodied) do
+        draw_crosshair
+        draw_target
+    end
 
     for id in selection do
         let p {entity_pos id}
