@@ -407,7 +407,8 @@ end
 # glow on the face a new block would go against. On the grid, smoothed ground or not: what's broken
 # and placed is a whole cell. Where ground rises over a fitting or the glow, it shows through faintly.
 # Where the slope reaches into the cell a new block would fill, so the glow alone can't say what
-# placing would do, that block shows as a faint ghost.
+# placing would do, that block can show as a faint ghost, though it's off for now (TARGET_GHOST). It's
+# drawn a little inside its cell, or its faces fight with the blocks beside it.
 set TARGET_BRASS [0.58 0.4 0.15]
 set TARGET_ARM 0.24
 set TARGET_BAR 0.05
@@ -417,6 +418,8 @@ set TARGET_GLOW_INSET 0.12
 set TARGET_THROUGH 0.4
 set TARGET_GHOST_FILL 0.035
 set TARGET_GHOST_EDGES 0.3
+set TARGET_GHOST_INSET 0.01
+set TARGET_GHOST false
 
 # One fitting: three bars from a corner along its three edges
 fn target_fitting [x y z sx sy sz] do
@@ -467,8 +470,10 @@ fn target_ghost [hit] do
     if (not {ground_reaches x y z}) { return nil }
     if {avatar_overlaps x y z} { return nil }
     let g TARGET_GLOW
-    marker_box x y z 1 1 1 g[0] g[1] g[2] TARGET_GHOST_FILL
-    marker_edges x y z 1 1 1 g[0] g[1] g[2] TARGET_GHOST_EDGES =points 1.2 =through 0.15
+    let i TARGET_GHOST_INSET
+    let span (1.0 - (2.0 * i))
+    marker_box (x + i) (y + i) (z + i) span span span g[0] g[1] g[2] TARGET_GHOST_FILL
+    marker_edges (x + i) (y + i) (z + i) span span span g[0] g[1] g[2] TARGET_GHOST_EDGES =points 1.2 =through 0.15
 end
 
 fn draw_target [] do
@@ -485,7 +490,7 @@ fn draw_target [] do
         end
     end
     target_glow hit
-    target_ghost hit
+    if (TARGET_GHOST) { target_ghost hit }
 end
 
 fn draw_overlay [] do
