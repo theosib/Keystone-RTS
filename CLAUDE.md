@@ -246,6 +246,9 @@ finescript traps that cost real time here:
   sides in reach of each other.
 - Water a scenario pours (`fluid_place`) level with the ground spills where the bank dips, and a body
   walking the edge can slip in and float, off any route. Stop it a block short, as `hunt_moat.fsc` does.
+- A world generated before 2026-11-26 can have whole columns of ground with water inside (a worldgen
+  bug, fixed in the engine). Its banks there aren't dry, get no water drawn over them, and show a dark
+  band at the shore. `fluid_at` on a solid cell finds it. A new game doesn't have it.
 - Fluids are the game root's `fluids/`, not the engine's. Before `fluids/water.fluid` the server had
   water that was never registered: units waded it, and no client drew it.
 - A block shape can follow what's above it: `connect_up_*` faces show with one of its `connects`
