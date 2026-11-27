@@ -62,6 +62,8 @@ set HARVEST_FIRST {=provisions [:carcass_4 :carcass_3 :carcass_2 :carcass_1]}
 set HARVEST_FIRST_RADIUS 32
 
 set SEARCH_RADIUS 72
+# Where nothing is left nearer
+set FAR_SEARCH_RADIUS 128
 # The generator never sets a leaf further than this from its trunk
 set LEAF_REACH 2
 set CROWN_DEPTH 12

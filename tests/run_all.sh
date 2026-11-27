@@ -116,6 +116,7 @@ run brigand_defence 4700
 run loads 5500
 run shelters 12000
 run thatch 9000
+run far_timber 4000
 run siege 3900
 run passing 3500
 run struck 2400

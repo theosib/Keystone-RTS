@@ -1,0 +1,39 @@
+# Scenario: with every tree near home felled, Hands go further for timber. They looked no further
+# than SEARCH_RADIUS, found none, and gathered stone the yard was full of, so nothing needing planks
+# was ever built.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set cleared 0
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    # Nobody to run from
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
+
+    if (t == 30) do
+        for p in {find_blocks f.x 66 f.z (SEARCH_RADIUS + 12) [:timber_log] =max 100000} do
+            world_set_block p[0] p[1] p[2] :air
+            set cleared (cleared + 1)
+        end
+        log "felled" cleared "logs near home"
+        endow f 0 200 200
+        zone_take f.zone :timber {stock_of f :timber} f.x f.z
+    end
+
+    if ((t > 30) and ({stock_of f :timber} > 0)) do
+        log "timber came in at" t
+        log "PASS"
+        game_exit 0
+    end
+
+    if (t == 3600) { fail "no timber came in from further out" }
+end

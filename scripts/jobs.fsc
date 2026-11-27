@@ -193,17 +193,10 @@ fn start_gather [w kind] do
         set found ({find_blocks pos[0] pos[1] pos[2] HARVEST_FIRST_RADIUS first =max 8} + found)
     }
 
-    for p in found do
-        if ({is_trunk_base p} and (not {in_danger f p[0] p[2]})) do
-            if {claim_block w.faction p[0] p[1] p[2] w.id 1800} do
-                set w.job :gather
-                set w.kind kind
-                set w.target p
-                go_to w (p[0] + 0.5) p[1] (p[2] + 0.5) 1.5 :harvest
-                return nil
-            end
-        end
-    end
+    if {gather_from w kind found} { return nil }
+    # The woods near home get cut down. Further out is a long walk, but better than gathering what
+    # the yard already has.
+    if {gather_from w kind {find_blocks pos[0] pos[1] pos[2] FAR_SEARCH_RADIUS names =max look}} { return nil }
 
     # Gathering something else would drop what's in hand
     if (w.carry_n > 0) { return start_carry w }
@@ -220,6 +213,22 @@ fn start_gather [w kind] do
         set w.state :resting
         set w.timer 2.0
     end
+end
+
+fn gather_from [w kind found] do
+    let f factions[w.faction]
+    for p in found do
+        if ({is_trunk_base p} and (not {in_danger f p[0] p[2]})) do
+            if {claim_block w.faction p[0] p[1] p[2] w.id 1800} do
+                set w.job :gather
+                set w.kind kind
+                set w.target p
+                go_to w (p[0] + 0.5) p[1] (p[2] + 0.5) 1.5 :harvest
+                return true
+            end
+        end
+    end
+    return false
 end
 
 fn gather_speed [w] do
