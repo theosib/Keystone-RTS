@@ -1,0 +1,77 @@
+# Scenario: the nearest trees are ones no Hand can get to (across a river in the game that found it,
+# here on pillars), with others further out. Nearest first, every Hand tried one, gave up, rested and
+# tried another, and the side stood about the Hall with no timber. They leave them be after one try.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set PILLAR 8
+
+# Open ground this far from home, starting from this angle
+fn spot_at [c r from] do
+    for i in (0..12) do
+        let angle (from + (i * 0.52))
+        let x {floor (c[0] + (r * {cos angle}))}
+        let z {floor (c[2] + (r * {sin angle}))}
+        let y {open_ground x z}
+        if (y != nil) { return [x y z] }
+    end
+    return nil
+end
+
+# A log on a column of stone, too high to reach from the ground
+fn pillar_tree [x z] do
+    let g {ground_y x z}
+    for y in ((g + 1)..(g + PILLAR)) do
+        world_set_block x y z :stone
+    end
+    world_set_block x (g + PILLAR) z :timber_log
+end
+
+fn tree [x z] do
+    let g {ground_y x z}
+    for y in ((g + 1)..(g + 4)) do
+        world_set_block x y z :timber_log
+    end
+end
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    # Nobody to run from
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
+
+    if (t == 30) do
+        for p in {find_blocks f.x 66 f.z (FAR_SEARCH_RADIUS + 12) [:timber_log] =max 100000} do
+            world_set_block p[0] p[1] p[2] :air
+        end
+        let home [f.x 0 f.z]
+        let high {spot_at home 16 0.0}
+        let low {spot_at home 44 3.1}
+        if ((high == nil) or (low == nil)) { return fail "no open ground for the trees" }
+        for i in (0..4) do
+            for j in (0..4) do
+                pillar_tree (high[0] + (i * 2)) (high[2] + (j * 2))
+            end
+        end
+        tree low[0] low[2]
+        tree (low[0] + 3) low[2]
+        log "trees out of reach at" high "and in reach at" low
+        endow f 0 200 200
+        zone_take f.zone :timber {stock_of f :timber} f.x f.z
+    end
+
+    if ((t > 30) and ({stock_of f :timber} > 0)) do
+        log "timber came in at" t
+        log "PASS"
+        game_exit 0
+    end
+
+    if (t == 3600) { fail "no timber came in: Hands kept trying the trees out of reach" }
+end

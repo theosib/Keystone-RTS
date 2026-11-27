@@ -271,6 +271,7 @@ set HUNT_RANGE 60
 # Sent this far from home or further, it looks for game round there instead, and no further off
 set HUNT_AWAY_RANGE 24
 set HUNT_LOOK_SECONDS 4.0
-# Finding no way to its quarry, a Hunter leaves game this near it be for this long
-set HUNT_NO_WAY_RANGE 12
-set HUNT_NO_WAY_SECONDS 60
+# Finding no way to its quarry, a Hunter leaves game this near it be for this long, and a side leaves
+# a tree its Hands found no way to
+set NO_WAY_RANGE 12
+set NO_WAY_SECONDS 60

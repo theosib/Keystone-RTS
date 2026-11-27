@@ -147,7 +147,8 @@ fn seek_game [s pos] do
 end
 
 # Where a Hunter found no way to its quarry: across a river, say. It leaves game there be for a
-# while, or it would stand on the bank trying for one after another.
+# while, or it would stand on the bank trying for one after another. A side does the same with
+# trees its Hands found no way to.
 fn no_way_to [s at] do
     let spots []
     let old {s.get :no_way}
@@ -156,7 +157,7 @@ fn no_way_to [s at] do
             if ({game_tick} < w[2]) { spots.push w }
         end
     end
-    spots.push [at[0] at[2] ({game_tick} + {to_int (HUNT_NO_WAY_SECONDS * 30)})]
+    spots.push [at[0] at[2] ({game_tick} + {to_int (NO_WAY_SECONDS * 30)})]
     s.set :no_way spots
 end
 
@@ -164,7 +165,7 @@ fn no_way [s x z] do
     let spots {s.get :no_way}
     if (spots == nil) { return false }
     for w in spots do
-        if (({game_tick} < w[2]) and ({dist2 x z w[0] w[1]} < (HUNT_NO_WAY_RANGE * HUNT_NO_WAY_RANGE))) { return true }
+        if (({game_tick} < w[2]) and ({dist2 x z w[0] w[1]} < (NO_WAY_RANGE * NO_WAY_RANGE))) { return true }
     end
     return false
 end

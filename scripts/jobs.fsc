@@ -70,8 +70,12 @@ end
 fn give_up [w] do
     let c "-"
     if (w.cell != nil) { set c [w.cell.x w.cell.y w.cell.z] }
-    trace :path "hand" w.id "side" w.faction "gave up" w.job w.after "cell" c "scaffolding" w.scaffolding "failures" (w.failures + 1)
+    let t "-"
+    if (w.target != nil) { set t w.target }
+    trace :path "hand" w.id "side" w.faction "gave up" w.job w.after "cell" c "target" t "scaffolding" w.scaffolding "failures" (w.failures + 1)
     if (w.job == :feed) { meal_failed w }
+    # Nearest first would pick the same tree across the river every time
+    if ((w.job == :gather) and (w.target != nil)) { no_way_to factions[w.faction] w.target }
     drop_job w
     set w.failures (w.failures + 1)
     set w.state :resting
@@ -218,7 +222,7 @@ end
 fn gather_from [w kind found] do
     let f factions[w.faction]
     for p in found do
-        if ({is_trunk_base p} and (not {in_danger f p[0] p[2]})) do
+        if ({is_trunk_base p} and (not {in_danger f p[0] p[2]}) and (not {no_way f p[0] p[2]})) do
             if {claim_block w.faction p[0] p[1] p[2] w.id 1800} do
                 set w.job :gather
                 set w.kind kind
