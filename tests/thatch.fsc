@@ -1,0 +1,52 @@
+# Scenario: a Shelter gets its thatch with the larder held under the food reserve. Builders can't
+# take what the yard keeps back, so the board had nobody to send, and the roof waited for good. A
+# wounded soldier out on campaign isn't brought meals from home: each walk there failed and lost
+# the meal, which is what kept the larder under the reserve.
+
+fn fail [why] do
+    log "FAIL:" why
+    game_exit 1
+end
+
+set shelter nil
+set far nil
+set roofed 0
+
+on :tick do
+    let t {game_tick}
+    let f factions[1]
+
+    # Nobody to run from
+    if (t == 1) do
+        let rival factions[2]
+        set rival.commander nil
+    end
+
+    if (t == 30) do
+        endow f 200 200 (FOOD_RESERVE - 2)
+        set shelter {place_building f :shelter (f.x + 24) (f.z - 12) 0}
+        if (shelter == nil) { return fail "no room to build" }
+        set far {spawn_soldier f :militia}
+        ent_set_pos far.id (f.x + (MEAL_REACH + 20)) 80 f.z
+        set far.post {ent_pos far.id}
+        ent_set_health far.id 10
+    end
+
+    if (t > 30) do
+        # Whatever comes in over the reserve goes, as if eaten
+        let food {stock_of f :provisions}
+        if (food > (FOOD_RESERVE - 2)) { zone_take f.zone :provisions (food - (FOOD_RESERVE - 2)) f.x f.z }
+        if ({far.get :fed_by} != nil) { return fail "a Hand set off with a meal for a soldier out of reach" }
+        if ((roofed == 0) and shelter.complete) do
+            set roofed t
+            log "the Shelter was finished at" t
+            log "PASS"
+            game_exit 0
+        end
+    end
+
+    if (t == 8970) do
+        log "still to build:" {site_remaining shelter.site}
+        fail "the Shelter never got its thatch"
+    end
+end

@@ -80,6 +80,9 @@ set MEAL_AT 0.75
 set MEAL_CALM_SECONDS 8.0
 set MEAL_HEAL 0.4
 set MEAL_SECONDS 20.0
+# Only a soldier this near the Hall is brought one, and one a Hand couldn't reach waits this long
+set MEAL_REACH 64
+set MEAL_RETRY_SECONDS 30.0
 # Below this in the yard, gathering food comes first and none of it goes to building sites
 set FOOD_RESERVE 20
 

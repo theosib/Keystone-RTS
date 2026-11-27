@@ -71,6 +71,7 @@ fn give_up [w] do
     let c "-"
     if (w.cell != nil) { set c [w.cell.x w.cell.y w.cell.z] }
     trace :path "hand" w.id "side" w.faction "gave up" w.job w.after "cell" c "scaffolding" w.scaffolding "failures" (w.failures + 1)
+    if (w.job == :feed) { meal_failed w }
     drop_job w
     set w.failures (w.failures + 1)
     set w.state :resting
@@ -107,6 +108,22 @@ fn is_builder [w] do
     return ((f.sites.length > 0) and {short_of_beds f} and {gives_beds f.sites[0]} and ({stock_of f :provisions} >= FOOD_RESERVE))
 end
 
+# The first site in line, if its layer wants what the yard can't spare. Nobody can be sent to fetch
+# that, so a builder gathers it for the site. Otherwise a thatch roof waits on a larder held at the reserve.
+fn site_short_of [f] do
+    for b in f.sites do
+        if (not {in_danger f b.x b.z}) do
+            let left {site_remaining b.site =now true}
+            for block in left.keys do
+                let kind {BLOCK_MATERIAL.get block}
+                if ((kind != nil) and ({yard_spare f kind} <= 0)) { return [b.site kind] }
+            end
+            return nil
+        end
+    end
+    return nil
+end
+
 fn health_of [id] do
     let most {ent_max_health id}
     if ((most == nil) or (most <= 0)) { return 1.0 }
@@ -133,7 +150,14 @@ fn pick_job [w] do
 
     set w.supplying nil
 
-    if ({is_builder w} and {take_task w}) { return nil }
+    if {is_builder w} do
+        if {take_task w} { return nil }
+        let short {site_short_of f}
+        if (short != nil) do
+            set w.supplying short[0]
+            return start_gather w short[1]
+        end
+    end
 
     let move {find_defrag_move f.zone}
     if ((move != nil) and ((w.id % 5) == 0)) do
@@ -633,10 +657,26 @@ fn soldier_to_feed [f] do
         let at {ent_pos s.id}
         if ({ent_alive s.id} and (at != nil) and (s.state != :rout) and (not eating) and (not {feeding s})) do
             # Not into where raiders were just seen, whatever the soldier's doing there
-            if (({health_of s.id} < MEAL_AT) and ({ent_since_damage s.id} > MEAL_CALM_SECONDS) and (s.target == nil) and (not {in_danger f at[0] at[2]})) { return s }
+            if (({health_of s.id} < MEAL_AT) and ({ent_since_damage s.id} > MEAL_CALM_SECONDS) and (s.target == nil) and (not {in_danger f at[0] at[2]}) and {meal_in_reach f s at}) { return s }
         end
     end
     return nil
+end
+
+# Not one out on campaign, nor one a Hand just failed to reach: each try walks a meal there and back
+fn meal_in_reach [f s at] do
+    if ({dist2 at[0] at[2] f.x f.z} > (MEAL_REACH * MEAL_REACH)) { return false }
+    let retry {s.get :meal_retry_at}
+    return ((retry == nil) or ({game_tick} >= retry))
+end
+
+# A Hand gave up on the way with a meal
+fn meal_failed [w] do
+    let entry {lookup_unit w.target}
+    if (entry != nil) do
+        set entry.record.meal_retry_at ({game_tick} + (MEAL_RETRY_SECONDS * 30))
+        set entry.record.fed_by nil
+    end
 end
 
 fn start_feed [w s] do
@@ -654,6 +694,9 @@ end
 fn finish_fetch_meal [w] do
     let pos {worker_pos w}
     if ({zone_take {zone_of w} :provisions 1 pos[0] pos[2]} == 0) { return drop_job w }
+    # Carried as a load, so a meal that never arrives goes back to the yard
+    set w.carry_kind :provisions
+    set w.carry_n 1
     serve_meal w
 end
 
@@ -674,6 +717,8 @@ fn finish_serve [w] do
         set entry.record.meal_left MEAL_SECONDS
         set entry.record.fed_by nil
     end
+    set w.carry_n 0
+    set w.carry_kind nil
     set w.job nil
     set w.target nil
     set w.state :idle
